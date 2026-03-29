@@ -169,7 +169,7 @@ def safe_get(data: Dict, *keys, default=None):
 
 
 def display_value(value, value_type='text'):
-    """NUCLEAR VERSION - kills ? Missing and all variations"""
+    """NUCLEAR VERSION - kills ? Missing and ALL ? patterns"""
     if value is None or value == "" or value == [] or value == {}:
         return ""
     if isinstance(value, bool):
@@ -184,16 +184,22 @@ def display_value(value, value_type='text'):
         return str(value)
     if isinstance(value, str):
         text = value.strip()
-        # Nuclear clean - order matters
+        # Nuclear clean - order matters, most specific first
         text = text.replace('? Missing', '')
+        text = text.replace('? Present', 'Present')
+        text = text.replace('? Moderate', 'Moderate')
+        text = text.replace('? ', '')
         text = text.replace('?', '')
         text = re.sub(r'\?\s*Missing', '', text)
+        text = re.sub(r'\?\s*Present', 'Present', text)
+        text = re.sub(r'\?\s*Moderate', 'Moderate', text)
         text = re.sub(r'\?\s*', '', text)
         text = text.replace('Missing Missing Missing', '')
         text = text.replace('Missing Missing', '')
         text = text.replace('Missing - Missing', '')
         text = text.replace('- Missing', '')
         text = text.replace('Missing -', '')
+        text = text.replace('outputs Present', 'outputs are available')
         text = re.sub(r'\s+', ' ', text).strip()
         if not text or text.lower() in ['missing', 'none', 'n/a', '-', '—']:
             return ""
@@ -290,10 +296,18 @@ def format_legal_text(text: str, section: str = "") -> str:
     replacements = {
         "Missing written agreement": "Absence of written agreement",
         "Missing documentary proof": "Lack of documentary evidence of debt",
+        "written agreement — primary defence weakness": "Absence of a written agreement constitutes a primary defence vulnerability",
+        "documentary proof — primary defence weakness": "Lack of documentary evidence constitutes a primary defence vulnerability",
         "? Missing": "",
-        "primary defence weakness": "significantly weakens enforceability of debt",
+        "? Present": "Present",
+        "? Moderate": "Moderate",
+        "primary defence weakness": "constitutes a primary defence vulnerability",
         "Is it correct that there is ? Missing": "Is it correct that no",
-        "Is it correct that there is Missing": "Is it correct that there is no"
+        "Is it correct that there is Missing": "Is it correct that there is no",
+        "All module outputs ? Present": "All module outputs are available",
+        "outputs ? Present": "outputs are available",
+        "? ": "",
+        "outputs Present": "outputs are available"
     }
     
     for old, new in replacements.items():
@@ -304,6 +318,9 @@ def format_legal_text(text: str, section: str = "") -> str:
         text = text.replace("Missing", "no") 
         if not text.endswith("?"):
             text += "?"
+    
+    # Remove any remaining ?
+    text = text.replace("?", "")
     
     return text.strip()
 
@@ -1872,11 +1889,22 @@ def compute_unified_timeline(case_data: Dict) -> Dict:
 
     return timeline_obj
 
-def apply_fatal_override(score: float, fatal_defects: List[Dict]) -> float:
-
+def apply_fatal_override(score: float, fatal_defects: List[Dict]) -> Tuple[float, str]:
+    """NON-NEGOTIABLE: If any fatal defect → force low score + DO NOT FILE"""
     if not fatal_defects or len(fatal_defects) == 0:
-        return score
+        if score >= 70:
+            return score, "READY TO FILE"
+        elif score >= 40:
+            return score, "FILE WITH CAUTION"
+        else:
+            return score, "HIGH RISK - REVIEW CAREFULLY"
 
+    # Extract defect descriptions
+    defect_descriptions = [
+        d.get('defect', '') + ' ' + d.get('description', '') + ' ' + str(d.get('defect_type', ''))
+        for d in fatal_defects
+    ]
+    
     has_catastrophic = any(
         d.get('defect_type') in [
             'limitation_expired',
@@ -1891,21 +1919,26 @@ def apply_fatal_override(score: float, fatal_defects: List[Dict]) -> float:
         d.get('severity') == 'CRITICAL'
         for d in fatal_defects
     )
+    
+    # Check for timeline defects
+    has_timeline_defect = any(
+        'limitation' in desc.lower() or 'time bar' in desc.lower() or 'notice' in desc.lower()
+        for desc in defect_descriptions
+    )
 
-    if has_catastrophic:
-
+    if has_catastrophic or has_timeline_defect:
         logger.warning(f"🚨 CATASTROPHIC FATAL DEFECT: Score forced to {FATAL_CAP_CATASTROPHIC}")
-        return FATAL_CAP_CATASTROPHIC
+        return FATAL_CAP_CATASTROPHIC, "DO NOT FILE - FATAL DEFECT DETECTED"
 
     if has_critical or len(fatal_defects) >= 2:
         logger.warning(f"🚨 CRITICAL FATAL DEFECTS ({len(fatal_defects)}): Score capped at {FATAL_CAP_UNIFIED}")
-        return min(score, FATAL_CAP_UNIFIED)
+        return min(score, FATAL_CAP_UNIFIED), "DO NOT FILE - FATAL DEFECT DETECTED"
 
     if len(fatal_defects) == 1:
         logger.info(f"⚠️ Single fatal defect: Score capped at {FATAL_CAP_UNIFIED}")
-        return min(score, FATAL_CAP_UNIFIED)
+        return min(score, FATAL_CAP_UNIFIED), "DO NOT FILE - FATAL DEFECT DETECTED"
 
-    return score
+    return score, "FILE WITH CAUTION"
 
 def safe_calculation(func):
 
