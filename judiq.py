@@ -60,7 +60,7 @@ ISSUE_BANK = {
     "notice_timeline": "Notice sent beyond 30-day deadline",
     "filing_timeline": "Complaint filed beyond limitation period",
     "company_directors": "Directors not properly impleaded",
-    "section_65b": "Section 65B certificate not filed for electronic evidence",
+    "section_63": "Section 63 certificate not filed for electronic evidence",
     "dishonour_memo_missing": "Dishonour memo from bank missing",
     "consideration_proof": "No proof of consideration for cheque",
     "endorsement_issue": "Cheque endorsement questionable",
@@ -107,7 +107,7 @@ def add_calendar_months(start_date, months: int):
         try:
             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            raise ValueError(f"Invalid date '{start_date}' — expected YYYY-MM-DD")
+            raise ValueError(f"Invalid date '{start_date}' â€” expected YYYY-MM-DD")
     return start_date + relativedelta(months=months)
 
 
@@ -116,7 +116,7 @@ def calculate_cheque_expiry(cheque_date):
         try:
             cheque_date = datetime.strptime(cheque_date, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            raise ValueError(f"Invalid cheque_date '{cheque_date}' — expected YYYY-MM-DD")
+            raise ValueError(f"Invalid cheque_date '{cheque_date}' â€” expected YYYY-MM-DD")
     expiry = add_calendar_months(cheque_date, Config.TIMELINE['cheque_validity_months'])
     days_to_expiry = (expiry - cheque_date).days
     return expiry, days_to_expiry
@@ -137,7 +137,7 @@ def get_cause_of_action(notice_service_date, notice_status='delivered'):
         try:
             notice_service_date = datetime.strptime(notice_service_date, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            raise ValueError(f"Invalid notice_service_date '{notice_service_date}' — expected YYYY-MM-DD")
+            raise ValueError(f"Invalid notice_service_date '{notice_service_date}' â€” expected YYYY-MM-DD")
 
 
     cause_of_action = notice_service_date + timedelta(days=15)
@@ -177,7 +177,7 @@ def display_value(value, value_type='text'):
         if isinstance(value, float) and value != value:
             return ""
         if value_type == 'amount':
-            return f"₹{indian_number_format(value)}"
+            return f"â‚¹{indian_number_format(value)}"
         if value_type == 'score':
             return f"{value:.1f}/100"
         return str(value)
@@ -200,7 +200,7 @@ def display_value(value, value_type='text'):
         text = text.replace('Missing -', '')
         text = text.replace('outputs Present', 'outputs are available')
         text = re.sub(r'\s+', ' ', text).strip()
-        if not text or text.lower() in ['missing', 'none', 'n/a', '-', '—']:
+        if not text or text.lower() in ['missing', 'none', 'n/a', '-', 'â€”']:
             return ""
         return text
     if isinstance(value, list):
@@ -295,8 +295,8 @@ def format_legal_text(text: str, section: str = "") -> str:
     replacements = {
         "Missing written agreement": "Absence of written agreement",
         "Missing documentary proof": "Lack of documentary evidence of debt",
-        "written agreement — primary defence weakness": "Absence of a written agreement constitutes a primary defence vulnerability",
-        "documentary proof — primary defence weakness": "Lack of documentary evidence constitutes a primary defence vulnerability",
+        "written agreement â€” primary defence weakness": "Absence of a written agreement constitutes a primary defence vulnerability",
+        "documentary proof â€” primary defence weakness": "Lack of documentary evidence constitutes a primary defence vulnerability",
         "? Missing": "",
         "? Present": "Present",
         "? Moderate": "Moderate",
@@ -338,7 +338,7 @@ def generate_question_from_issue(issue_key):
         "bank_memo": "Is it correct that the bank dishonour memo is not available?",
         "witness_statement": "Is it correct that no witness statement has been filed?",
         "acknowledgment": "Is it correct that there is no acknowledgment of debt from the accused?",
-        "section_65b": "Is it correct that no Section 65B certificate has been filed for electronic evidence?",
+        "section_63": "Is it correct that no Section 63 certificate has been filed for electronic evidence?",
         "consideration_proof": "Is it correct that there is no proof of consideration for the cheque?",
         "cash_transaction": "Is it correct that this was a cash transaction with no verifiable documentary trail?"
     }
@@ -369,13 +369,13 @@ def remove_formatting_artifacts(text):
         return text
     text = text.replace('? ', '')
     text = text.replace('- ', '')
-    text = text.replace('⚠️', '')
-    text = text.replace('⚠', '')
-    text = text.replace('❌', '')
-    text = text.replace('⚡', '')
-    text = text.replace('🔴', '')
-    text = text.replace('✗', '')
-    text = text.replace('✓', '')
+    text = text.replace('âš ï¸', '')
+    text = text.replace('âš ', '')
+    text = text.replace('âŒ', '')
+    text = text.replace('âš¡', '')
+    text = text.replace('ðŸ”´', '')
+    text = text.replace('âœ—', '')
+    text = text.replace('âœ“', '')
     return text.strip()
 
 
@@ -547,17 +547,17 @@ def generate_actionable_suggestions(analysis: Dict, case_data: Dict) -> Dict:
                 'details': 'Even though case is ready, obtain written agreement/acknowledgment to strengthen your position and reduce cross-examination risk'
             })
         
-        if case_data.get('electronic_evidence_available') and not case_data.get('section_65b_certificate'):
+        if case_data.get('electronic_evidence_available') and not case_data.get('section_63_certificate'):
             suggestions['high_priority']['actions'].append({
-                'step': 'File Section 65B certificate for electronic evidence',
-                'details': 'Prepare and file Section 65B certificate for: (1) Email printouts, (2) WhatsApp screenshots, (3) Digital bank statements, (4) Any other electronic records'
+                'step': 'File Section 63 certificate for electronic evidence',
+                'details': 'Prepare and file Section 63 certificate for: (1) Email printouts, (2) WhatsApp screenshots, (3) Digital bank statements, (4) Any other electronic records'
             })
     
     # Add remaining high priority if less than 3
     if len(suggestions['high_priority']['actions']) < 3:
-        if case_data.get('electronic_evidence_available') and not case_data.get('section_65b_certificate'):
+        if case_data.get('electronic_evidence_available') and not case_data.get('section_63_certificate'):
             suggestions['high_priority']['actions'].append({
-                'step': 'Prepare Section 65B certificate for all electronic evidence',
+                'step': 'Prepare Section 63 certificate for all electronic evidence',
                 'details': 'Required for: emails, WhatsApp messages, digital statements, online banking records'
             })
     
@@ -567,7 +567,7 @@ def generate_actionable_suggestions(analysis: Dict, case_data: Dict) -> Dict:
         settlement_percentage = '70-80%' if score < 60 else '80-90%'
         suggestions['medium_priority']['actions'].append({
             'step': f'Attempt out-of-court settlement at {settlement_percentage} of cheque amount',
-            'details': f'Send strong legal notice demanding ₹{indian_number_format(cheque_amount * 0.8)} with clear deadline. Offer 2-3 installments with post-dated cheques as security. Settlement saves time and legal costs.'
+            'details': f'Send strong legal notice demanding â‚¹{indian_number_format(cheque_amount * 0.8)} with clear deadline. Offer 2-3 installments with post-dated cheques as security. Settlement saves time and legal costs.'
         })
     
     # Witness preparation
@@ -701,13 +701,13 @@ def format_timeline_transparency(timeline_data: Dict) -> Dict:
 
                     if notice <= notice_deadline:
                         transparent_timeline['compliance_display']['notice'] = {
-                            'status': '✅ COMPLIANT',
+                            'status': 'âœ… COMPLIANT',
                             'details': f'Notice issued {days_diff} days after dishonour',
                             'margin': f'{(notice_deadline - notice).days} days before expiry'
                         }
                     else:
                         transparent_timeline['compliance_display']['notice'] = {
-                            'status': '❌ BEYOND LIMITATION',
+                            'status': 'âŒ BEYOND LIMITATION',
                             'details': f'Notice issued {days_diff} days after dishonour',
                             'exceeded_by': f'{(notice - notice_deadline).days} days late'
                         }
@@ -745,28 +745,28 @@ def format_timeline_transparency(timeline_data: Dict) -> Dict:
 
                             days_premature = (cause_of_action - complaint).days
                             transparent_timeline['compliance_display']['complaint'] = {
-                                'status': '❌ PREMATURE FILING',
+                                'status': 'âŒ PREMATURE FILING',
                                 'details': f'Filed {days_premature} days BEFORE cause of action arose',
                                 'cause_of_action_date': cause_of_action.isoformat(),
-                                'impact': 'Fatal — complaint filed before 15-day payment period expired'
+                                'impact': 'Fatal â€” complaint filed before 15-day payment period expired'
                             }
                         elif complaint == cause_of_action:
 
                             transparent_timeline['compliance_display']['complaint'] = {
-                                'status': '⚠️ SAME-DAY FILING — BORDERLINE RISK',
+                                'status': 'âš ï¸ SAME-DAY FILING â€” BORDERLINE RISK',
                                 'details': 'Complaint filed on exact date cause of action arose',
                                 'cause_of_action_date': cause_of_action.isoformat(),
-                                'impact': 'Some courts require filing strictly AFTER cause of action — risk of dismissal'
+                                'impact': 'Some courts require filing strictly AFTER cause of action â€” risk of dismissal'
                             }
                         elif complaint <= complaint_deadline:
                             transparent_timeline['compliance_display']['complaint'] = {
-                                'status': '✅ WITHIN LIMITATION',
+                                'status': 'âœ… WITHIN LIMITATION',
                                 'details': f'Filed {days_from_coa} days after cause of action',
                                 'margin': f'{(complaint_deadline - complaint).days} days before expiry'
                             }
                         else:
                             transparent_timeline['compliance_display']['complaint'] = {
-                                'status': '❌ TIME BARRED',
+                                'status': 'âŒ TIME BARRED',
                                 'details': f'Filed {days_from_coa} days after cause of action',
                                 'exceeded_by': f'{(complaint - complaint_deadline).days} days late - FATAL'
                             }
@@ -904,7 +904,7 @@ def compute_court_statistics_from_kb(kb_data: pd.DataFrame) -> Dict[str, Dict]:
     if 'case_id' not in kb_data.columns:
         return {}
 
-    logger.info("📊 Computing ratio-based court statistics...")
+    logger.info("ðŸ“Š Computing ratio-based court statistics...")
 
     for idx, row in kb_data.iterrows():
         court_name = str(row.get('court_name', row.get('court_level', 'Generic Court')))
@@ -995,7 +995,7 @@ def compute_court_statistics_from_kb(kb_data: pd.DataFrame) -> Dict[str, Dict]:
             stats['confidence'] = 'HIGH' if total >= 20 else ('MEDIUM' if total >= 10 else 'LOW')
             stats['sample_size'] = total
 
-    logger.info(f"✅ Ratio-based statistics computed for {len(court_stats)} courts")
+    logger.info(f"âœ… Ratio-based statistics computed for {len(court_stats)} courts")
     return dict(court_stats)
 
 
@@ -1042,9 +1042,9 @@ def save_court_statistics_to_db(court_stats: Dict):
             ))
         conn.commit()
         conn.close()
-        logger.info(f"✅ Court statistics saved for {len(court_stats)} courts")
+        logger.info(f"âœ… Court statistics saved for {len(court_stats)} courts")
     except sqlite3.Error as e:
-        logger.error(f"❌ Failed to save court statistics: {e}")
+        logger.error(f"âŒ Failed to save court statistics: {e}")
 
 
 def analyze_judicial_behavior_fallback(court_location: Optional[str], kb_results: List[Dict]) -> Dict:
@@ -1057,7 +1057,7 @@ def analyze_judicial_behavior_fallback(court_location: Optional[str], kb_results
         'strategic_insights': [],
         'sample_size': 0,
         'confidence': 'LOW',
-        'confidence_note': 'Keyword heuristics — insufficient case data for this court'
+        'confidence_note': 'Keyword heuristics â€” insufficient case data for this court'
     }
 
     if not kb_results:
@@ -1114,7 +1114,7 @@ def analyze_judicial_behavior_fallback(court_location: Optional[str], kb_results
     behavior_analysis['confidence_note'] = (
         f"Based on {behavior_analysis['sample_size']} cases from knowledge base"
         if behavior_analysis['sample_size'] >= 10 else
-        'Insufficient case data — using keyword heuristics'
+        'Insufficient case data â€” using keyword heuristics'
     )
     behavior_analysis['warning'] = 'Heuristic analysis only - upgrade to structured data for accurate insights'
 
@@ -1153,7 +1153,7 @@ RISK_POINTS_SERVICE_WEAK = 15
 RISK_POINTS_JURISDICTION_INVALID = 20
 
 PENALTY_JURISDICTION = 20
-PENALTY_SECTION_65B = 10
+PENALTY_SECTION_63 = 10
 
 SCORE_SERVICE_EXCELLENT = 100
 SCORE_SERVICE_GOOD = 85
@@ -1279,7 +1279,7 @@ def safe_analysis(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            logger.error(f"❌ {func.__name__} failed: {str(e)}")
+            logger.error(f"âŒ {func.__name__} failed: {str(e)}")
             import traceback
             logger.debug(traceback.format_exc())
 
@@ -1326,7 +1326,7 @@ def _build_cross_exam_context(case_data: Dict) -> str:
     """Build a rich case context string for the Phi-2 prompt."""
     amount   = case_data.get('cheque_amount', 0)
     lines = [
-        f"Cheque Amount     : ₹{indian_number_format(amount)}",
+        f"Cheque Amount     : â‚¹{indian_number_format(amount)}",
         f"Cheque Number     : {case_data.get('cheque_number', 'Not provided')}",
         f"Cheque Date       : {case_data.get('cheque_date', 'Not provided')}",
         f"Bank              : {case_data.get('bank_name', 'Not provided')}",
@@ -1426,7 +1426,7 @@ Generate exactly {num_questions} sharp, specific cross-examination questions. Ea
 Focus your attack on:
 {attack_text}
 
-Format: Number each question. One question per line. Questions only — no explanations.
+Format: Number each question. One question per line. Questions only â€” no explanations.
 
 Output:
 1."""
@@ -1455,7 +1455,7 @@ def _parse_phi2_questions(response: str, num_questions: int) -> list:
             continue
 
 
-        cleaned = re.sub(r"^(Q?\d{1,2}[.):\-]\s*|[-•*]\s*)", "", line).strip()
+        cleaned = re.sub(r"^(Q?\d{1,2}[.):\-]\s*|[-â€¢*]\s*)", "", line).strip()
 
 
         if "?" in cleaned and len(cleaned) > 20:
@@ -1486,15 +1486,15 @@ def _build_summary_section(questions: list, witness_type: str, case_data: Dict) 
     themes = []
     q_text = " ".join(questions).lower()
     if any(w in q_text for w in ["agreement", "document", "proof", "ledger", "written"]):
-        themes.append("Documentary weakness — no written agreement or ledger")
+        themes.append("Documentary weakness â€” no written agreement or ledger")
     if any(w in q_text for w in ["security", "guarantee", "collateral"]):
-        themes.append("Security cheque defence — challenging purpose of issuance")
+        themes.append("Security cheque defence â€” challenging purpose of issuance")
     if any(w in q_text for w in ["notice", "postal", "received", "service", "address"]):
-        themes.append("Notice service — challenging proof of delivery")
+        themes.append("Notice service â€” challenging proof of delivery")
     if any(w in q_text for w in ["capacity", "income", "source", "funds", "afford"]):
-        themes.append("Financial capacity — questioning complainant's ability to lend ₹" + amount)
+        themes.append("Financial capacity â€” questioning complainant's ability to lend â‚¹" + amount)
     if any(w in q_text for w in ["date", "when", "time", "period", "15"]):
-        themes.append("Timeline — challenging dates and limitation compliance")
+        themes.append("Timeline â€” challenging dates and limitation compliance")
     if not themes:
         themes.append("General credibility and consistency of witness testimony")
 
@@ -1509,12 +1509,12 @@ def _build_summary_section(questions: list, witness_type: str, case_data: Dict) 
 
     objective = (
         f"These {len(questions)} questions are designed to cross-examine {label} "
-        f"in a ₹{amount} Section 138 case. "
+        f"in a â‚¹{amount} Section 138 case. "
     )
     if witness_type in ("complainant", "drawer"):
         if not has_agreement and not has_ledger:
             objective += (
-                "The primary attack is on the absence of documentary proof of the debt — "
+                "The primary attack is on the absence of documentary proof of the debt â€” "
                 "without a written agreement or ledger, the complainant cannot easily establish "
                 "a legally enforceable debt, which is a fundamental ingredient under Section 138."
             )
@@ -1539,7 +1539,7 @@ def _build_summary_section(questions: list, witness_type: str, case_data: Dict) 
         "primary_attack_themes": themes,
         "witness_role": label,
         "question_count": len(questions),
-        "note": "Summary derived from generated questions and case facts only — main analysis not re-run."
+        "note": "Summary derived from generated questions and case facts only â€” main analysis not re-run."
     }
 
 
@@ -1572,9 +1572,9 @@ def generate_cross_examination_questions(
 def _rule_based_fallback_questions(case_data: Dict, witness_type: str, num: int) -> list:
     """
     Deterministic fallback questions when Phi-2 is unavailable or returns garbage.
-    Built from case facts — always returns valid, legally grounded questions.
+    Built from case facts â€” always returns valid, legally grounded questions.
     """
-    amount  = f"₹{indian_number_format(case_data.get('cheque_amount', 0))}"
+    amount  = f"â‚¹{indian_number_format(case_data.get('cheque_amount', 0))}"
     bank    = case_data.get('bank_name', 'the bank')
     defence = case_data.get('defence_type', '')
     has_ag  = case_data.get('written_agreement_exists', False)
@@ -1585,9 +1585,9 @@ def _rule_based_fallback_questions(case_data: Dict, witness_type: str, num: int)
         "complainant": [
             f"Is it correct that you do not have any written agreement evidencing the loan of {amount}?",
             f"Can you produce the original bank statement showing the transfer of {amount} to the accused?",
-            "You have stated the cheque was issued towards repayment of a loan — when exactly was this loan given and in what form?",
+            "You have stated the cheque was issued towards repayment of a loan â€” when exactly was this loan given and in what form?",
             "Is it correct that no receipts, ledger entries, or acknowledgements were created at the time of the alleged transaction?",
-            f"The cheque dated {cheque_date} — was it issued on the same day as the alleged transaction or at a later date?",
+            f"The cheque dated {cheque_date} â€” was it issued on the same day as the alleged transaction or at a later date?",
             f"Did you retain any document signed by the accused acknowledging receipt of {amount}?",
             f"Is it not true that the notice dated {notice_date} was sent by ordinary post and not by registered AD post?",
             "Can you explain why no civil suit for recovery was filed despite claiming a legally enforceable debt?",
@@ -1596,7 +1596,7 @@ def _rule_based_fallback_questions(case_data: Dict, witness_type: str, num: int)
         ],
         "accused": [
             f"Is your signature on the cheque for {amount} genuine?",
-            f"You issued the cheque dated {cheque_date} — for what specific purpose was it issued?",
+            f"You issued the cheque dated {cheque_date} â€” for what specific purpose was it issued?",
             "Did you make any payment towards this debt after the cheque was dishonoured?",
             "Did you respond to the statutory notice within the 15-day period?",
             "Is it your case that the cheque was given as security? If so, please produce any document recording this arrangement.",
@@ -1604,7 +1604,7 @@ def _rule_based_fallback_questions(case_data: Dict, witness_type: str, num: int)
             "Why did you not make payment within 15 days of receiving the notice?",
         ],
         "bank_official": [
-            "Please produce the original dishonour memo — is the one you are relying on a certified copy?",
+            "Please produce the original dishonour memo â€” is the one you are relying on a certified copy?",
             "What was the exact reason recorded by the bank for returning the cheque?",
             "Was there any stop-payment instruction on the account at the time of presentation?",
             f"Was the cheque presented to {bank} within the cheque's validity period of 3 months?",
@@ -1615,7 +1615,7 @@ def _rule_based_fallback_questions(case_data: Dict, witness_type: str, num: int)
             "Were you personally present when the alleged loan was given?",
             "Did you witness the signing of any written agreement between the parties?",
             "What is your personal relationship with the complainant?",
-            "Are you able to identify the cheque in question — did you see it being issued?",
+            "Are you able to identify the cheque in question â€” did you see it being issued?",
             "Is your testimony based on what you personally saw or what you were told by the complainant?",
         ],
     }
@@ -1830,7 +1830,7 @@ def get_centralized_weights() -> Dict[str, float]:
 
     total = sum(weights.values())
     if abs(total - 1.0) > 0.01:
-        logger.warning(f"⚠️ Weights sum to {total}, normalizing to 1.0")
+        logger.warning(f"âš ï¸ Weights sum to {total}, normalizing to 1.0")
 
         if total > 0:
             for key in weights:
@@ -1855,7 +1855,7 @@ def validate_case_input(case_data: Dict) -> Tuple[bool, List[str]]:
 
     for field, label in required.items():
         if not case_data.get(field):
-            errors.append(f"❌ Missing required field: {label}")
+            errors.append(f"âŒ Missing required field: {label}")
 
     if errors:
         return (False, errors)
@@ -1870,26 +1870,26 @@ def validate_case_input(case_data: Dict) -> Tuple[bool, List[str]]:
     }
     case_type = case_type_mapping.get(case_type_raw)
     if not case_type:
-        errors.append(f"❌ Invalid case_type: '{case_data.get('case_type')}' - Use 'complainant' or 'accused'")
+        errors.append(f"âŒ Invalid case_type: '{case_data.get('case_type')}' - Use 'complainant' or 'accused'")
 
     try:
         amount = float(case_data['cheque_amount'])
         if amount <= 0:
-            errors.append("❌ Cheque amount must be positive (greater than 0)")
+            errors.append("âŒ Cheque amount must be positive (greater than 0)")
         if amount > 100_000_000_000:
-            errors.append("❌ Cheque amount exceeds reasonable limit (₹100 billion)")
+            errors.append("âŒ Cheque amount exceeds reasonable limit (â‚¹100 billion)")
         if amount < 1:
-            errors.append("❌ Cheque amount suspiciously low (minimum ₹1)")
+            errors.append("âŒ Cheque amount suspiciously low (minimum â‚¹1)")
     except (ValueError, TypeError) as e:
-        errors.append(f"❌ Invalid cheque amount format: {case_data.get('cheque_amount')} - {str(e)}")
+        errors.append(f"âŒ Invalid cheque amount format: {case_data.get('cheque_amount')} - {str(e)}")
 
     cheque_num = case_data.get('cheque_number', '')
     if not cheque_num or len(str(cheque_num).strip()) == 0:
-        errors.append("❌ Cheque number cannot be empty")
+        errors.append("âŒ Cheque number cannot be empty")
 
     bank = case_data.get('bank_name', '')
     if not bank or len(str(bank).strip()) < 2:
-        errors.append("❌ Bank name must be at least 2 characters")
+        errors.append("âŒ Bank name must be at least 2 characters")
 
     date_fields = {
         'transaction_date': 'Transaction date',
@@ -1914,16 +1914,16 @@ def validate_case_input(case_data: Dict) -> Tuple[bool, List[str]]:
                 elif hasattr(date_val, 'year'):
                     parsed_dates[field] = date_val
                 else:
-                    errors.append(f"❌ {label}: Invalid date format (use YYYY-MM-DD)")
+                    errors.append(f"âŒ {label}: Invalid date format (use YYYY-MM-DD)")
             except (ValueError, TypeError):
-                errors.append(f"❌ {label}: Invalid date format '{date_val}' (use YYYY-MM-DD)")
+                errors.append(f"âŒ {label}: Invalid date format '{date_val}' (use YYYY-MM-DD)")
 
     if len(parsed_dates) >= 3:
         today = datetime.now().date()
 
         for field, date_val in parsed_dates.items():
             if date_val > today:
-                errors.append(f"❌ {date_fields[field]} cannot be in the future ({date_val})")
+                errors.append(f"âŒ {date_fields[field]} cannot be in the future ({date_val})")
 
         sequence_checks = [
             ('transaction_date', 'cheque_date', 'Transaction date must be before cheque date'),
@@ -1937,14 +1937,14 @@ def validate_case_input(case_data: Dict) -> Tuple[bool, List[str]]:
         for earlier, later, message in sequence_checks:
             if earlier in parsed_dates and later in parsed_dates:
                 if parsed_dates[earlier] > parsed_dates[later]:
-                    errors.append(f"❌ {message}: {parsed_dates[earlier]} > {parsed_dates[later]}")
+                    errors.append(f"âŒ {message}: {parsed_dates[earlier]} > {parsed_dates[later]}")
 
         if 'dishonour_date' in parsed_dates and 'notice_date' in parsed_dates:
 
             notice_deadline = add_calendar_months(parsed_dates['dishonour_date'], 1)
             if parsed_dates['notice_date'] > notice_deadline:
                 notice_gap = (parsed_dates['notice_date'] - parsed_dates['dishonour_date']).days
-                errors.append(f"⚠️ CRITICAL: Notice sent {notice_gap} days after dishonour (deadline was {notice_deadline})")
+                errors.append(f"âš ï¸ CRITICAL: Notice sent {notice_gap} days after dishonour (deadline was {notice_deadline})")
 
         if 'notice_date' in parsed_dates and 'complaint_filed_date' in parsed_dates:
 
@@ -1960,17 +1960,17 @@ def validate_case_input(case_data: Dict) -> Tuple[bool, List[str]]:
             if parsed_dates['complaint_filed_date'] < cause_of_action:
                 days_premature = (cause_of_action - parsed_dates['complaint_filed_date']).days
                 errors.append(
-                    f"⚠️ FATAL: Complaint filed {days_premature} days BEFORE cause of action "
-                    f"(cause of action arises on {cause_of_action} — 15 days after notice service)"
+                    f"âš ï¸ FATAL: Complaint filed {days_premature} days BEFORE cause of action "
+                    f"(cause of action arises on {cause_of_action} â€” 15 days after notice service)"
                 )
             elif parsed_dates['complaint_filed_date'] == cause_of_action:
                 errors.append(
-                    f"⚠️ WARNING: Complaint filed on same day as cause of action ({cause_of_action}). "
-                    f"Some courts treat this as premature — borderline legal risk."
+                    f"âš ï¸ WARNING: Complaint filed on same day as cause of action ({cause_of_action}). "
+                    f"Some courts treat this as premature â€” borderline legal risk."
                 )
             elif parsed_dates['complaint_filed_date'] > complaint_deadline:
                 complaint_gap = (parsed_dates['complaint_filed_date'] - cause_of_action).days
-                errors.append(f"⚠️ CRITICAL: Complaint filed {complaint_gap} days after cause of action (deadline was {complaint_deadline})")
+                errors.append(f"âš ï¸ CRITICAL: Complaint filed {complaint_gap} days after cause of action (deadline was {complaint_deadline})")
 
     boolean_fields = [
         'is_company_case', 'directors_impleaded', 'return_memo_available',
@@ -1981,33 +1981,33 @@ def validate_case_input(case_data: Dict) -> Tuple[bool, List[str]]:
         if field in case_data:
             val = case_data[field]
             if not isinstance(val, bool) and val not in [0, 1, '0', '1', 'true', 'false', 'True', 'False']:
-                errors.append(f"⚠️ {field} should be boolean (true/false)")
+                errors.append(f"âš ï¸ {field} should be boolean (true/false)")
 
 
     """
     BEFORE (v9.8 OLD):
-    - Section 65B check was optional
+    - Section 63 check was optional
     - Could proceed with electronic evidence without certificate
     - Only marked as CRITICAL, not FATAL
 
     AFTER (v9.8 ENHANCED):
-    - Section 65B certificate MANDATORY if electronic evidence
+    - Section 63 certificate MANDATORY if electronic evidence
     - NO override allowed - FATAL defect
     - Evidence inadmissible without certificate (Anvar P.V. precedent)
     """
     if case_data.get('electronic_evidence', False):
-        has_65b_certificate = case_data.get('section_65b_certificate', False)
+        has_63_certificate = case_data.get('section_63_certificate', False)
 
-        if not has_65b_certificate:
+        if not has_63_certificate:
             errors.append({
                 'type': 'FATAL_DEFECT',
-                'field': 'section_65b_certificate',
+                'field': 'section_63_certificate',
                 'severity': 'FATAL',
-                'message': '❌ FATAL: Electronic evidence present but Section 65B certificate MISSING',
-                'legal_basis': 'Section 65B Evidence Act - Anvar P.V. v. P.K. Basheer (2014)',
+                'message': 'âŒ FATAL: Electronic evidence present but Section 63 certificate MISSING',
+                'legal_basis': 'Section 63 Evidence Act - Anvar P.V. v. P.K. Basheer (2014)',
                 'impact': 'Electronic evidence INADMISSIBLE - NO OVERRIDE ALLOWED',
                 'consequence': 'All electronic evidence (emails, SMS, WhatsApp, digital records) will be EXCLUDED',
-                'remedy': 'Obtain Section 65B certificate from device/server custodian before filing',
+                'remedy': 'Obtain Section 63 certificate from device/server custodian before filing',
                 'strict_enforcement': True,
                 'override_allowed': False
             })
@@ -2016,13 +2016,13 @@ def validate_case_input(case_data: Dict) -> Tuple[bool, List[str]]:
 
     if case_data.get('is_company_case'):
         if not case_data.get('company_name'):
-            errors.append("⚠️ Company case but company_name not provided")
+            errors.append("âš ï¸ Company case but company_name not provided")
         if not case_data.get('directors_impleaded'):
-            errors.append("⚠️ CRITICAL: Company case without directors impleaded - Section 141 violation risk")
+            errors.append("âš ï¸ CRITICAL: Company case without directors impleaded - Section 141 violation risk")
 
     doc_fields = ['original_cheque_available', 'return_memo_available', 'postal_proof_available']
     if not any(case_data.get(f) for f in doc_fields):
-        errors.append("⚠️ WARNING: No primary documentary evidence marked as available")
+        errors.append("âš ï¸ WARNING: No primary documentary evidence marked as available")
 
     is_valid = len(errors) == 0
 
@@ -2152,7 +2152,7 @@ def compute_unified_timeline(case_data: Dict) -> Dict:
     return timeline_obj
 
 def apply_fatal_override(score: float, fatal_defects: List[Dict]) -> Tuple[float, str]:
-    """NON-NEGOTIABLE: If any fatal defect → force low score + DO NOT FILE"""
+    """NON-NEGOTIABLE: If any fatal defect â†’ force low score + DO NOT FILE"""
     if not fatal_defects or len(fatal_defects) == 0:
         if score >= 70:
             return score, "READY TO FILE"
@@ -2189,15 +2189,15 @@ def apply_fatal_override(score: float, fatal_defects: List[Dict]) -> Tuple[float
     )
 
     if has_catastrophic or has_timeline_defect:
-        logger.warning(f"🚨 CATASTROPHIC FATAL DEFECT: Score forced to {FATAL_CAP_CATASTROPHIC}")
+        logger.warning(f"ðŸš¨ CATASTROPHIC FATAL DEFECT: Score forced to {FATAL_CAP_CATASTROPHIC}")
         return FATAL_CAP_CATASTROPHIC, "DO NOT FILE - FATAL DEFECT DETECTED"
 
     if has_critical or len(fatal_defects) >= 2:
-        logger.warning(f"🚨 CRITICAL FATAL DEFECTS ({len(fatal_defects)}): Score capped at {FATAL_CAP_UNIFIED}")
+        logger.warning(f"ðŸš¨ CRITICAL FATAL DEFECTS ({len(fatal_defects)}): Score capped at {FATAL_CAP_UNIFIED}")
         return min(score, FATAL_CAP_UNIFIED), "DO NOT FILE - FATAL DEFECT DETECTED"
 
     if len(fatal_defects) == 1:
-        logger.info(f"⚠️ Single fatal defect: Score capped at {FATAL_CAP_UNIFIED}")
+        logger.info(f"âš ï¸ Single fatal defect: Score capped at {FATAL_CAP_UNIFIED}")
         return min(score, FATAL_CAP_UNIFIED), "DO NOT FILE - FATAL DEFECT DETECTED"
 
     return score, "FILE WITH CAUTION"
@@ -2208,7 +2208,7 @@ def safe_calculation(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            logger.error(f"❌ Calculation error in {func.__name__}: {e}")
+            logger.error(f"âŒ Calculation error in {func.__name__}: {e}")
 
             return {
                 'error': True,
@@ -2223,7 +2223,7 @@ def calculate_notice_deadline(dishonour_date):
         try:
             dishonour_date = datetime.strptime(dishonour_date, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            raise ValueError(f"Invalid dishonour_date '{dishonour_date}' — expected YYYY-MM-DD")
+            raise ValueError(f"Invalid dishonour_date '{dishonour_date}' â€” expected YYYY-MM-DD")
     deadline = add_calendar_months(dishonour_date, 1)
     return deadline
 
@@ -2248,11 +2248,11 @@ def module_exists(analysis: Dict, module_name: str) -> bool:
 def validate_module_output(module_name: str, output: Dict) -> bool:
 
     if not output:
-        logger.error(f"❌ Module {module_name}: No output")
+        logger.error(f"âŒ Module {module_name}: No output")
         return False
 
     if 'error' in output:
-        logger.error(f"❌ Module {module_name}: Error - {output.get('message')}")
+        logger.error(f"âŒ Module {module_name}: Error - {output.get('message')}")
         return False
 
     return True
@@ -2453,7 +2453,7 @@ def adjust_weights_contextually(
         adjusted['liability'] -= reduction
         adjusted['procedural'] -= reduction
 
-        explanations.append(f"High-value case (₹{cheque_amount/100000:.1f}L): Documentary weight +10%")
+        explanations.append(f"High-value case (â‚¹{cheque_amount/100000:.1f}L): Documentary weight +10%")
 
     if is_company_case:
         adj_factor = 0.05
@@ -2553,13 +2553,13 @@ def validate_case_input_strict(case_data: Dict) -> Tuple[bool, List[str], Dict]:
     """
     Validate case input and split issues into two buckets:
 
-    HARD ERRORS  → block analysis entirely (truly impossible to proceed)
+    HARD ERRORS  â†’ block analysis entirely (truly impossible to proceed)
       - Missing required fields
       - Invalid data types
       - Impossible date sequences (cheque after dishonour, etc.)
       - Unparseable dates
 
-    SOFT WARNINGS → proceed with caution, included in response
+    SOFT WARNINGS â†’ proceed with caution, included in response
       - Future dates (pre-filing a complaint is legitimate)
       - Very old dates
       - Missing optional fields (complaint_filed_date, etc.)
@@ -2623,7 +2623,7 @@ def validate_case_input_strict(case_data: Dict) -> Tuple[bool, List[str], Dict]:
             if field not in optional_dates:
                 errors.append(f"MISSING required date: '{field}'")
             else:
-                warnings.append(f"⚠️ '{field}' not provided — related analysis will be skipped")
+                warnings.append(f"âš ï¸ '{field}' not provided â€” related analysis will be skipped")
             continue
 
         try:
@@ -2635,21 +2635,21 @@ def validate_case_input_strict(case_data: Dict) -> Tuple[bool, List[str], Dict]:
 
             if days_diff > 1:
                 warnings.append(
-                    f"⚠️ '{field}' is {days_diff} days in the future ({parsed}) — "
+                    f"âš ï¸ '{field}' is {days_diff} days in the future ({parsed}) â€” "
                     f"analysis proceeds with provided date"
                 )
 
 
             if parsed.year < 2000:
                 warnings.append(
-                    f"⚠️ '{field}' year {parsed.year} is before 2000 — verify this is correct"
+                    f"âš ï¸ '{field}' year {parsed.year} is before 2000 â€” verify this is correct"
                 )
 
             parsed_dates[field] = parsed
             sanitized[field] = parsed.isoformat()
 
         except Exception:
-            errors.append(f"INVALID DATE FORMAT: '{field}' — use YYYY-MM-DD")
+            errors.append(f"INVALID DATE FORMAT: '{field}' â€” use YYYY-MM-DD")
 
 
     if 'cheque_date' in parsed_dates and 'dishonour_date' in parsed_dates:
@@ -2666,13 +2666,13 @@ def validate_case_input_strict(case_data: Dict) -> Tuple[bool, List[str], Dict]:
 
 
     if 'complaint_filed_date' not in parsed_dates:
-        warnings.append("⚠️ 'complaint_filed_date' not provided — limitation period analysis will be partial")
+        warnings.append("âš ï¸ 'complaint_filed_date' not provided â€” limitation period analysis will be partial")
 
     if not case_data.get('return_memo_available'):
-        warnings.append("⚠️ Return memo not marked available — documentary strength will be reduced")
+        warnings.append("âš ï¸ Return memo not marked available â€” documentary strength will be reduced")
 
     if not case_data.get('postal_proof_available'):
-        warnings.append("⚠️ Postal proof not provided — notice service presumption may be challenged")
+        warnings.append("âš ï¸ Postal proof not provided â€” notice service presumption may be challenged")
 
 
     case_type_raw = case_data.get('case_type', '').strip().lower()
@@ -2697,16 +2697,16 @@ def validate_case_input_strict(case_data: Dict) -> Tuple[bool, List[str], Dict]:
         if any(kw in case_type_raw for kw in ('complain', 'plaintiff', 'recover', 'petitioner')):
             case_type = 'complainant'
             warnings.append(
-                f"⚠️ case_type '{case_data.get('case_type')}' auto-mapped to 'complainant'"
+                f"âš ï¸ case_type '{case_data.get('case_type')}' auto-mapped to 'complainant'"
             )
         elif any(kw in case_type_raw for kw in ('accus', 'defend', 'respond')):
             case_type = 'accused'
             warnings.append(
-                f"⚠️ case_type '{case_data.get('case_type')}' auto-mapped to 'accused'"
+                f"âš ï¸ case_type '{case_data.get('case_type')}' auto-mapped to 'accused'"
             )
         else:
             errors.append(
-                f"INVALID case_type: '{case_data.get('case_type')}' — "
+                f"INVALID case_type: '{case_data.get('case_type')}' â€” "
                 f"use 'complainant' or 'accused'"
             )
     else:
@@ -2776,7 +2776,7 @@ def safe_module_execution(module_func, *args, **kwargs) -> Dict:
         return module_func(*args, **kwargs)
     except Exception as e:
         _trace = _tb.format_exc()
-        logger.error(f"❌ Module {module_func.__name__} failed: {e}")
+        logger.error(f"âŒ Module {module_func.__name__} failed: {e}")
         logger.error(f"Traceback:\n{_trace}")
         return {
             'error': True,
@@ -2887,7 +2887,7 @@ ISSUE_SEVERITY = {
     'wrong_jurisdiction': 'FATAL',
     'cheque_after_validity': 'FATAL',
     'no_specific_averment': 'FATAL',
-    'section_65b_missing': 'FATAL',
+    'section_63_missing': 'FATAL',
     'no_debt_proof': 'MAJOR',
     'notice_defect': 'MAJOR',
     'signature_disputed': 'MAJOR',
@@ -2943,7 +2943,7 @@ def get_calibrated_weights() -> Dict[str, float]:
             'dishonour': 15
         }
 
-        logger.info(f"📊 Data-calibrated weights: debt={debt_rate:.1f}% → {_calibrated_weights_cache['debt']:.0f}, notice={notice_rate:.1f}% → {_calibrated_weights_cache['notice']:.0f}")
+        logger.info(f"ðŸ“Š Data-calibrated weights: debt={debt_rate:.1f}% â†’ {_calibrated_weights_cache['debt']:.0f}, notice={notice_rate:.1f}% â†’ {_calibrated_weights_cache['notice']:.0f}")
         return _calibrated_weights_cache
 
     except Exception as e:
@@ -3093,7 +3093,7 @@ class CaseAnalysisRequest(BaseModel):
 
     cheque_amount: float = Field(
         ...,
-        description="Face value of the cheque in INR (e.g. 500000 for ₹5,00,000)",
+        description="Face value of the cheque in INR (e.g. 500000 for â‚¹5,00,000)",
         examples=[500000]
     )
     cheque_number: str = Field(
@@ -3255,7 +3255,7 @@ class CaseAnalysisRequest(BaseModel):
     case_summary: Optional[str] = Field(
         None,
         description="Brief narrative of the case facts in plain language. Used for cross-examination risk and context.",
-        examples=["Accused borrowed ₹5,00,000 as a friendly loan and issued a cheque for repayment. Cheque dishonoured due to insufficient funds."]
+        examples=["Accused borrowed â‚¹5,00,000 as a friendly loan and issued a cheque for repayment. Cheque dishonoured due to insufficient funds."]
     )
 
     model_config = {
@@ -3293,7 +3293,7 @@ class CaseAnalysisRequest(BaseModel):
                 "civil_suit_pending": False,
                 "insolvency_proceedings": False,
                 "defence_type": "security_cheque",
-                "case_summary": "Accused borrowed ₹5,00,000 as a friendly loan in December 2025 and issued a cheque for repayment. Cheque dishonoured due to insufficient funds."
+                "case_summary": "Accused borrowed â‚¹5,00,000 as a friendly loan in December 2025 and issued a cheque for repayment. Cheque dishonoured due to insufficient funds."
             }
         }
     }
@@ -3301,7 +3301,7 @@ class CaseAnalysisRequest(BaseModel):
 
     user_email: Optional[str] = Field(
         None,
-        description="User email from Firebase Auth — required for per-user daily limit enforcement.",
+        description="User email from Firebase Auth â€” required for per-user daily limit enforcement.",
         examples=["lawyer@example.com"]
     )
 
@@ -3328,7 +3328,7 @@ class CrossExaminationRequest(BaseModel):
     """
     case_data: Dict = Field(
         ...,
-        description="Case details — same structure as /analyze-case request body",
+        description="Case details â€” same structure as /analyze-case request body",
         examples=[{
             "case_type": "complainant",
             "cheque_amount": 500000,
@@ -3344,7 +3344,7 @@ class CrossExaminationRequest(BaseModel):
             "postal_proof_available": True,
             "debt_nature": "loan",
             "defence_type": "security_cheque",
-            "case_summary": "Accused borrowed ₹5,00,000 as a friendly loan and issued a cheque for repayment."
+            "case_summary": "Accused borrowed â‚¹5,00,000 as a friendly loan and issued a cheque for repayment."
         }]
     )
     witness_type: str = Field(
@@ -3361,7 +3361,7 @@ class CrossExaminationRequest(BaseModel):
     )
     num_questions: int = Field(
         5,
-        description="Number of questions to generate (5–15)",
+        description="Number of questions to generate (5â€“15)",
         ge=5,
         le=15
     )
@@ -3384,7 +3384,7 @@ class CrossExaminationRequest(BaseModel):
                     "postal_proof_available": True,
                     "debt_nature": "loan",
                     "defence_type": "security_cheque",
-                    "case_summary": "Accused borrowed ₹5,00,000 as a friendly loan and issued a cheque for repayment."
+                    "case_summary": "Accused borrowed â‚¹5,00,000 as a friendly loan and issued a cheque for repayment."
                 },
                 "witness_type": "complainant",
                 "num_questions": 5
@@ -3419,12 +3419,12 @@ def init_analytics_db():
     Initialize the JUDIQ SQLite database.
 
     Creates all 6 tables (idempotent - safe to call on every startup):
-      1. case_analyses      — one row per analysis run
-      2. court_intelligence — judicial behaviour per court/judge
-      3. case_history       — audit trail of events per case
-      4. api_usage_log      — request/response logging
-      5. knowledge_base     — legal KB entries (sections, provisions, judgments)
-      6. court_statistics   — aggregated conviction/acquittal rates per court
+      1. case_analyses      â€” one row per analysis run
+      2. court_intelligence â€” judicial behaviour per court/judge
+      3. case_history       â€” audit trail of events per case
+      4. api_usage_log      â€” request/response logging
+      5. knowledge_base     â€” legal KB entries (sections, provisions, judgments)
+      6. court_statistics   â€” aggregated conviction/acquittal rates per court
 
     DB location: DATA_DIR / "case_analysis" / "judiq.db"
     (Google Drive if mounted in Colab, local otherwise)
@@ -3466,7 +3466,7 @@ def init_analytics_db():
 
     try:
         cursor.execute("ALTER TABLE case_analyses ADD COLUMN user_email TEXT")
-        logger.info("✅ Migration: added user_email column to case_analyses")
+        logger.info("âœ… Migration: added user_email column to case_analyses")
     except sqlite3.OperationalError:
         pass
 
@@ -3590,7 +3590,7 @@ def init_analytics_db():
     conn.commit()
     conn.close()
 
-    logger.info(f"✅ JUDIQ database ready  |  path: {analytics_db_path}")
+    logger.info(f"âœ… JUDIQ database ready  |  path: {analytics_db_path}")
     logger.info("   Tables: case_analyses, court_intelligence, case_history, "
                 "api_usage_log, knowledge_base, court_statistics, draft_logs")
 
@@ -3655,7 +3655,7 @@ def _download_kb_from_gdrive(file_id: str, dest_path: Path) -> bool:
 
     direct_url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
     try:
-        print(f"📥 Downloading KB from Google Drive (file ID: {file_id[:12]}...)...")
+        print(f"ðŸ“¥ Downloading KB from Google Drive (file ID: {file_id[:12]}...)...")
         req = urllib.request.Request(
             direct_url,
             headers={
@@ -3683,13 +3683,13 @@ def _download_kb_from_gdrive(file_id: str, dest_path: Path) -> bool:
             with open(dest_path, 'w', encoding='utf-8') as f:
                 f.write(decoded)
             size_kb = dest_path.stat().st_size // 1024
-            print(f"✅ KB downloaded: {dest_path.name} ({size_kb} KB)")
+            print(f"âœ… KB downloaded: {dest_path.name} ({size_kb} KB)")
             return True
         else:
-            logger.warning("⚠️ Download returned non-CSV content — trying API method")
+            logger.warning("âš ï¸ Download returned non-CSV content â€” trying API method")
 
     except Exception as e:
-        logger.warning(f"⚠️ Direct download failed: {e} — trying API method")
+        logger.warning(f"âš ï¸ Direct download failed: {e} â€” trying API method")
 
 
     api_key = CONFIG.get("GDRIVE_API_KEY", "")
@@ -3705,10 +3705,10 @@ def _download_kb_from_gdrive(file_id: str, dest_path: Path) -> bool:
             with open(dest_path, 'w', encoding='utf-8') as f:
                 f.write(raw)
             size_kb = dest_path.stat().st_size // 1024
-            print(f"✅ KB downloaded via API: {dest_path.name} ({size_kb} KB)")
+            print(f"âœ… KB downloaded via API: {dest_path.name} ({size_kb} KB)")
             return True
     except Exception as e:
-        logger.error(f"❌ API download also failed: {e}")
+        logger.error(f"âŒ API download also failed: {e}")
 
     return False
 
@@ -3733,7 +3733,7 @@ def load_kb():
 
     To enable:
       1. Upload cheque_bounce_kb.csv to Google Drive
-      2. Share it: "Anyone with the link → Viewer"
+      2. Share it: "Anyone with the link â†’ Viewer"
       3. Copy the file ID from the URL
       4. Set GDRIVE_FILE_ID=<your-file-id> in Render environment variables
     """
@@ -3751,10 +3751,10 @@ def load_kb():
                 if len(df) > 1:
                     kb_data = df
                     kb_loaded = True
-                    print(f"✅ KB loaded from local cache: {len(df)} rows ({age_hours:.1f}h old)")
+                    print(f"âœ… KB loaded from local cache: {len(df)} rows ({age_hours:.1f}h old)")
                     return True
             except Exception as e:
-                logger.warning(f"⚠️ Local KB read failed: {e}")
+                logger.warning(f"âš ï¸ Local KB read failed: {e}")
 
 
     file_id = CONFIG.get("GDRIVE_FILE_ID", "").strip()
@@ -3766,7 +3766,7 @@ def load_kb():
                 if len(df) > 1:
                     kb_data = df
                     kb_loaded = True
-                    print(f"✅ KB loaded from Google Drive: {len(df)} rows")
+                    print(f"âœ… KB loaded from Google Drive: {len(df)} rows")
 
 
                     if 'case_id' in df.columns or 'court_name' in df.columns:
@@ -3774,19 +3774,19 @@ def load_kb():
                             court_stats = compute_court_statistics_from_kb(df)
                             if court_stats:
                                 save_court_statistics_to_db(court_stats)
-                                print(f"✅ Court statistics computed: {len(court_stats)} courts")
+                                print(f"âœ… Court statistics computed: {len(court_stats)} courts")
                         except Exception as e:
-                            logger.warning(f"⚠️ Court stats computation failed: {e}")
+                            logger.warning(f"âš ï¸ Court stats computation failed: {e}")
                     return True
                 else:
-                    logger.warning("⚠️ Downloaded KB has ≤1 rows — using fallback")
+                    logger.warning("âš ï¸ Downloaded KB has â‰¤1 rows â€” using fallback")
             except Exception as e:
-                logger.error(f"❌ KB CSV parse failed: {e}")
+                logger.error(f"âŒ KB CSV parse failed: {e}")
         else:
-            logger.warning("⚠️ Google Drive download failed — using minimal fallback")
+            logger.warning("âš ï¸ Google Drive download failed â€” using minimal fallback")
     else:
-        print("⚠️  GDRIVE_FILE_ID not set — using minimal KB fallback")
-        print("   → Set GDRIVE_FILE_ID env var on Render to enable full KB")
+        print("âš ï¸  GDRIVE_FILE_ID not set â€” using minimal KB fallback")
+        print("   â†’ Set GDRIVE_FILE_ID env var on Render to enable full KB")
 
 
     kb_data = _minimal_kb_fallback()
@@ -3795,7 +3795,7 @@ def load_kb():
 
 
 def search_kb(query: str, top_k: int = 5, category_filter: str = None, **kwargs) -> list:
-    """KB search disabled on Render — returns empty list (no embedding model)."""
+    """KB search disabled on Render â€” returns empty list (no embedding model)."""
     return []
 
 
@@ -4126,7 +4126,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
             timeline_analysis['timeline_chart'].append({
                 'date': cheque_date.strftime('%Y-%m-%d'),
                 'event': 'Cheque Issued',
-                'status': '✅',
+                'status': 'âœ…',
                 'marker': 'GREEN'
             })
 
@@ -4139,9 +4139,9 @@ def analyze_timeline(case_data: Dict) -> Dict:
                     'impact': 'Fatal defect - case will be dismissed',
                     'rule': 'Negotiable Instruments Act - Cheque validity 3 months from date'
                 })
-                timeline_analysis['compliance_status']['cheque_validity'] = '❌ FAILED (FATAL)'
+                timeline_analysis['compliance_status']['cheque_validity'] = 'âŒ FAILED (FATAL)'
             else:
-                timeline_analysis['compliance_status']['cheque_validity'] = '✅ COMPLIANT'
+                timeline_analysis['compliance_status']['cheque_validity'] = 'âœ… COMPLIANT'
                 timeline_analysis['calculation_log'].append({
                     'rule': 'Presentation within validity',
                     'check': f'Presentation {presentation_date} <= Validity end {cheque_validity_end}',
@@ -4152,14 +4152,14 @@ def analyze_timeline(case_data: Dict) -> Dict:
             timeline_analysis['timeline_chart'].append({
                 'date': presentation_date.strftime('%Y-%m-%d'),
                 'event': 'Cheque Presented',
-                'status': '✅'
+                'status': 'âœ…'
             })
 
         if dishonour_date:
             timeline_analysis['timeline_chart'].append({
                 'date': dishonour_date.strftime('%Y-%m-%d'),
                 'event': f"Dishonoured - {case_data.get('dishonour_reason', 'Reason unknown')}",
-                'status': '⚠️'
+                'status': 'âš ï¸'
             })
 
         if dishonour_date and notice_date:
@@ -4186,14 +4186,14 @@ def analyze_timeline(case_data: Dict) -> Dict:
                     timeline_analysis['critical_dates']['notice_deadline'] = notice_deadline.strftime('%Y-%m-%d')
 
                     if notice_date <= notice_deadline:
-                        timeline_analysis['compliance_status']['notice_timing'] = f'✅ COMPLIANT ({days_to_notice} days, deadline: {notice_deadline.strftime("%Y-%m-%d")})'
+                        timeline_analysis['compliance_status']['notice_timing'] = f'âœ… COMPLIANT ({days_to_notice} days, deadline: {notice_deadline.strftime("%Y-%m-%d")})'
                         timeline_analysis['timeline_chart'].append({
                             'date': notice_date.strftime('%Y-%m-%d'),
                             'event': f'Notice Sent (Day {days_to_notice}, within limit)',
-                            'status': '✅'
+                            'status': 'âœ…'
                         })
                     else:
-                        timeline_analysis['compliance_status']['notice_timing'] = f'❌ DELAYED ({days_to_notice} days)'
+                        timeline_analysis['compliance_status']['notice_timing'] = f'âŒ DELAYED ({days_to_notice} days)'
                         timeline_analysis['limitation_risk'] = 'EXPIRED'
                         timeline_analysis['deterministic_score'] = 0
                         timeline_analysis['risk_markers'].append({
@@ -4206,7 +4206,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
                         timeline_analysis['timeline_chart'].append({
                             'date': notice_date.strftime('%Y-%m-%d'),
                             'event': f'Notice Sent (Day {days_to_notice}/30) - TIME-BARRED',
-                            'status': '❌'
+                            'status': 'âŒ'
                         })
             except Exception as e:
                 logger.error(f"Error calculating notice timing: {e}")
@@ -4229,18 +4229,18 @@ def analyze_timeline(case_data: Dict) -> Dict:
             timeline_analysis['timeline_chart'].append({
                 'date': notice_received_date.strftime('%Y-%m-%d'),
                 'event': 'Notice Received',
-                'status': '✅'
+                'status': 'âœ…'
             })
             timeline_analysis['timeline_chart'].append({
                 'date': fifteen_day_expiry.strftime('%Y-%m-%d'),
                 'event': '15-Day Payment Period Expired (Cause of Action)',
-                'status': '⚠️'
+                'status': 'âš ï¸'
             })
         elif notice_date:
             timeline_analysis['edge_cases_detected'].append({
                 'case': 'Notice Service Date Not Provided',
                 'severity': 'HIGH',
-                'rule': '⚠️ MANUAL VERIFICATION REQUIRED',
+                'rule': 'âš ï¸ MANUAL VERIFICATION REQUIRED',
                 'legal_principle': 'Deemed service varies: postal endorsement/refusal/unclaimed/General Clauses Act',
                 'action_required': 'CRITICAL: Obtain postal records before calculating limitation',
                 'options': [
@@ -4254,7 +4254,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
             })
 
             timeline_analysis['critical_dates']['notice_service_status'] = 'UNVERIFIED'
-            timeline_analysis['compliance_status']['notice_service'] = '⚠️ VERIFICATION REQUIRED'
+            timeline_analysis['compliance_status']['notice_service'] = 'âš ï¸ VERIFICATION REQUIRED'
             timeline_analysis['limitation_risk'] = 'CANNOT ASSESS'
 
         if complaint_filed_date and 'fifteen_day_expiry' in timeline_analysis['critical_dates']:
@@ -4281,7 +4281,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
                     timeline_analysis['refiling_window'] = {
                         'available':           False,
                         'days_remaining':      0,
-                        'message':             'Limitation period expired — refiling not possible without condonation application',
+                        'message':             'Limitation period expired â€” refiling not possible without condonation application',
                         'urgency':             'CRITICAL',
                     }
 
@@ -4291,7 +4291,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
 
                 days_premature = (cause_of_action - complaint_filed_date).days
                 timeline_analysis['compliance_status']['limitation'] = (
-                    f'❌ PREMATURE FILING — complaint filed {days_premature} days before '
+                    f'âŒ PREMATURE FILING â€” complaint filed {days_premature} days before '
                     f'cause of action arose ({cause_of_action.strftime("%Y-%m-%d")})'
                 )
                 timeline_analysis['limitation_risk'] = 'CRITICAL'
@@ -4316,7 +4316,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
                     f"Section 138(b) NI Act: Cause of action arises ONLY after the 15-day payment "
                     f"period expires from notice receipt. Notice received: {case_data.get('notice_received_date', '?')}. "
                     f"Cause of action date: {cause_of_action.strftime('%d %B %Y')}. "
-                    f"Complaint filed: {complaint_filed_date.strftime('%d %B %Y')} — "
+                    f"Complaint filed: {complaint_filed_date.strftime('%d %B %Y')} â€” "
                     f"{days_premature} day(s) BEFORE cause of action. Not maintainable."
                 )
                 timeline_analysis['can_refile'] = True
@@ -4326,13 +4326,13 @@ def analyze_timeline(case_data: Dict) -> Dict:
                 )
                 timeline_analysis['timeline_chart'].append({
                     'date': complaint_filed_date.strftime('%Y-%m-%d'),
-                    'event': f'Complaint Filed — PREMATURE (Day {days_to_complaint}/30)',
-                    'status': '❌'
+                    'event': f'Complaint Filed â€” PREMATURE (Day {days_to_complaint}/30)',
+                    'status': 'âŒ'
                 })
                 timeline_analysis['risk_markers'].append({
                     'severity': 'FATAL',
                     'issue': f'Complaint filed {days_premature} days BEFORE cause of action',
-                    'impact': 'Premature complaint — cause of action had not yet arisen under Section 138',
+                    'impact': 'Premature complaint â€” cause of action had not yet arisen under Section 138',
                     'legal_basis': 'Section 138 NI Act: complaint maintainable only after 15-day payment period expires',
                     'action': 'File fresh complaint after cause of action arises (if still within limitation)'
                 })
@@ -4340,8 +4340,8 @@ def analyze_timeline(case_data: Dict) -> Dict:
             elif complaint_filed_date == cause_of_action:
 
                 timeline_analysis['compliance_status']['limitation'] = (
-                    f'⚠️ SAME-DAY FILING — complaint filed on exact date of cause of action '
-                    f'({cause_of_action.strftime("%Y-%m-%d")}). Procedural risk — interpretation dependent.'
+                    f'âš ï¸ SAME-DAY FILING â€” complaint filed on exact date of cause of action '
+                    f'({cause_of_action.strftime("%Y-%m-%d")}). Procedural risk â€” interpretation dependent.'
                 )
                 timeline_analysis['limitation_risk'] = 'HIGH'
 
@@ -4356,7 +4356,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
                 timeline_analysis['cause_of_action_reasoning'] = (
                     f'Cause of action under Section 138 arises at expiry of 15-day notice period '
                     f'({cause_of_action.strftime("%d %b %Y")}). Complaint filed on the SAME DAY '
-                    f'as cause of action. Courts are split — some require filing strictly AFTER this date. '
+                    f'as cause of action. Courts are split â€” some require filing strictly AFTER this date. '
                     f'High dismissal risk.'
                 )
                 timeline_analysis['refile_guidance'] = (
@@ -4366,15 +4366,15 @@ def analyze_timeline(case_data: Dict) -> Dict:
                 )
                 timeline_analysis['timeline_chart'].append({
                     'date': complaint_filed_date.strftime('%Y-%m-%d'),
-                    'event': 'Complaint Filed — SAME DAY AS CAUSE OF ACTION ⚠️',
-                    'status': '⚠️'
+                    'event': 'Complaint Filed â€” SAME DAY AS CAUSE OF ACTION âš ï¸',
+                    'status': 'âš ï¸'
                 })
                 timeline_analysis['risk_markers'].append({
                     'severity': 'HIGH',
                     'issue': 'Complaint filed on same day as cause of action',
-                    'impact': 'Some courts hold complaint not maintainable on same day — depends on judicial interpretation',
+                    'impact': 'Some courts hold complaint not maintainable on same day â€” depends on judicial interpretation',
                     'legal_basis': 'Section 138: cause of action arises when 15-day period expires; filing on same day is legally grey',
-                    'action': 'High risk — recommend refiling after cause of action date if within limitation'
+                    'action': 'High risk â€” recommend refiling after cause of action date if within limitation'
                 })
                 timeline_analysis['edge_cases_detected'].append({
                     'case': 'Same-Day Filing',
@@ -4400,12 +4400,12 @@ def analyze_timeline(case_data: Dict) -> Dict:
                         f"Refiling window: {_days_till_limit} days remaining "
                         f"(must file by {limitation_deadline.strftime('%d %B %Y')})"
                         if _days_till_limit > 0 else
-                        "Refiling window CLOSED — limitation period has expired"
+                        "Refiling window CLOSED â€” limitation period has expired"
                     )
                 }
 
             elif complaint_filed_date <= limitation_deadline:
-                timeline_analysis['compliance_status']['limitation'] = f'✅ WITHIN LIMITATION ({days_to_complaint} days, deadline: {limitation_deadline.strftime("%Y-%m-%d")})'
+                timeline_analysis['compliance_status']['limitation'] = f'âœ… WITHIN LIMITATION ({days_to_complaint} days, deadline: {limitation_deadline.strftime("%Y-%m-%d")})'
                 timeline_analysis['limitation_risk'] = 'LOW'
                 timeline_analysis['score'] = 95
 
@@ -4426,11 +4426,11 @@ def analyze_timeline(case_data: Dict) -> Dict:
                 timeline_analysis['timeline_chart'].append({
                     'date': complaint_filed_date.strftime('%Y-%m-%d'),
                     'event': f'Complaint Filed (Day {days_to_complaint}/30)',
-                    'status': '✅'
+                    'status': 'âœ…'
                 })
             else:
                 delay_days = days_to_complaint - 30
-                timeline_analysis['compliance_status']['limitation'] = f'❌ BARRED BY LIMITATION ({days_to_complaint} days, delayed by {delay_days} days)'
+                timeline_analysis['compliance_status']['limitation'] = f'âŒ BARRED BY LIMITATION ({days_to_complaint} days, delayed by {delay_days} days)'
                 timeline_analysis['limitation_risk'] = 'CRITICAL'
                 timeline_analysis['risk_markers'].append({
                     'severity': 'CRITICAL',
@@ -4440,7 +4440,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
                 timeline_analysis['timeline_chart'].append({
                     'date': complaint_filed_date.strftime('%Y-%m-%d'),
                     'event': f'Complaint Filed - DELAYED (Day {days_to_complaint}/30)',
-                    'status': '❌'
+                    'status': 'âŒ'
                 })
 
                 if delay_days <= 60:
@@ -4468,7 +4468,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
         critical_risks = [r for r in timeline_analysis['risk_markers'] if r['severity'] in ['HIGH', 'CRITICAL']]
         if critical_risks:
             timeline_analysis['limitation_risk'] = 'CRITICAL'
-        elif timeline_analysis['compliance_status'].get('limitation', '').startswith('✅'):
+        elif timeline_analysis['compliance_status'].get('limitation', '').startswith('âœ…'):
             timeline_analysis['limitation_risk'] = 'LOW'
         else:
             timeline_analysis['limitation_risk'] = 'MEDIUM'
@@ -4512,7 +4512,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
         'number': 1,
         'name': 'Cheque Drawn on Bank Account',
         'score': ing1_score,
-        'status': '✅ Compliant' if ing1_score >= SCORE_EXCELLENT else '⚠️ Weak',
+        'status': 'âœ… Compliant' if ing1_score >= SCORE_EXCELLENT else 'âš ï¸ Weak',
         'issues': ing1_issues,
         'evidence_required': ['Original cheque', 'Cheque number', 'Bank name', 'Account details']
     })
@@ -4532,7 +4532,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
             if years_diff > 3:
                 deduction, severity = get_severity_deduction('no_debt_proof')
                 ing2_score -= deduction
-                ing2_issues.append(f'Debt may be time-barred (transaction {years_diff:.1f} years before cheque) [−{deduction} {severity}]')
+                ing2_issues.append(f'Debt may be time-barred (transaction {years_diff:.1f} years before cheque) [âˆ’{deduction} {severity}]')
                 ingredients['fatal_defects'].append({
                     'ingredient': 2,
                     'defect': 'Possible Time-Barred Debt',
@@ -4545,23 +4545,23 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
     if case_data.get('defence_type') == 'security_cheque':
         deduction = weights['debt']
         ing2_score -= deduction
-        ing2_issues.append(f'Accused claims security cheque (no legally enforceable debt) [−{deduction:.0f} calibrated]')
+        ing2_issues.append(f'Accused claims security cheque (no legally enforceable debt) [âˆ’{deduction:.0f} calibrated]')
 
     if not case_data.get('written_agreement_exists'):
         deduction, severity = get_severity_deduction('no_written_agreement')
         ing2_score -= deduction
-        ing2_issues.append(f'No written agreement - relying on presumption alone [−{deduction} {severity}]')
+        ing2_issues.append(f'No written agreement - relying on presumption alone [âˆ’{deduction} {severity}]')
 
     if not case_data.get('ledger_available'):
         deduction, severity = get_severity_deduction('no_ledger')
         ing2_score -= deduction
-        ing2_issues.append(f'No ledger/account books to prove debt [−{deduction} {severity}]')
+        ing2_issues.append(f'No ledger/account books to prove debt [âˆ’{deduction} {severity}]')
 
     ingredients['ingredient_details'].append({
         'number': 2,
         'name': 'Legally Enforceable Debt',
         'score': max(0, ing2_score),
-        'status': '✅ Strong' if ing2_score >= SCORE_EXCELLENT else ('⚠️ Moderate' if ing2_score >= SCORE_ADEQUATE else '❌ Weak'),
+        'status': 'âœ… Strong' if ing2_score >= SCORE_EXCELLENT else ('âš ï¸ Moderate' if ing2_score >= SCORE_ADEQUATE else 'âŒ Weak'),
         'issues': ing2_issues,
         'evidence_required': ['Written agreement', 'Ledger', 'Invoices', 'Email/SMS', 'Transaction proof'],
         'presumption_status': 'Section 139 presumption active - burden on accused to rebut',
@@ -4572,7 +4572,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
     ing3_score = 100
     ing3_issues = []
 
-    if timeline_data['compliance_status'].get('cheque_validity', '').startswith('❌'):
+    if timeline_data['compliance_status'].get('cheque_validity', '').startswith('âŒ'):
         ing3_score = 0
         ing3_issues.append('Cheque presented after 3-month validity - FATAL DEFECT')
         ingredients['fatal_defects'].append({
@@ -4586,7 +4586,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
         'number': 3,
         'name': 'Presented Within Validity Period',
         'score': ing3_score,
-        'status': '✅ Compliant' if ing3_score == 100 else '❌ FAILED',
+        'status': 'âœ… Compliant' if ing3_score == 100 else 'âŒ FAILED',
         'issues': ing3_issues,
         'evidence_required': ['Presentation date proof', 'Return memo']
     })
@@ -4617,7 +4617,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
         'number': 4,
         'name': 'Dishonoured by Bank',
         'score': ing4_score,
-        'status': '✅ Strong' if ing4_score >= SCORE_EXCELLENT else '⚠️ Moderate',
+        'status': 'âœ… Strong' if ing4_score >= SCORE_EXCELLENT else 'âš ï¸ Moderate',
         'issues': ing4_issues,
         'dishonour_reason': case_data.get('dishonour_reason', 'Not specified'),
         'evidence_required': ['Return memo/cheque', 'Bank memo']
@@ -4627,7 +4627,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
     ing5_score = 100
     ing5_issues = []
 
-    if timeline_data['compliance_status'].get('notice_timing', '').startswith('❌'):
+    if timeline_data['compliance_status'].get('notice_timing', '').startswith('âŒ'):
         ing5_score = 0
         ing5_issues.append('Notice sent beyond 30 days - FATAL DEFECT')
         ingredients['fatal_defects'].append({
@@ -4659,7 +4659,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
         'number': 5,
         'name': 'Notice Within 30 Days of Dishonour',
         'score': ing5_score,
-        'status': '✅ Compliant' if ing5_score >= SCORE_EXCELLENT else ('⚠️ Weak' if ing5_score >= SCORE_ADEQUATE else '❌ FAILED'),
+        'status': 'âœ… Compliant' if ing5_score >= SCORE_EXCELLENT else ('âš ï¸ Weak' if ing5_score >= SCORE_ADEQUATE else 'âŒ FAILED'),
         'issues': ing5_issues,
         'evidence_required': ['Copy of notice', 'Postal receipt', 'AD/registered post proof']
     })
@@ -4671,13 +4671,13 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
     _tl_limit6 = timeline_data.get('compliance_status', {}).get('limitation', '')
     if 'PREMATURE' in str(_tl_limit6).upper() or 'SAME-DAY' in str(_tl_limit6).upper():
         ing6_score = 50
-        ing6_issues.append('15-day period had not expired at complaint filing — ingredient conditionally incomplete')
+        ing6_issues.append('15-day period had not expired at complaint filing â€” ingredient conditionally incomplete')
 
     ingredients['ingredient_details'].append({
         'number': 6,
         'name': 'Payment Failed Within 15 Days',
         'score': ing6_score,
-        'status': '✅ Compliant' if ing6_score == 100 else '⚠️ Conditional — filing was premature',
+        'status': 'âœ… Compliant' if ing6_score == 100 else 'âš ï¸ Conditional â€” filing was premature',
         'issues': ing6_issues,
         'evidence_required': ['Affidavit stating no payment received']
     })
@@ -4691,14 +4691,14 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
     if 'SAME-DAY' in limitation_status_str.upper() or 'SAME DAY' in limitation_status_str.upper():
 
         ing7_score = 50
-        ing7_issues.append('Complaint filed on same day as cause of action — borderline legal risk')
-        _ing7_status = '⚠️ BORDERLINE (Same-Day)'
+        ing7_issues.append('Complaint filed on same day as cause of action â€” borderline legal risk')
+        _ing7_status = 'âš ï¸ BORDERLINE (Same-Day)'
 
     elif 'PREMATURE' in limitation_status_str.upper():
 
 
         ing7_score = 0
-        ing7_issues.append('Premature complaint — cause of action had not yet arisen under Section 138')
+        ing7_issues.append('Premature complaint â€” cause of action had not yet arisen under Section 138')
         ingredients['fatal_defects'].append({
             'ingredient': 7,
             'defect': 'Complaint Filed Before Cause of Action Arose',
@@ -4710,12 +4710,12 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
                 'Filing before this is premature and not maintainable.'
             )
         })
-        _ing7_status = '❌ PREMATURE'
+        _ing7_status = 'âŒ PREMATURE'
 
-    elif limitation_status_str.startswith('❌') and 'PREMATURE' not in limitation_status_str.upper():
+    elif limitation_status_str.startswith('âŒ') and 'PREMATURE' not in limitation_status_str.upper():
 
         ing7_score = 0
-        ing7_issues.append('Complaint time-barred — filed beyond 1 month of cause of action')
+        ing7_issues.append('Complaint time-barred â€” filed beyond 1 month of cause of action')
         ingredients['fatal_defects'].append({
             'ingredient': 7,
             'defect': 'Complaint Barred by Limitation',
@@ -4726,15 +4726,15 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
                 'Condonation is discretionary and not guaranteed.'
             )
         })
-        _ing7_status = '❌ TIME-BARRED'
+        _ing7_status = 'âŒ TIME-BARRED'
 
     elif 'DELAYED' in limitation_status_str:
         ing7_score = 50
-        ing7_issues.append('Slight delay — may be condoned with sufficient cause')
-        _ing7_status = '⚠️ Delayed'
+        ing7_issues.append('Slight delay â€” may be condoned with sufficient cause')
+        _ing7_status = 'âš ï¸ Delayed'
 
     else:
-        _ing7_status = '✅ Compliant'
+        _ing7_status = 'âœ… Compliant'
 
     ingredients['ingredient_details'].append({
         'number': 7,
@@ -4779,7 +4779,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
     _ing_fatals = [d for d in ingredients.get('ingredient_details', []) if d.get('score', 100) < 30]
     if _ing_comp >= 70 and not _ing_fatals:
         ingredients['context_note'] = (
-            f'Strong ingredient compliance ({_ing_comp:.1f}/100) — statutory requirements well-satisfied. '
+            f'Strong ingredient compliance ({_ing_comp:.1f}/100) â€” statutory requirements well-satisfied. '
             'Note: Final risk score may still be capped if procedural or timeline defects exist.'
         )
     elif _ing_comp >= 60 and _ing_fatals:
@@ -4915,13 +4915,13 @@ def analyze_presumption_rebuttal(case_data: Dict, ingredient_data: Dict, doc_dat
 
 
         if case_data.get('email_sms_evidence'):
-            if case_data.get('section_65b_certificate', False):
+            if case_data.get('section_63_certificate', False):
                 rebuttal_score += 30
-                evidence_types.append('Electronic (Section 65B compliant)')
+                evidence_types.append('Electronic (Section 63 compliant)')
                 evidence_quality.append('HIGH')
             else:
                 rebuttal_score += 10
-                evidence_types.append('Electronic (No Section 65B certificate - WEAK)')
+                evidence_types.append('Electronic (No Section 63 certificate - WEAK)')
                 evidence_quality.append('LOW')
 
 
@@ -4989,7 +4989,7 @@ def analyze_presumption_rebuttal(case_data: Dict, ingredient_data: Dict, doc_dat
                 'Consider settlement negotiations'
             ]
     else:
-        presumption_analysis['current_stage'] = 'Stage 2: No rebuttal evidence provided — presumption remains unrebutted'
+        presumption_analysis['current_stage'] = 'Stage 2: No rebuttal evidence provided â€” presumption remains unrebutted'
         presumption_analysis['burden_position'] = 'On Accused - Presumption Unrebutted'
         presumption_analysis['rebuttal_strength'] = 'NONE'
 
@@ -5005,7 +5005,7 @@ def analyze_presumption_rebuttal(case_data: Dict, ingredient_data: Dict, doc_dat
             'Evidence to rebut presumption on preponderance',
             'Documentary evidence preferred (highest weight)',
             'Witness corroboration essential',
-            'Section 65B certificate mandatory for electronic evidence'
+            'Section 63 certificate mandatory for electronic evidence'
         ]
     }
 
@@ -5096,15 +5096,15 @@ def analyze_security_cheque_probability(case_data: Dict) -> Dict:
     elif probability_score >= 50:
         probability = 'HIGH'
         defence_strength = 'STRONG'
-        recommendation = 'Security cheque defence probable — strengthen evidence base before filing'
+        recommendation = 'Security cheque defence probable â€” strengthen evidence base before filing'
     elif probability_score >= 30:
         probability = 'MEDIUM'
         defence_strength = 'MODERATE'
-        recommendation = 'Security cheque defence possible — obtain written agreement and transaction records'
+        recommendation = 'Security cheque defence possible â€” obtain written agreement and transaction records'
     else:
         probability = 'LOW'
         defence_strength = 'WEAK'
-        recommendation = 'Security cheque defence unlikely — documentary evidence appears adequate'
+        recommendation = 'Security cheque defence unlikely â€” documentary evidence appears adequate'
 
     return {
         'module': 'Security Cheque Probability Analysis',
@@ -5188,7 +5188,7 @@ def analyze_financial_capacity(case_data: Dict) -> Dict:
     if case_data.get('transaction_mode') == 'cash' and loan_amount > 50000:
         score -= 15
         capacity_analysis['red_flags'].append({
-            'issue': 'Large cash transaction (>₹50,000)',
+            'issue': 'Large cash transaction (>â‚¹50,000)',
             'severity': 'HIGH',
             'impact': 'Violates cash transaction limits, suspicious'
         })
@@ -5404,24 +5404,24 @@ def analyze_documentary_strength(case_data: Dict) -> Dict:
         if has_agreement and has_bank_transfer:
             liability_score = 95
             liability_grade = "STRONG"
-            liability_details.append("✓ Written agreement available")
-            liability_details.append("✓ Bank transfer proof available")
+            liability_details.append("âœ“ Written agreement available")
+            liability_details.append("âœ“ Bank transfer proof available")
         elif has_agreement:
             liability_score = 75
             liability_grade = "STRONG"
-            liability_details.append("✓ Written agreement available")
-            liability_details.append("⚠️ No bank transfer proof")
+            liability_details.append("âœ“ Written agreement available")
+            liability_details.append("âš ï¸ No bank transfer proof")
         elif has_invoice and has_ledger:
             liability_score = 55
             liability_grade = "MODERATE"
-            liability_details.append("✓ Invoice available")
-            liability_details.append("✓ Ledger available")
-            liability_details.append("⚠️ No formal written agreement")
+            liability_details.append("âœ“ Invoice available")
+            liability_details.append("âœ“ Ledger available")
+            liability_details.append("âš ï¸ No formal written agreement")
         elif has_ledger:
             liability_score = 35
             liability_grade = "WEAK"
-            liability_details.append("⚠️ Ledger only")
-            liability_details.append("❌ No agreement or invoice")
+            liability_details.append("âš ï¸ Ledger only")
+            liability_details.append("âŒ No agreement or invoice")
             doc_analysis['critical_gaps'].append({
                 'category': 'Liability Documentation',
                 'gap': 'No written agreement',
@@ -5432,19 +5432,19 @@ def analyze_documentary_strength(case_data: Dict) -> Dict:
         elif transaction_mode == 'oral' or (not has_agreement and not has_invoice and not has_ledger):
             liability_score = 15
             liability_grade = "HIGHLY CONTESTABLE"
-            liability_details.append("❌ Oral transaction only")
-            liability_details.append("❌ No documentary proof")
+            liability_details.append("âŒ Oral transaction only")
+            liability_details.append("âŒ No documentary proof")
             doc_analysis['critical_gaps'].append({
                 'category': 'Liability Documentation',
                 'gap': 'No documentary proof of legally enforceable debt',
-                'impact': 'Severe — accused can challenge the existence of a legally enforceable debt, which is a fundamental Section 138 ingredient',
+                'impact': 'Severe â€” accused can challenge the existence of a legally enforceable debt, which is a fundamental Section 138 ingredient',
                 'severity': 'CRITICAL',
                 'deduction': -35
             })
         else:
             liability_score = 10
             liability_grade = "CRITICALLY WEAK"
-            liability_details.append("❌ No documentation")
+            liability_details.append("âŒ No documentation")
 
         doc_analysis['liability_documentation'] = {
             'score': liability_score,
@@ -5462,16 +5462,16 @@ def analyze_documentary_strength(case_data: Dict) -> Dict:
 
 
         if unified_service['delivery_confirmed']:
-            service_details.append(f"✓ {unified_service['delivery_method']}")
-            service_details.append(f"✓ Delivery confirmed: {unified_service['service_quality']}")
+            service_details.append(f"âœ“ {unified_service['delivery_method']}")
+            service_details.append(f"âœ“ Delivery confirmed: {unified_service['service_quality']}")
         else:
-            service_details.append(f"⚠️ {unified_service['delivery_method']}")
+            service_details.append(f"âš ï¸ {unified_service['delivery_method']}")
             if unified_service['delivery_status'] == 'REFUSED':
-                service_details.append("⚠️ Notice refused - deemed service applies")
+                service_details.append("âš ï¸ Notice refused - deemed service applies")
             elif unified_service['delivery_status'] == 'UNCLAIMED':
-                service_details.append("⚠️ Returned unclaimed - deemed service applies")
+                service_details.append("âš ï¸ Returned unclaimed - deemed service applies")
             elif unified_service['delivery_status'] == 'SENT_NO_PROOF':
-                service_details.append("❌ No proof of delivery")
+                service_details.append("âŒ No proof of delivery")
                 doc_analysis['critical_gaps'].append({
                     'category': 'Service Proof',
                     'gap': 'No delivery confirmation',
@@ -5492,8 +5492,8 @@ def analyze_documentary_strength(case_data: Dict) -> Dict:
 
         if transaction_mode == 'cash' and not has_agreement:
             trail_score = 15
-            trail_details.append("❌ Cash-only with no written agreement")
-            trail_details.append("⚠️ Serious contestability risk")
+            trail_details.append("âŒ Cash-only with no written agreement")
+            trail_details.append("âš ï¸ Serious contestability risk")
             doc_analysis['critical_gaps'].append({
                 'category': 'Transaction Trail',
                 'gap': 'Cash transaction without documentation',
@@ -5503,17 +5503,17 @@ def analyze_documentary_strength(case_data: Dict) -> Dict:
             })
         elif transaction_mode == 'cash':
             trail_score = 45
-            trail_details.append("⚠️ Cash transaction")
-            trail_details.append("✓ Agreement mitigates risk partially")
+            trail_details.append("âš ï¸ Cash transaction")
+            trail_details.append("âœ“ Agreement mitigates risk partially")
         elif has_bank_transfer:
             trail_score = 95
-            trail_details.append("✓ Bank transfer proof")
+            trail_details.append("âœ“ Bank transfer proof")
         elif has_ledger:
             trail_score = 65
-            trail_details.append("✓ Ledger provides trail")
+            trail_details.append("âœ“ Ledger provides trail")
         else:
             trail_score = 35
-            trail_details.append("⚠️ Limited transaction trail")
+            trail_details.append("âš ï¸ Limited transaction trail")
 
         doc_analysis['transaction_trail'] = {
             'score': trail_score,
@@ -5583,8 +5583,8 @@ def analyze_documentary_strength(case_data: Dict) -> Dict:
             if not has_itr and not has_bank_statement:
                 capacity_risk_level = "HIGH"
                 capacity_score = 30
-                capacity_flags.append("❌ Large amount (>₹10L) without ITR or bank statement")
-                capacity_flags.append("⚠️ Defence may challenge financial capacity")
+                capacity_flags.append("âŒ Large amount (>â‚¹10L) without ITR or bank statement")
+                capacity_flags.append("âš ï¸ Defence may challenge financial capacity")
                 doc_analysis['critical_gaps'].append({
                     'category': 'Financial Capacity',
                     'gap': 'No income documentation for large amount',
@@ -5595,12 +5595,12 @@ def analyze_documentary_strength(case_data: Dict) -> Dict:
             elif not income_source:
                 capacity_risk_level = "MODERATE"
                 capacity_score = 60
-                capacity_flags.append("⚠️ Income source not documented")
+                capacity_flags.append("âš ï¸ Income source not documented")
                 capacity_flags.append("Attach income proof recommended")
             else:
                 capacity_risk_level = "LOW"
                 capacity_score = 95
-                capacity_flags.append("✓ Financial documentation adequate")
+                capacity_flags.append("âœ“ Financial documentation adequate")
         else:
             capacity_risk_level = "LOW"
             capacity_score = 100
@@ -5679,7 +5679,7 @@ def analyze_documentary_strength(case_data: Dict) -> Dict:
     except Exception as _doc_err:
         logger.error(f'analyze_documentary_strength error: {_doc_err}')
         doc_analysis['overall_strength_score'] = 25
-        doc_analysis['strength_label'] = 'Assessment Error — Weak assumed'
+        doc_analysis['strength_label'] = 'Assessment Error â€” Weak assumed'
 
 def analyze_accused_liability(case_data: Dict) -> Dict:
     """
@@ -5713,13 +5713,13 @@ def analyze_accused_liability(case_data: Dict) -> Dict:
         liability_analysis['case_type'] = 'Company Case - Section 141 Applicable'
 
         liability_analysis['vicarious_liability_check']['company_impleaded'] = {
-            'status': '✅ Company is accused',
+            'status': 'âœ… Company is accused',
             'requirement': 'Mandatory - Company must be accused No. 1'
         }
 
         if case_data.get('directors_impleaded'):
             liability_analysis['vicarious_liability_check']['directors_impleaded'] = {
-                'status': '✅ Directors impleaded',
+                'status': 'âœ… Directors impleaded',
                 'requirement': 'Required for vicarious liability'
             }
 
@@ -5823,7 +5823,7 @@ def analyze_accused_liability(case_data: Dict) -> Dict:
 
         else:
             liability_analysis['vicarious_liability_check']['directors_impleaded'] = {
-                'status': '❌ Directors NOT impleaded',
+                'status': 'âŒ Directors NOT impleaded',
                 'requirement': 'Required for vicarious liability'
             }
             liability_analysis['issues'].append({
@@ -5837,13 +5837,13 @@ def analyze_accused_liability(case_data: Dict) -> Dict:
 
         if case_data.get('specific_averment_present'):
             liability_analysis['vicarious_liability_check']['specific_averment'] = {
-                'status': '✅ Specific averment present',
+                'status': 'âœ… Specific averment present',
                 'requirement': 'MANDATORY per SMS Pharmaceuticals judgment',
                 'details': 'Must specifically state each director was "in charge of and responsible for conduct of business" at relevant time'
             }
         else:
             liability_analysis['vicarious_liability_check']['specific_averment'] = {
-                'status': '❌ Specific averment MISSING',
+                'status': 'âŒ Specific averment MISSING',
                 'requirement': 'MANDATORY per SMS Pharmaceuticals judgment'
             }
             liability_analysis['issues'].append({
@@ -5872,7 +5872,7 @@ def analyze_accused_liability(case_data: Dict) -> Dict:
                 'board_resolution_date': board_resolution_date,
                 'cheque_date': cheque_date,
                 'authorized_signatories': case_data.get('authorized_signatories', []),
-                'status': '✅ Resolution predates cheque' if resolution_date_obj < cheque_date_obj else '⚠️ Timeline issue'
+                'status': 'âœ… Resolution predates cheque' if resolution_date_obj < cheque_date_obj else 'âš ï¸ Timeline issue'
             }
 
         liability_analysis['vicarious_liability_check']['director_distinction'] = {
@@ -5908,7 +5908,7 @@ def analyze_accused_liability(case_data: Dict) -> Dict:
 
         liability_analysis['case_type'] = 'Individual Case'
         liability_analysis['vicarious_liability_check']['simple_liability'] = {
-            'status': '✅ Direct liability - no Section 141 issues',
+            'status': 'âœ… Direct liability - no Section 141 issues',
             'note': 'Individual is directly liable as drawer of cheque'
         }
 
@@ -5926,7 +5926,7 @@ def analyze_accused_liability(case_data: Dict) -> Dict:
 
 def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, doc_analysis: Dict) -> Dict:
     """
-    Comprehensive defence vulnerability analysis — every possible Section 138 defence scenario.
+    Comprehensive defence vulnerability analysis â€” every possible Section 138 defence scenario.
     Maps case facts to realistic defence strengths, counter-strategies, and cross-exam angles.
     """
     try:
@@ -5985,7 +5985,7 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
         if not has_ledger:     score1 += 8
         if not has_bank_proof: score1 += 7
         _add(
-            'Security Cheque — No Legally Enforceable Debt',
+            'Security Cheque â€” No Legally Enforceable Debt',
             score1,
             'Accused claims cheque was given as collateral security, not towards discharge of an existing debt.',
             [
@@ -5995,7 +5995,7 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
                 'Deny debt in examination under Section 313 CrPC'
             ],
             [
-                'Rely on Section 139 presumption — burden shifts to accused',
+                'Rely on Section 139 presumption â€” burden shifts to accused',
                 'Produce all documentation of the original transaction',
                 'Prove exact date debt arose and that cheque was issued contemporaneously',
                 'Show through cross-examination that accused cannot prove security purpose'
@@ -6010,9 +6010,9 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
         if not has_bank_proof: score2 += 10
         if is_cash and amount > 20000: score2 += 15
         _add(
-            'Absence of Legally Enforceable Debt — No Documentary Proof',
+            'Absence of Legally Enforceable Debt â€” No Documentary Proof',
             score2,
-            'No written agreement, ledger, or bank transfer proof — accused will deny debt existence.',
+            'No written agreement, ledger, or bank transfer proof â€” accused will deny debt existence.',
             [
                 'Deny transaction in examination under Section 313',
                 'Challenge complainant to produce any independent proof',
@@ -6063,7 +6063,7 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
                 'Produce any notice/letter sent before cheque presentation citing dispute'
             ],
             [
-                'Argue stop payment with valid reason still attracts Section 138 — Supreme Court settled this',
+                'Argue stop payment with valid reason still attracts Section 138 â€” Supreme Court settled this',
                 'Prove no valid dispute existed at time of cheque issue',
                 'Rely on K. Bhaskaran v. Sankaran Vaidhyan Balan: stop payment = dishonour under S.138'
             ]
@@ -6108,7 +6108,7 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
             [
                 'Produce postal receipt and tracking confirmation',
                 'Produce AD card signed by accused',
-                'Argue deemed service applies — accused cannot benefit from own refusal/avoidance',
+                'Argue deemed service applies â€” accused cannot benefit from own refusal/avoidance',
                 'Examine postal department witness if required'
             ]
         )
@@ -6128,7 +6128,7 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
         _add(
             'Time-Barred Debt (Limitation Act)',
             score7,
-            'Underlying debt is more than 3 years old — accused argues debt itself is barred.',
+            'Underlying debt is more than 3 years old â€” accused argues debt itself is barred.',
             [
                 'Produce proof that transaction was more than 3 years before cheque',
                 'Argue no fresh acknowledgment existed to revive limitation',
@@ -6169,7 +6169,7 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
         if is_company and directors_impl:
             score9 = 55 if not specific_av else 20
             _add(
-                'Company Case — Director Not "In Charge" (Section 141)',
+                'Company Case â€” Director Not "In Charge" (Section 141)',
                 score9,
                 'Director denies being in charge of or responsible for conduct of business at time of offence.',
                 [
@@ -6190,14 +6190,14 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
             _add(
                 'Insolvency / IBC Moratorium',
                 80,
-                'Accused is undergoing insolvency — Section 138 complaint may be stayed.',
+                'Accused is undergoing insolvency â€” Section 138 complaint may be stayed.',
                 [
                     'Produce NCLT order declaring moratorium under IBC',
                     'Apply to court for stay citing moratorium'
                 ],
                 [
-                    'Verify moratorium status — personal complaints under NI Act may still proceed',
-                    'Cite Ajay Kumar Radheshyam Goenka v. Tourism Finance Corp (2023) — S.138 proceeds despite IBC',
+                    'Verify moratorium status â€” personal complaints under NI Act may still proceed',
+                    'Cite Ajay Kumar Radheshyam Goenka v. Tourism Finance Corp (2023) â€” S.138 proceeds despite IBC',
                     'Argue criminal liability is not extinguished by IBC proceedings'
                 ],
                 is_fatal=False
@@ -6208,7 +6208,7 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
             _add(
                 'Savkari / Moneylender Act Violation',
                 65,
-                'Accused argues complainant is an unregistered moneylender — underlying transaction is void.',
+                'Accused argues complainant is an unregistered moneylender â€” underlying transaction is void.',
                 [
                     'Prove complainant operates as moneylender without license',
                     'Cite applicable State Moneylenders Act',
@@ -6216,7 +6216,7 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
                 ],
                 [
                     'Produce registration certificate under applicable State Act',
-                    'Deny operating as commercial moneylender — argue this was a personal loan',
+                    'Deny operating as commercial moneylender â€” argue this was a personal loan',
                     'Cite exceptions: one-time friendly loans not covered by Moneylenders Act'
                 ]
             )
@@ -6225,7 +6225,7 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
         if bank_merged:
             score12 = 40
             _add(
-                'Bank Merger — Successor Bank Liability',
+                'Bank Merger â€” Successor Bank Liability',
                 score12,
                 'Accused challenges whether dishonour by successor bank after merger is valid under Section 138.',
                 [
@@ -6285,7 +6285,7 @@ def analyze_defence_vulnerabilities(case_data: Dict, ingredient_analysis: Dict, 
 
 def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data: Dict) -> Dict:
     """
-    Comprehensive procedural defect scanner — covers every Section 138 scenario.
+    Comprehensive procedural defect scanner â€” covers every Section 138 scenario.
     Checks: jurisdiction, notice validity, complaint timing, company cases,
     cheque specifics, service proof, stamp duty, drafting compliance,
     limitation, delay condonation, multiple cheques, part payment, and more.
@@ -6313,7 +6313,7 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
                     defect_scan['fatal_defects'].append({
                         'defect': 'Complaint Filed Before 15-Day Payment Period Expired',
                         'severity': 'CRITICAL',
-                        'impact': f'Premature complaint — cause of action had not yet arisen under Section 138. '
+                        'impact': f'Premature complaint â€” cause of action had not yet arisen under Section 138. '
                                   f'Complaint filed {days_early} day(s) before cause of action date ({fifteen_day_expiry}).',
                         'legal_basis': 'Section 138 NI Act: cause of action arises only after expiry of 15-day payment period from notice receipt.',
                         'remedy': 'Current complaint is not maintainable. Do NOT refile same complaint. '
@@ -6350,27 +6350,27 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
             defect_scan['fatal_defects'].append({
                 'defect': 'Legal Notice Sent Beyond 30 Days of Dishonour',
                 'severity': 'CRITICAL',
-                'impact': 'Notice sent too late — ingredient 5 (notice within 30 days) fails. Complaint cannot be maintained.',
+                'impact': 'Notice sent too late â€” ingredient 5 (notice within 30 days) fails. Complaint cannot be maintained.',
                 'legal_basis': 'Section 138(b) NI Act: notice must be given within 30 days of dishonour memo.',
                 'remedy': 'No remedy. Complaint must be withdrawn or dismissed. Cannot be cured by sending fresh notice.'
             })
 
 
         _tl_validity = str((timeline_data.get('compliance_status') or {}).get('cheque_validity', ''))
-        if _tl_validity.startswith('❌') or 'EXPIRED' in _tl_validity.upper() or 'BEYOND' in _tl_validity.upper():
+        if _tl_validity.startswith('âŒ') or 'EXPIRED' in _tl_validity.upper() or 'BEYOND' in _tl_validity.upper():
             defect_scan['fatal_defects'].append({
                 'defect': 'Cheque Presented After 3-Month Validity Period',
                 'severity': 'CRITICAL',
-                'impact': 'Stale cheque — dishonour of stale cheque does not attract Section 138 liability.',
+                'impact': 'Stale cheque â€” dishonour of stale cheque does not attract Section 138 liability.',
                 'legal_basis': 'Section 138 NI Act requires cheque to be presented within 3 calendar months of issue date.',
-                'remedy': 'No remedy — Section 138 does not apply. Civil remedy for debt recovery may be explored.'
+                'remedy': 'No remedy â€” Section 138 does not apply. Civil remedy for debt recovery may be explored.'
             })
 
 
         if case_data.get('is_company_case'):
             if not case_data.get('specific_averment_present') and not case_data.get('director_specific_averment'):
                 defect_scan['fatal_defects'].append({
-                    'defect': 'No Specific Averment for Directors — Company Case (Section 141)',
+                    'defect': 'No Specific Averment for Directors â€” Company Case (Section 141)',
                     'severity': 'CRITICAL',
                     'impact': 'Directors will be discharged in limine. Without specific averment that each director '
                               'was "in charge of and responsible for conduct of business", no liability attaches.',
@@ -6381,7 +6381,7 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
                 })
             if not case_data.get('directors_impleaded') and case_data.get('is_company_case'):
                 defect_scan['warnings'].append({
-                    'area': 'Company Case — Director Impleading',
+                    'area': 'Company Case â€” Director Impleading',
                     'warning': 'All directors in charge at time of offence must be named as accused.',
                     'check': 'Verify each director named was actually in charge and responsible at time cheque was drawn.'
                 })
@@ -6392,7 +6392,7 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
             defect_scan['fatal_defects'].append({
                 'defect': 'Legal Notice Sent to Wrong Address',
                 'severity': 'CRITICAL',
-                'impact': 'Service of notice is invalid — accused can challenge that valid notice was never received.',
+                'impact': 'Service of notice is invalid â€” accused can challenge that valid notice was never received.',
                 'legal_basis': 'Section 138(b): notice must be sent to address where accused is accessible.',
                 'remedy': 'Send fresh notice to correct address immediately. If still within notice period, '
                           'refile complaint counting limitation from fresh notice receipt.'
@@ -6403,7 +6403,7 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
             defect_scan['curable_defects'].append({
                 'defect': 'Legal Notice Appears Unsigned',
                 'severity': 'HIGH',
-                'impact': 'Defence will challenge validity of notice — unsigned notice may not satisfy Section 138(b).',
+                'impact': 'Defence will challenge validity of notice â€” unsigned notice may not satisfy Section 138(b).',
                 'cure': 'Produce signed original at trial. File affidavit explaining notice was duly signed and served.'
             })
 
@@ -6420,11 +6420,11 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
 
         if case_data.get('part_payment_full_amount'):
             defect_scan['fatal_defects'].append({
-                'defect': 'Part Payment Equals Full Cheque Amount — Debt Fully Discharged',
+                'defect': 'Part Payment Equals Full Cheque Amount â€” Debt Fully Discharged',
                 'severity': 'CRITICAL',
                 'impact': 'If accused has paid the full cheque amount, no legally enforceable debt survives. '
                           'Complaint is not maintainable.',
-                'legal_basis': 'Section 138 requires a legally enforceable debt — if debt is discharged, no offence exists.',
+                'legal_basis': 'Section 138 requires a legally enforceable debt â€” if debt is discharged, no offence exists.',
                 'remedy': 'Withdraw complaint. Explore if excess was owed on other counts.'
             })
         elif case_data.get('part_payment_made') and case_data.get('part_payment_amount'):
@@ -6435,7 +6435,7 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
                 if paid > 0 and total > 0:
                     defect_scan['warnings'].append({
                         'area': 'Part Payment',
-                        'warning': f'Part payment of ₹{paid:,.0f} made — balance ₹{balance:,.0f} still due.',
+                        'warning': f'Part payment of â‚¹{paid:,.0f} made â€” balance â‚¹{balance:,.0f} still due.',
                         'check': 'Amend complaint to reflect balance amount. '
                                  'Complaint for full amount when part paid may need clarification.'
                     })
@@ -6450,16 +6450,16 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
                     'severity': 'HIGH',
                     'impact': 'Court may not proceed with complaint if limitation delay is not explained.',
                     'cure': 'File application under Section 142(b) NI Act with affidavit explaining delay. '
-                            'Court has discretion — genuine reasons are usually accepted.'
+                            'Court has discretion â€” genuine reasons are usually accepted.'
                 })
 
 
-        if case_data.get('electronic_evidence') and not case_data.get('section_65b_certificate'):
+        if case_data.get('electronic_evidence') and not case_data.get('section_63_certificate'):
             defect_scan['curable_defects'].append({
-                'defect': 'Electronic Evidence (WhatsApp/Email/SMS) Without Section 65B Certificate',
+                'defect': 'Electronic Evidence (WhatsApp/Email/SMS) Without Section 63 Certificate',
                 'severity': 'MEDIUM',
-                'impact': 'Electronic records without S.65B certificate are inadmissible — Anvar P.V. v. P.K. Basheer (2014).',
-                'cure': 'File Section 65B certificate from computer owner before evidence stage. '
+                'impact': 'Electronic records without S.63 certificate are inadmissible â€” Anvar P.V. v. P.K. Basheer (2014).',
+                'cure': 'File Section 63 certificate from computer owner before evidence stage. '
                         'Obtain from service provider if own device not available.'
             })
 
@@ -6487,7 +6487,7 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
             num = int(case_data.get('number_of_cheques', 2) or 2)
             defect_scan['warnings'].append({
                 'area': 'Multiple Cheques',
-                'warning': f'{num} cheques — each dishonoured cheque creates a SEPARATE offence and requires a separate complaint.',
+                'warning': f'{num} cheques â€” each dishonoured cheque creates a SEPARATE offence and requires a separate complaint.',
                 'check': 'Verify separate notices sent and separate complaints filed for each cheque. '
                          'Clubbing multiple cheques in one complaint is procedurally incorrect.'
             })
@@ -6497,9 +6497,9 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
         amount = float(case_data.get('cheque_amount', 0) or 0)
         if ('cash' in cash_status or 'exceeds' in cash_status) and amount > 20000:
             defect_scan['warnings'].append({
-                'area': 'Section 269SS — Cash Transaction',
-                'warning': f'Cash transaction of ₹{amount:,.0f} may violate Section 269SS Income Tax Act.',
-                'check': 'If loan was given in cash above ₹20,000, defence will argue the debt is illegal '
+                'area': 'Section 269SS â€” Cash Transaction',
+                'warning': f'Cash transaction of â‚¹{amount:,.0f} may violate Section 269SS Income Tax Act.',
+                'check': 'If loan was given in cash above â‚¹20,000, defence will argue the debt is illegal '
                          'and cheque given for illegal consideration. Courts have split on this point.'
             })
 
@@ -6514,7 +6514,7 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
 
         defect_scan['warnings'].append({
             'area': 'Complaint Affidavit',
-            'warning': 'Complaint must be on oath — affidavit in support is mandatory.',
+            'warning': 'Complaint must be on oath â€” affidavit in support is mandatory.',
             'check': 'Ensure complaint is accompanied by a proper verification affidavit.'
         })
 
@@ -6532,38 +6532,38 @@ def scan_procedural_defects(case_data: Dict, timeline_data: Dict, liability_data
         _high_cure = [d for d in defect_scan['curable_defects'] if d.get('severity') == 'HIGH']
 
         if fatal_count >= 2:
-            defect_scan['overall_risk']     = 'CRITICAL — Multiple Fatal Defects'
+            defect_scan['overall_risk']     = 'CRITICAL â€” Multiple Fatal Defects'
             defect_scan['risk_category']    = 'Multiple Fatal Defects'
             defect_scan['risk_description'] = (
-                f'{fatal_count} fatal procedural defects — complaint will be dismissed at first hearing'
+                f'{fatal_count} fatal procedural defects â€” complaint will be dismissed at first hearing'
             )
         elif fatal_count == 1:
-            defect_scan['overall_risk']     = 'HIGH — Fatal Defect Present'
+            defect_scan['overall_risk']     = 'HIGH â€” Fatal Defect Present'
             defect_scan['risk_category']    = 'Fatal Defect'
             defect_scan['risk_description'] = (
                 defect_scan['fatal_defects'][0].get('defect', 'Fatal procedural defect') +
-                ' — complaint is not maintainable in current form'
+                ' â€” complaint is not maintainable in current form'
             )
         elif _high_cure:
-            defect_scan['overall_risk']     = 'MEDIUM — High-Risk Curable Defects'
+            defect_scan['overall_risk']     = 'MEDIUM â€” High-Risk Curable Defects'
             defect_scan['risk_category']    = 'Curable High-Risk'
             defect_scan['risk_description'] = (
-                f'{len(_high_cure)} high-risk curable defect(s) — addressable before trial but require immediate action'
+                f'{len(_high_cure)} high-risk curable defect(s) â€” addressable before trial but require immediate action'
             )
         elif curable_count > 0:
-            defect_scan['overall_risk']     = 'LOW-MEDIUM — Minor Curable Defects'
+            defect_scan['overall_risk']     = 'LOW-MEDIUM â€” Minor Curable Defects'
             defect_scan['risk_category']    = 'Curable Minor'
             defect_scan['risk_description'] = (
-                f'{curable_count} minor procedural gap(s) — addressable at evidence stage'
+                f'{curable_count} minor procedural gap(s) â€” addressable at evidence stage'
             )
         else:
-            defect_scan['overall_risk']     = 'LOW — No Significant Procedural Defects'
+            defect_scan['overall_risk']     = 'LOW â€” No Significant Procedural Defects'
             defect_scan['risk_category']    = 'Compliant'
             defect_scan['risk_description'] = 'Procedural compliance is adequate'
 
     except Exception as _proc_err:
         logger.error(f'scan_procedural_defects error: {_proc_err}')
-        defect_scan['overall_risk'] = 'CANNOT ASSESS — System Error'
+        defect_scan['overall_risk'] = 'CANNOT ASSESS â€” System Error'
         defect_scan['warnings'].append({'area': 'System', 'warning': str(_proc_err), 'check': 'Retry'})
 
     return defect_scan
@@ -6646,7 +6646,7 @@ def calculate_overall_risk_score(
         'weight': weights['liability'],
         'weighted_score': round(liability_score * weights['liability'], 1),
         'reason': 'All required parties are correctly impleaded' if liability_score >= 90 else 'One or more required parties may not be correctly impleaded',
-        'explanation': 'Section 141 NI Act — for company cases, all directors in-charge at time of offence must be named with specific averments'
+        'explanation': 'Section 141 NI Act â€” for company cases, all directors in-charge at time of offence must be named with specific averments'
     }
     risk_model['risk_breakdown']['liability_risk'] = int((100 - liability_score) * weights['liability'])
 
@@ -6709,10 +6709,10 @@ def calculate_overall_risk_score(
 
             all_fatal_defects.append({
                 'category': 'Timeline',
-                'defect': 'Premature Complaint — Cause of Action Not Yet Arisen' if _is_premature else 'Complaint Barred by Limitation',
+                'defect': 'Premature Complaint â€” Cause of Action Not Yet Arisen' if _is_premature else 'Complaint Barred by Limitation',
                 'defect_type': 'premature_complaint' if _is_premature else 'complaint_beyond_30_days',
                 'severity': 'FATAL',
-                'impact': 'Complaint is not maintainable — will be dismissed at first hearing' if _is_premature else 'Complaint is time-barred — condonation required',
+                'impact': 'Complaint is not maintainable â€” will be dismissed at first hearing' if _is_premature else 'Complaint is time-barred â€” condonation required',
                 'is_absolute': True,
             })
         elif _is_same_day:
@@ -6723,7 +6723,7 @@ def calculate_overall_risk_score(
                 max(35, (risk_model.get('final_score') or total_weighted) - _same_day_penalty), 1
             )
             risk_model['same_day_filing_penalty'] = _same_day_penalty
-            risk_model['same_day_filing_risk'] = 'HIGH — interpretation-dependent procedural risk'
+            risk_model['same_day_filing_risk'] = 'HIGH â€” interpretation-dependent procedural risk'
 
             all_fatal_defects = [d for d in all_fatal_defects
                                  if 'same-day' not in str(d.get('defect','')).lower()
@@ -6773,15 +6773,15 @@ def calculate_overall_risk_score(
         _prob_dismiss = '>90%'
         _prob_convict = '<10%'
     elif _score < 50:
-        _prob_label   = 'High likelihood of dismissal (60–80%)'
-        _prob_dismiss = '60–80%'
-        _prob_convict = '20–40%'
+        _prob_label   = 'High likelihood of dismissal (60â€“80%)'
+        _prob_dismiss = '60â€“80%'
+        _prob_convict = '20â€“40%'
     elif _score < 70:
-        _prob_label   = 'Moderate risk — outcome depends on evidence strength'
-        _prob_dismiss = '30–50%'
-        _prob_convict = '50–70%'
+        _prob_label   = 'Moderate risk â€” outcome depends on evidence strength'
+        _prob_dismiss = '30â€“50%'
+        _prob_convict = '50â€“70%'
     else:
-        _prob_label   = 'Favourable — high likelihood of conviction'
+        _prob_label   = 'Favourable â€” high likelihood of conviction'
         _prob_dismiss = '<20%'
         _prob_convict = '>80%'
 
@@ -6790,15 +6790,15 @@ def calculate_overall_risk_score(
         _court_stage   = 'Pre-trial / threshold stage'
         _court_action  = 'Accused can file discharge application at first hearing'
     elif _score < 50:
-        _court_outcome = 'High risk of acquittal — significant evidentiary gaps'
+        _court_outcome = 'High risk of acquittal â€” significant evidentiary gaps'
         _court_stage   = 'Trial stage'
         _court_action  = 'Strengthen documentary evidence before filing'
     elif _score < 70:
-        _court_outcome = 'Moderate chance of conviction — case viable but improvable'
+        _court_outcome = 'Moderate chance of conviction â€” case viable but improvable'
         _court_stage   = 'Trial stage'
         _court_action  = 'Address documentary gaps and prepare strong examination-in-chief'
     else:
-        _court_outcome = 'Strong case — high likelihood of conviction'
+        _court_outcome = 'Strong case â€” high likelihood of conviction'
         _court_stage   = 'Likely to proceed to conviction'
         _court_action  = 'File complaint and apply for interim compensation under Section 143A'
     risk_model['outcome_probability'] = {
@@ -6834,7 +6834,7 @@ def calculate_overall_risk_score(
             'weight_pct':  _cwp,
             'weight_float':_cw,
             'contribution':_contrib,
-            'display':     f'{_cname} ({_cwp}%): {_cs}/100 → contributes {_contrib}',
+            'display':     f'{_cname} ({_cwp}%): {_cs}/100 â†’ contributes {_contrib}',
             'level':       'Strong' if _cs >= 70 else 'Moderate' if _cs >= 45 else 'Weak',
         })
     risk_model['score_contributions'] = _contributions
@@ -6844,7 +6844,7 @@ def calculate_overall_risk_score(
     if risk_model.get('jurisdiction_penalty'):
         _adj_notes.append(f"Jurisdiction penalty: -{risk_model['jurisdiction_penalty']}")
     if all_fatal_defects:
-        _adj_notes.append(f"Fatal override cap: {_base}/100 → {_final}/100")
+        _adj_notes.append(f"Fatal override cap: {_base}/100 â†’ {_final}/100")
     risk_model['score_trail'] = {
         'final_score':          _final,
         'adjustments':          _adj_notes,
@@ -6862,8 +6862,8 @@ def calculate_overall_risk_score(
         'fatal_defects_found': len(all_fatal_defects),
         'cap_applied':        len(all_fatal_defects) > 0,
         'cap_reason':         (
-            f'{len(all_fatal_defects)} fatal defect(s) detected — score capped regardless of other factors'
-            if all_fatal_defects else 'No fatal defects — full score applies'
+            f'{len(all_fatal_defects)} fatal defect(s) detected â€” score capped regardless of other factors'
+            if all_fatal_defects else 'No fatal defects â€” full score applies'
         ),
         'interpretation':     (
             'Despite adequate scores in some categories, fatal defects make the case legally non-maintainable.'
@@ -6871,26 +6871,26 @@ def calculate_overall_risk_score(
             'Score reflects weighted compliance across all statutory requirements.'
         ),
         'cap_logic': (
-            f'Base: {_base}/100 → Fatal override applied → Final: {_final}/100'
+            f'Base: {_base}/100 â†’ Fatal override applied â†’ Final: {_final}/100'
             if all_fatal_defects else
-            f'Base: {_base}/100 → No cap → Final: {_final}/100'
+            f'Base: {_base}/100 â†’ No cap â†’ Final: {_final}/100'
         ),
     }
 
 
     risk_model['score_interpretation'] = (
-        'Very Weak — High dismissal probability' if _final < 30 else
-        'Weak — Significant gaps, remediation required' if _final < 50 else
-        'Moderate — Maintainable with strengthening' if _final < 65 else
-        'Good — Reasonable chance of success' if _final < 80 else
-        'Strong — Well-supported case'
+        'Very Weak â€” High dismissal probability' if _final < 30 else
+        'Weak â€” Significant gaps, remediation required' if _final < 50 else
+        'Moderate â€” Maintainable with strengthening' if _final < 65 else
+        'Good â€” Reasonable chance of success' if _final < 80 else
+        'Strong â€” Well-supported case'
     )
     risk_model['score_band'] = (
-        '0–30: Very Weak' if _final < 30 else
-        '30–50: Weak' if _final < 50 else
-        '50–65: Moderate' if _final < 65 else
-        '65–80: Good' if _final < 80 else
-        '80–100: Strong'
+        '0â€“30: Very Weak' if _final < 30 else
+        '30â€“50: Weak' if _final < 50 else
+        '50â€“65: Moderate' if _final < 65 else
+        '65â€“80: Good' if _final < 80 else
+        '80â€“100: Strong'
     )
 
     risk_model['final_score'] = round(_final, 1)
@@ -6922,10 +6922,10 @@ def calculate_overall_risk_score(
                     'capped_at': hard_override_score,
                     'capped_at_display': f"{hard_override_score}/100",
                     'final_score': hard_override_score,
-                    'message': f'FATAL DEFECT — Score capped at {hard_override_score}/100'
+                    'message': f'FATAL DEFECT â€” Score capped at {hard_override_score}/100'
                 }
 
-                risk_model['compliance_level'] = 'FATAL – HIGH DISMISSAL RISK'
+                risk_model['compliance_level'] = 'FATAL â€“ HIGH DISMISSAL RISK'
 
     for defect in all_fatal_defects:
         risk_model['critical_issues'].append({
@@ -6948,7 +6948,7 @@ def calculate_overall_risk_score(
                                   if d.get('severity') == 'HIGH'])
     if procedural_fatal_count >= 2:
         fatal_defect_override = True
-        override_reason.append(f'{procedural_fatal_count} fatal procedural defects — technical dismissal likely')
+        override_reason.append(f'{procedural_fatal_count} fatal procedural defects â€” technical dismissal likely')
         risk_model['final_score'] = min(risk_model['final_score'], 30)
     elif procedural_fatal_count == 1 and (defect_data.get('overall_risk', '').startswith('CRITICAL')
                                            or defect_data.get('overall_risk', '').startswith('HIGH')):
@@ -6961,7 +6961,7 @@ def calculate_overall_risk_score(
         risk_model['final_score'] = round(
             max(25, risk_model.get('final_score', 0) - _high_reduction), 1
         )
-        override_reason.append(f'High procedural risk — {_high_reduction:.1f} point reduction applied')
+        override_reason.append(f'High procedural risk â€” {_high_reduction:.1f} point reduction applied')
 
     if fatal_defect_override:
         _capped_at = risk_model['final_score']
@@ -6975,7 +6975,7 @@ def calculate_overall_risk_score(
     if timeline_data.get('fatal_defect') or timeline_data.get('limitation_expired'):
         risk_model['final_score'] = min(risk_model['final_score'], 25)
         risk_model['filing_status'] = 'DO NOT FILE'
-        risk_model['compliance_level'] = 'FATAL – TIMELINE DEFECT'
+        risk_model['compliance_level'] = 'FATAL â€“ TIMELINE DEFECT'
         if 'fatal_defect_override' not in risk_model:
             risk_model['fatal_defect_override'] = {
                 'applied': True,
@@ -6983,7 +6983,7 @@ def calculate_overall_risk_score(
                 'capped_at': 25,
                 'original_score_display': f"{round(total_weighted, 1):.1f}/100",
                 'severity': 'FATAL',
-                'logic': 'Fatal defects auto-cap score — case will collapse regardless of other strengths',
+                'logic': 'Fatal defects auto-cap score â€” case will collapse regardless of other strengths',
                 'warning': 'Despite strong scores in other areas, fatal defects make case unviable'
             }
 
@@ -7177,7 +7177,7 @@ def analyze_settlement_exposure(case_data: Dict, risk_score_data: Dict) -> Dict:
             if _doc_weak < 60:
                 _rationale = (
                     'Case has procedural strength but weak documentary evidence. '
-                    'Accused may contest on transaction basis — settle quickly to avoid documentary challenge at trial.'
+                    'Accused may contest on transaction basis â€” settle quickly to avoid documentary challenge at trial.'
                 )
             else:
                 _rationale = 'Strong case with solid documentary foundation. Accused faces high conviction risk.'
@@ -7437,7 +7437,7 @@ def detect_edge_cases(case_data: Dict) -> Dict:
 def pure_escalation_engine(flags: Dict) -> Dict:
     """
     Escalation engine: adjusts the computed base_score by applying
-    hard floors/caps for serious conditions. Never replaces — only constrains.
+    hard floors/caps for serious conditions. Never replaces â€” only constrains.
     """
     base = float(flags.get('base_score', 50) or 50)
 
@@ -7459,7 +7459,7 @@ def pure_escalation_engine(flags: Dict) -> Dict:
             'status': 'SUBSTANTIVE DEFENCE RISK',
             'score': adjusted,
             'recommendation': 'ADDRESS DEBT DISPUTE',
-            'reason': 'Enforceable debt challenged — score capped at 55',
+            'reason': 'Enforceable debt challenged â€” score capped at 55',
             'tier_locked': True,
             'minimum_tier_enforcement': 'HIGH_RISK cannot be reduced by procedural compliance'
         }
@@ -7471,7 +7471,7 @@ def pure_escalation_engine(flags: Dict) -> Dict:
             'status': 'SECTION 141 FAILURE',
             'score': adjusted,
             'recommendation': 'OBTAIN SPECIFIC AVERMENT',
-            'reason': 'Director liability requirements not met — score capped at 50',
+            'reason': 'Director liability requirements not met â€” score capped at 50',
             'tier_locked': True,
             'minimum_tier_enforcement': 'HIGH_RISK cannot be reduced'
         }
@@ -7603,11 +7603,11 @@ def analyze_defence_risks(case_data: Dict, documentary_result: Dict) -> Dict:
     if part_payment_claimed:
         defence_analysis['defence_grounds']['part_payment'] = {
             'risk_level': 'HIGH',
-            'vulnerability': f"Accused claims ₹{part_payment_amount} already paid",
+            'vulnerability': f"Accused claims â‚¹{part_payment_amount} already paid",
             'defence_likely': True,
-            'consequence': 'Enforceable debt reduced - May fall below ₹5000 threshold or cheque amount',
+            'consequence': 'Enforceable debt reduced - May fall below â‚¹5000 threshold or cheque amount',
             'score_impact': -12,
-            'amount_impact': f"Disputed amount: ₹{case_data.get('cheque_amount', 0) - part_payment_amount}"
+            'amount_impact': f"Disputed amount: â‚¹{case_data.get('cheque_amount', 0) - part_payment_amount}"
         }
         risk_score -= 12
         consequence_adjustment -= 12
@@ -7729,7 +7729,7 @@ def analyze_defence_risks(case_data: Dict, documentary_result: Dict) -> Dict:
 
 def analyze_cross_examination_risks(case_data: Dict, doc_data: Dict, defence_data: Dict) -> Dict:
     """
-    Cross Examination Risk Analysis — Deterministic Rule-Based Engine
+    Cross Examination Risk Analysis â€” Deterministic Rule-Based Engine
     Maps documentary gaps and defence postures to specific cross-exam vulnerabilities.
     """
     zones = []
@@ -7756,7 +7756,7 @@ def analyze_cross_examination_risks(case_data: Dict, doc_data: Dict, defence_dat
         zones.append({
             'zone': 'Transaction Documentation',
             'severity': 'CRITICAL',
-            'attack_vector': 'No written proof of debt — defence will ask for every document proving money was actually given',
+            'attack_vector': 'No written proof of debt â€” defence will ask for every document proving money was actually given',
             'defence_question': "Is it correct you have no written agreement, ledger entry or bank record of this alleged transaction?"
         })
         questions += [
@@ -7770,7 +7770,7 @@ def analyze_cross_examination_risks(case_data: Dict, doc_data: Dict, defence_dat
         zones.append({
             'zone': 'Written Agreement',
             'severity': 'HIGH',
-            'attack_vector': 'No formal written agreement — defence will question the legal character of the transaction',
+            'attack_vector': 'No formal written agreement â€” defence will question the legal character of the transaction',
             'defence_question': "Is it not a fact that there is no written document signed by the accused acknowledging this debt?"
         })
         questions.append('Why was no written agreement executed for a transaction of this amount?')
@@ -7782,7 +7782,7 @@ def analyze_cross_examination_risks(case_data: Dict, doc_data: Dict, defence_dat
         zones.append({
             'zone': 'Notice Service Proof',
             'severity': 'CRITICAL' if not has_postal and not has_ad_card else 'HIGH',
-            'attack_vector': 'No postal receipt or AD card — defence will deny receipt of legal notice entirely',
+            'attack_vector': 'No postal receipt or AD card â€” defence will deny receipt of legal notice entirely',
             'defence_question': "Is it not correct that you cannot produce the AD card signed by the accused acknowledging receipt of your notice?"
         })
         questions += [
@@ -7793,9 +7793,9 @@ def analyze_cross_examination_risks(case_data: Dict, doc_data: Dict, defence_dat
     elif notice_returned:
         risk_score += 15
         zones.append({
-            'zone': 'Notice Delivery — Returned Undelivered',
+            'zone': 'Notice Delivery â€” Returned Undelivered',
             'severity': 'HIGH',
-            'attack_vector': 'Notice returned — accused will deny deemed service applies in this situation',
+            'attack_vector': 'Notice returned â€” accused will deny deemed service applies in this situation',
             'defence_question': 'Is it correct the postal article was returned with "Not Found / Refused" endorsement?'
         })
         questions.append("Was the notice returned undelivered, and if so, did you take any alternative steps to serve the accused?")
@@ -7806,13 +7806,13 @@ def analyze_cross_examination_risks(case_data: Dict, doc_data: Dict, defence_dat
         zones.append({
             'zone': 'Cash Transaction',
             'severity': 'HIGH',
-            'attack_vector': 'Cash transactions are impossible to independently verify — defence will deny any money changed hands',
+            'attack_vector': 'Cash transactions are impossible to independently verify â€” defence will deny any money changed hands',
             'defence_question': 'Is it not correct that no bank statement or transfer record exists showing money actually paid to accused?'
         })
         questions += [
             'From which bank account did you withdraw this cash to give to the accused?',
             'Produce your bank passbook/statement showing the withdrawal of this amount.',
-            'Are you aware that cash transactions above ₹20,000 may violate Section 269SS of the Income Tax Act?',
+            'Are you aware that cash transactions above â‚¹20,000 may violate Section 269SS of the Income Tax Act?',
         ]
         if amount > 20000:
             questions.append('Did you file your income tax return declaring this cash loan? Can you produce the ITR?')
@@ -7823,7 +7823,7 @@ def analyze_cross_examination_risks(case_data: Dict, doc_data: Dict, defence_dat
         zones.append({
             'zone': 'Security Cheque Allegation',
             'severity': 'CRITICAL',
-            'attack_vector': 'Accused claims cheque was given as security only — will attack the legal character of the cheque',
+            'attack_vector': 'Accused claims cheque was given as security only â€” will attack the legal character of the cheque',
             'defence_question': "Is it not a fact that this cheque was given to you as security deposit and not towards discharge of any debt?"
         })
         questions += [
@@ -7839,7 +7839,7 @@ def analyze_cross_examination_risks(case_data: Dict, doc_data: Dict, defence_dat
         zones.append({
             'zone': 'Bank Dishonour Memo',
             'severity': 'HIGH',
-            'attack_vector': 'No bank memo — defence will challenge whether the cheque was actually dishonoured',
+            'attack_vector': 'No bank memo â€” defence will challenge whether the cheque was actually dishonoured',
             'defence_question': "Can you produce the original bank return memo bearing the bank's seal and endorsement?"
         })
         questions.append("Where is the original bank return memo issued when the cheque was dishonoured?")
@@ -7851,22 +7851,22 @@ def analyze_cross_examination_risks(case_data: Dict, doc_data: Dict, defence_dat
         zones.append({
             'zone': 'Original Cheque',
             'severity': 'CRITICAL',
-            'attack_vector': 'Original instrument not available — admissibility of copy will be challenged',
+            'attack_vector': 'Original instrument not available â€” admissibility of copy will be challenged',
             'defence_question': "Can you produce the ORIGINAL cheque in court, or only a photocopy?"
         })
         questions.append('Where is the original cheque? Why are you producing only a photocopy?')
         questions.append('How do you prove the signature on the photocopy is that of the accused?')
 
 
-    if has_email_sms and not case_data.get('section_65b_certificate', False):
+    if has_email_sms and not case_data.get('section_63_certificate', False):
         risk_score += 10
         zones.append({
-            'zone': 'Electronic Evidence — Section 65B',
+            'zone': 'Electronic Evidence â€” Section 63',
             'severity': 'MEDIUM',
-            'attack_vector': 'WhatsApp/SMS/email without S.65B certificate is inadmissible — Anvar P.V. v P.K. Basheer (2014)',
-            'defence_question': 'Is it not correct you have not filed a Section 65B certificate authenticating this electronic evidence?'
+            'attack_vector': 'WhatsApp/SMS/email without S.63 certificate is inadmissible â€” Anvar P.V. v P.K. Basheer (2014)',
+            'defence_question': 'Is it not correct you have not filed a Section 63 certificate authenticating this electronic evidence?'
         })
-        questions.append("Have you filed a Section 65B certificate authenticating the WhatsApp/SMS/email messages?")
+        questions.append("Have you filed a Section 63 certificate authenticating the WhatsApp/SMS/email messages?")
 
 
     questions += [
@@ -7915,16 +7915,16 @@ def analyze_cross_examination_risks(case_data: Dict, doc_data: Dict, defence_dat
     }
 
 
-def analyze_section_65b_compliance(case_data: Dict) -> Dict:
+def analyze_section_63_compliance(case_data: Dict) -> Dict:
     """
-    Section 65B Evidence Act - Electronic Evidence Certificate Compliance
+    Section 63 Evidence Act - Electronic Evidence Certificate Compliance
 
     As per Anvar P.V. v. P.K. Basheer (2014) 10 SCC 473:
-    Electronic records are INADMISSIBLE without Section 65B certificate
+    Electronic records are INADMISSIBLE without Section 63 certificate
     """
 
     compliance = {
-        'module': 'Section 65B Electronic Evidence Compliance',
+        'module': 'Section 63 Electronic Evidence Compliance',
         'applicable': False,
         'compliant': True,
         'electronic_evidence_types': [],
@@ -7957,8 +7957,8 @@ def analyze_section_65b_compliance(case_data: Dict) -> Dict:
         compliance['electronic_evidence_types'].append('Other Electronic Records')
 
 
-    has_certificate = case_data.get('section_65b_certificate', False)
-    certificate_signed = case_data.get('section_65b_certificate_signed', False)
+    has_certificate = case_data.get('section_63_certificate', False)
+    certificate_signed = case_data.get('section_63_certificate_signed', False)
     certificate_from_custodian = case_data.get('certificate_from_device_custodian', False)
 
 
@@ -7988,20 +7988,20 @@ def analyze_section_65b_compliance(case_data: Dict) -> Dict:
             compliance['risk_level'] = 'FATAL'
             compliance['recommendations'].append({
                 'priority': 'CRITICAL',
-                'action': 'Obtain Section 65B certificate immediately',
+                'action': 'Obtain Section 63 certificate immediately',
                 'details': 'Electronic evidence is PRIMARY PROOF - INADMISSIBLE without certificate',
                 'from_whom': 'Device/server custodian (email provider, telecom, bank)',
-                'legal_basis': 'Section 65B Evidence Act - Mandatory for primary electronic evidence'
+                'legal_basis': 'Section 63 Evidence Act - Mandatory for primary electronic evidence'
             })
         else:
 
             compliance['risk_level'] = 'HIGH'
             compliance['recommendations'].append({
                 'priority': 'HIGH',
-                'action': 'Obtain Section 65B certificate to strengthen case',
+                'action': 'Obtain Section 63 certificate to strengthen case',
                 'details': 'Electronic evidence is supporting - case can proceed on primary docs but weakened without certificate',
                 'from_whom': 'Device/server custodian (email provider, telecom, bank)',
-                'legal_basis': 'Section 65B Evidence Act',
+                'legal_basis': 'Section 63 Evidence Act',
                 'impact': 'Electronic evidence inadmissible but primary documents remain valid'
             })
     elif not certificate_signed or not certificate_from_custodian:
@@ -8011,7 +8011,7 @@ def analyze_section_65b_compliance(case_data: Dict) -> Dict:
             'priority': 'HIGH',
             'action': 'Ensure certificate is properly executed',
             'details': 'Certificate must be signed by authorized custodian',
-            'legal_basis': 'Section 65B(4) - Certificate requirements'
+            'legal_basis': 'Section 63(4) - Certificate requirements'
         })
     else:
         compliance['compliant'] = True
@@ -8029,7 +8029,7 @@ def analyze_income_tax_269ss_compliance(case_data: Dict) -> Dict:
     """
     Income Tax Act Section 269SS - Cash Transaction Limit
 
-    Cash loans/deposits above ₹20,000 are prohibited
+    Cash loans/deposits above â‚¹20,000 are prohibited
     Violation makes debt legally unenforceable
     """
 
@@ -8082,7 +8082,7 @@ def analyze_income_tax_269ss_compliance(case_data: Dict) -> Dict:
                 'Argue transaction was not a loan but payment for goods/services',
                 'Provide evidence of underlying transaction (invoice, delivery proof)',
                 'Show cheque was for sale consideration, not repayment of loan',
-                'If loan: Argue it was under ₹20,000 with balance in kind/adjustment'
+                'If loan: Argue it was under â‚¹20,000 with balance in kind/adjustment'
             ],
             'legal_risk': 'HIGH - Defence likely to succeed if proven to be cash loan'
         })
@@ -8158,7 +8158,7 @@ def evaluate_service_proof_unified(case_data: Dict) -> Dict:
         })
 
 
-    elif case_data.get('track_report_available') or case_data.get('section_65b_track_report'):
+    elif case_data.get('track_report_available') or case_data.get('section_63_track_report'):
         result.update({
             'delivery_confirmed': True,
             'delivery_status': 'DELIVERED (track report confirmation)',
@@ -8173,7 +8173,7 @@ def evaluate_service_proof_unified(case_data: Dict) -> Dict:
     elif postal_acknowledgment or postal_proof_available:
         result.update({
             'delivery_confirmed': False,
-            'delivery_status': 'SENT — Proof of Posting Available',
+            'delivery_status': 'SENT â€” Proof of Posting Available',
             'delivery_method': 'Postal Receipt / Dispatch Slip',
             'proof_strength': 'MODERATE',
             'service_quality': 'MODERATE',
@@ -8496,7 +8496,7 @@ def analyze_territorial_jurisdiction(case_data: Dict) -> Dict:
             if not jurisdiction_matches:
                 analysis['jurisdiction_valid'] = False
                 analysis['risk_level'] = 'CRITICAL'
-                analysis['jurisdiction_note'] = 'Court may lack jurisdiction — file where cheque was presented/dishonoured'
+                analysis['jurisdiction_note'] = 'Court may lack jurisdiction â€” file where cheque was presented/dishonoured'
                 analysis['recommendations'].append({
                     'priority': 'CRITICAL',
                     'issue': 'Territorial jurisdiction may be invalid',
@@ -8619,7 +8619,7 @@ def analyze_compounding_eligibility(case_data: Dict) -> Dict:
                 analysis['recommendations'].append({
                     'priority': 'MEDIUM',
                     'action': 'Settlement offer below cheque amount',
-                    'details': f'Offered: ₹{settlement_amount_offered}, Debt: ₹{cheque_amount}',
+                    'details': f'Offered: â‚¹{settlement_amount_offered}, Debt: â‚¹{cheque_amount}',
                     'strategy': 'Negotiate for full amount + interest + costs, or proceed with filing'
                 })
             elif settlement_amount_agreed > 0:
@@ -8665,8 +8665,8 @@ def analyze_director_role_liability(case_data: Dict) -> Dict:
         analysis['applicable'] = False
         analysis['properly_impleaded'] = True
         analysis['risk_level'] = 'LOW'
-        analysis['explanation'] = 'Not a company case — Section 141 director liability not applicable. Individual drawer is solely liable.'
-        analysis['recommendation'] = 'N/A — no director impleading required'
+        analysis['explanation'] = 'Not a company case â€” Section 141 director liability not applicable. Individual drawer is solely liable.'
+        analysis['recommendation'] = 'N/A â€” no director impleading required'
         return analysis
 
     analysis['is_company_case'] = True
@@ -8786,7 +8786,7 @@ def analyze_document_compliance(case_data: Dict) -> Dict:
         'overall_compliance': 0,
         'mandatory_docs': {},
         'evidence_classification': {},
-        'section_65b_compliance': {},
+        'section_63_compliance': {},
         'service_proof_unified': unified_service,
         'filing_readiness': 'NOT READY',
         'missing_critical_docs': [],
@@ -8834,13 +8834,13 @@ def analyze_document_compliance(case_data: Dict) -> Dict:
             'consequence': f"Service proof {unified_service['proof_strength']} - {unified_service['delivery_method']}",
             'unified_grade': unified_service['grade']
         },
-        'section_65b_certificate': {
-            'present': case_data.get('section_65b_certificate', True) if case_data.get('electronic_evidence') else True,
-            'severity': 'FATAL' if (case_data.get('electronic_evidence') and not case_data.get('section_65b_certificate')) else ('CRITICAL' if case_data.get('electronic_evidence') else 'NA'),
+        'section_63_certificate': {
+            'present': case_data.get('section_63_certificate', True) if case_data.get('electronic_evidence') else True,
+            'severity': 'FATAL' if (case_data.get('electronic_evidence') and not case_data.get('section_63_certificate')) else ('CRITICAL' if case_data.get('electronic_evidence') else 'NA'),
             'deduction': 30,
-            'consequence': 'Electronic evidence INADMISSIBLE without Section 65B certificate - NO OVERRIDE ALLOWED',
+            'consequence': 'Electronic evidence INADMISSIBLE without Section 63 certificate - NO OVERRIDE ALLOWED',
             'applicable': case_data.get('electronic_evidence', False),
-            'legal_basis': 'Section 65B Evidence Act - Anvar P.V. v. P.K. Basheer (2014)',
+            'legal_basis': 'Section 63 Evidence Act - Anvar P.V. v. P.K. Basheer (2014)',
             'strict_enforcement': True
         },
         'postal_receipt': {
@@ -8871,7 +8871,7 @@ def analyze_document_compliance(case_data: Dict) -> Dict:
 
             compliance['mandatory_docs'][doc_name] = {
                 'present': present,
-                'status': '✅ Available' if present else f"❌ MISSING ({severity})",
+                'status': 'âœ… Available' if present else f"âŒ MISSING ({severity})",
                 'severity': severity,
                 'consequence': doc_info['consequence']
             }
@@ -8886,7 +8886,7 @@ def analyze_document_compliance(case_data: Dict) -> Dict:
                         'consequence': doc_info['consequence']
                     })
                     compliance['fatal_defects'].append({
-                        'defect': f"{doc_name.replace('_', ' ').title()} not available — filing blocked",
+                        'defect': f"{doc_name.replace('_', ' ').title()} not available â€” filing blocked",
                         'severity': 'FATAL',
                         'impact': doc_info['consequence'],
                         'filing_blocked': True
@@ -8894,26 +8894,26 @@ def analyze_document_compliance(case_data: Dict) -> Dict:
                 elif severity == 'CRITICAL':
                     critical_missing.append(doc_name.replace('_', ' ').title())
                     compliance['defects'].append({
-                        'defect': f"{doc_name.replace('_', ' ').title()} not available — critical gap",
+                        'defect': f"{doc_name.replace('_', ' ').title()} not available â€” critical gap",
                         'severity': 'CRITICAL',
                         'impact': doc_info['consequence']
                     })
 
     if fatal_missing:
-        compliance['filing_readiness'] = '🔴 FILING BLOCKED'
+        compliance['filing_readiness'] = 'ðŸ”´ FILING BLOCKED'
         compliance['overall_compliance'] = 'FATAL - DO NOT FILE'
         compliance['compliance_score'] = min(score, 25)
         compliance['fatal_message'] = f"FILING BLOCKED: {len(fatal_missing)} fatal document defects detected"
     elif critical_missing:
-        compliance['filing_readiness'] = '⚠️ HIGH RISK - NOT READY'
+        compliance['filing_readiness'] = 'âš ï¸ HIGH RISK - NOT READY'
         compliance['overall_compliance'] = 'CRITICAL GAPS'
         compliance['compliance_score'] = min(score, 60)
     elif score >= 80:
-        compliance['filing_readiness'] = '✅ READY TO FILE'
+        compliance['filing_readiness'] = 'âœ… READY TO FILE'
         compliance['overall_compliance'] = 'COMPLIANT'
         compliance['compliance_score'] = score
     else:
-        compliance['filing_readiness'] = '⚠️ GAPS PRESENT'
+        compliance['filing_readiness'] = 'âš ï¸ GAPS PRESENT'
         compliance['overall_compliance'] = 'MINOR GAPS'
         compliance['compliance_score'] = score
 
@@ -8940,7 +8940,7 @@ def generate_executive_summary(
     """
     Generate a rich executive summary that NEVER returns empty fields.
     Robustly handles any module returning None, list, or malformed dict.
-    This is what lawyers read first — it must always be complete.
+    This is what lawyers read first â€” it must always be complete.
     """
 
     def _s(v, fb="Not available"):
@@ -9012,16 +9012,16 @@ def generate_executive_summary(
         'risk_score'
     )
     if fatal_flag:
-        filing_verdict = "DO NOT FILE — FATAL DEFECTS PRESENT"
+        filing_verdict = "DO NOT FILE â€” FATAL DEFECTS PRESENT"
         assessment     = "FATAL FAILURE"
     elif score >= 75:
-        filing_verdict = "READY TO FILE — STRONG CASE"
+        filing_verdict = "READY TO FILE â€” STRONG CASE"
         assessment     = "COMPLIANT"
     elif score >= 55:
-        filing_verdict = "FILE WITH CAUTION — GAPS PRESENT"
+        filing_verdict = "FILE WITH CAUTION â€” GAPS PRESENT"
         assessment     = "MODERATE RISK"
     else:
-        filing_verdict = "HIGH RISK — REMEDIATION REQUIRED BEFORE FILING"
+        filing_verdict = "HIGH RISK â€” REMEDIATION REQUIRED BEFORE FILING"
         assessment     = "WEAK CASE"
 
 
@@ -9031,8 +9031,8 @@ def generate_executive_summary(
     )
 
     case_overview = (
-        f"{case_type} — Section 138 NI Act | "
-        f"Cheque: ₹{indian_number_format(amount)} | "
+        f"{case_type} â€” Section 138 NI Act | "
+        f"Cheque: â‚¹{indian_number_format(amount)} | "
         f"Score: {score}/100 | "
         f"{compliance}"
     )
@@ -9047,7 +9047,7 @@ def generate_executive_summary(
         elif not case_data.get('written_agreement_exists'):
             _primary_issue = "Absence of written agreement evidencing the debt"
         elif not case_data.get('ledger_available'):
-            _primary_issue = "No financial records available — transaction trail incomplete"
+            _primary_issue = "No financial records available â€” transaction trail incomplete"
         elif not case_data.get('postal_proof_available'):
             _primary_issue = "Unverified notice delivery - postal proof missing"
         elif not case_data.get('original_cheque_available'):
@@ -9063,16 +9063,16 @@ def generate_executive_summary(
         'status':    filing_verdict,
         'reason':    (
             _primary_issue if _primary_issue else
-            f'Score {score}/100 — {compliance}'
+            f'Score {score}/100 â€” {compliance}'
         ),
         'next_step': (
             "Refile after cause of action" +
-            (f" — {_refile_days} days left (deadline {_refile_dl})" if _refile_days else '')
+            (f" â€” {_refile_days} days left (deadline {_refile_dl})" if _refile_days else '')
             if fatal_flag and _refile_days > 0 else
-            'Do not refile same complaint — address fatal defects first' if fatal_flag else
-            'File complaint — case is in strong position' if score >= 75 else
+            'Do not refile same complaint â€” address fatal defects first' if fatal_flag else
+            'File complaint â€” case is in strong position' if score >= 75 else
             'Strengthen documentary evidence before filing' if score >= 55 else
-            'Significant gaps — legal review required before filing'
+            'Significant gaps â€” legal review required before filing'
         ),
         'confidence': (
             'HIGH' if score > 0 and len([x for x in [timeline_data, ingredient_data, doc_data] if x]) >= 3
@@ -9085,15 +9085,15 @@ def generate_executive_summary(
         ),
     }
     if unique_fatals:
-        case_overview += f" | ⚠️ {len(unique_fatals)} Fatal Defect(s)"
+        case_overview += f" | âš ï¸ {len(unique_fatals)} Fatal Defect(s)"
 
 
     _pf = unique_fatals[0] if unique_fatals else {}
     _ = (
-        f"{filing_verdict} — {_s(_pf.get('defect',''))}."
+        f"{filing_verdict} â€” {_s(_pf.get('defect',''))}."
         if unique_fatals else
-        f"{filing_verdict} — Risk score: {score}/100."
-    ).strip().replace('—  .', '').replace('..', '.')
+        f"{filing_verdict} â€” Risk score: {score}/100."
+    ).strip().replace('â€”  .', '').replace('..', '.')
 
 
     _pf_text = unique_fatals[0].get('defect', '') if unique_fatals else ''
@@ -9110,13 +9110,13 @@ def generate_executive_summary(
     for cat, data in cat_scores.items():
         s = _n(data.get('score') if isinstance(data, dict) else data)
         if s >= 75:
-            strengths.append(f"{cat}: {s}/100 — Strong ✅")
+            strengths.append(f"{cat}: {s}/100 â€” Strong âœ…")
     if case_data.get('return_memo_available'):
-        strengths.append("Dishonour memo available — primary evidence secured ✅")
+        strengths.append("Dishonour memo available â€” primary evidence secured âœ…")
     if case_data.get('postal_proof_available'):
-        strengths.append("Postal proof available — notice service established ✅")
+        strengths.append("Postal proof available â€” notice service established âœ…")
     if case_data.get('original_cheque_available'):
-        strengths.append("Original cheque available — foundational document present ✅")
+        strengths.append("Original cheque available â€” foundational document present âœ…")
     if not strengths:
         strengths.append("Core transaction facts established")
 
@@ -9129,10 +9129,10 @@ def generate_executive_summary(
             # Apply global sanitizer to clean all Missing patterns
             reason = sanitize_text(reason)
             weaknesses.append(
-                f"{cat}: {s}/100 — {reason or 'Insufficient evidence'} ❌"
+                f"{cat}: {s}/100 â€” {reason or 'Insufficient evidence'} âŒ"
             )
     if not case_data.get('written_agreement_exists'):
-        weaknesses.append("No written agreement available — enforceability risk ❌")
+        weaknesses.append("No written agreement available â€” enforceability risk âŒ")
 
 
     _doc_score = _n(_doc.get('overall_strength_score'))
@@ -9143,12 +9143,12 @@ def generate_executive_summary(
     elif _doc_score >= 70:
         documentary_context = "Documentary evidence is in reasonable order."
     else:
-        documentary_context = f"Documentary strength: {_doc_score:.0f}/100 — obtain written agreement and financial records before filing."
+        documentary_context = f"Documentary strength: {_doc_score:.0f}/100 â€” obtain written agreement and financial records before filing."
 
     if not case_data.get('ledger_available'):
-        weaknesses.append("No financial records — transaction trail incomplete ❌")
+        weaknesses.append("No financial records â€” transaction trail incomplete âŒ")
     if not case_data.get('postal_proof_available'):
-        weaknesses.append("No proof of notice service — procedural defect ❌")
+        weaknesses.append("No proof of notice service â€” procedural defect âŒ")
     if not weaknesses:
         weaknesses.append("No critical weaknesses at this stage")
 
@@ -9200,7 +9200,7 @@ def generate_executive_summary(
                 'File fresh complaint after the 15-day payment period expires')),
             'next_step':   (
                 "File fresh complaint within limitation window"
-                + (f" — {_days_rem} days remaining (deadline {_dl_str})" if _days_rem else '')
+                + (f" â€” {_days_rem} days remaining (deadline {_dl_str})" if _days_rem else '')
             ),
             'support':     'Prepare: written agreement / ledger records / postal proof of notice',
             'rationale':   _s(_primary.get('defect', 'Fatal procedural defect detected')),
@@ -9209,7 +9209,7 @@ def generate_executive_summary(
     elif score >= 70:
         strategic_recommendations.append({
             'priority': 'HIGH',
-            'recommendation': 'File complaint — case is in strong position',
+            'recommendation': 'File complaint â€” case is in strong position',
             'rationale': f"Risk score {score}/100 indicates solid compliance"
         })
         if settlement_data.get('interim_compensation_eligible'):
@@ -9222,7 +9222,7 @@ def generate_executive_summary(
         strategic_recommendations.append({
             'priority': 'HIGH',
             'recommendation': 'Strengthen evidence before filing',
-            'rationale': f"Score {score}/100 — multiple gaps increase acquittal risk"
+            'rationale': f"Score {score}/100 â€” multiple gaps increase acquittal risk"
         })
         if not case_data.get('written_agreement_exists'):
             strategic_recommendations.append({
@@ -9242,7 +9242,7 @@ def generate_executive_summary(
             'action':  'Wait for cause of action, then file fresh complaint',
             'urgency': 'URGENT',
             'details': (
-                "Do not refile same complaint — it will be dismissed. "
+                "Do not refile same complaint â€” it will be dismissed. "
                 + (_s(_pf.get('remedy', '')) + '. ' if _pf.get('remedy') else '')
                 + (f"You have {_days_na} days to refile (deadline: {_dl_na})." if _days_na else '')
             ).strip()
@@ -9269,7 +9269,7 @@ def generate_executive_summary(
         next_actions.append({
             'action':  'Proceed with final legal review before filing',
             'urgency': 'NORMAL',
-            'details': 'Case is in reasonable position — verify all documents before filing'
+            'details': 'Case is in reasonable position â€” verify all documents before filing'
         })
 
 
@@ -9277,21 +9277,21 @@ def generate_executive_summary(
 
 
     if fatal_flag:
-        outcome_probability = 'HIGH probability of dismissal — fatal procedural defect present'
+        outcome_probability = 'HIGH probability of dismissal â€” fatal procedural defect present'
         dismissal_risk = 'CERTAIN' if any('premature' in str(d).lower() for d in unique_fatals) else 'HIGH'
     elif score >= 75:
         _doc_s = _n(doc_data.get('overall_strength_score', 0))
         if _doc_s < 55:
-            outcome_probability = 'MODERATE — procedural compliance adequate but weak documentary evidence creates acquittal risk'
+            outcome_probability = 'MODERATE â€” procedural compliance adequate but weak documentary evidence creates acquittal risk'
             dismissal_risk = 'MEDIUM'
         else:
             outcome_probability = 'MODERATE-HIGH probability of conviction if evidence maintained'
             dismissal_risk = 'LOW'
     elif score >= 55:
-        outcome_probability = 'MODERATE — case is legally valid but outcome depends on documentary strengthening'
+        outcome_probability = 'MODERATE â€” case is legally valid but outcome depends on documentary strengthening'
         dismissal_risk = 'MEDIUM'
     else:
-        outcome_probability = 'LOW probability of conviction — significant compliance gaps present'
+        outcome_probability = 'LOW probability of conviction â€” significant compliance gaps present'
         dismissal_risk = 'HIGH'
 
 
@@ -9319,11 +9319,11 @@ def generate_executive_summary(
     _doc_s2 = _n(doc_data.get('overall_strength_score', 0))
     if unique_fatals:
         top_summary = (
-            f"Case has fatal procedural defect — do not file until resolved. Score: {score}/100."
+            f"Case has fatal procedural defect â€” do not file until resolved. Score: {score}/100."
         )
     elif score >= 75 and _doc_s2 >= 60:
         top_summary = (
-            f"Case is in strong position to file — statutory requirements largely satisfied. Score: {score}/100."
+            f"Case is in strong position to file â€” statutory requirements largely satisfied. Score: {score}/100."
         )
     elif score >= 55:
         top_summary = (
@@ -9332,7 +9332,7 @@ def generate_executive_summary(
         )
     else:
         top_summary = (
-            f"Case has multiple compliance gaps — significant remediation required before filing. Score: {score}/100."
+            f"Case has multiple compliance gaps â€” significant remediation required before filing. Score: {score}/100."
         )
 
     return {
@@ -9379,7 +9379,7 @@ def generate_verdict_one_liner(
     verdict = {}
 
     if fatal_defects and len(fatal_defects) > 0:
-        maintainability = "⚠️ Maintainability Questionable"
+        maintainability = "âš ï¸ Maintainability Questionable"
         maintainability_status = "CRITICAL"
 
         verdict_line = f"Maintainability at risk due to {fatal_defects[0].get('defect', 'statutory compliance gaps')}. Immediate remediation advisable."
@@ -9581,53 +9581,53 @@ def generate_prefiling_checklist(
 
     if 'original_cheque_missing' in documentary_gaps:
         checklist['critical_actions'].append({
-            'action': '📎 Obtain and attach original cheque',
+            'action': 'ðŸ“Ž Obtain and attach original cheque',
             'priority': 'CRITICAL',
             'reason': 'Primary evidence required'
         })
 
     if 'return_memo_missing' in documentary_gaps:
         checklist['critical_actions'].append({
-            'action': '📎 Obtain dishonour memo from bank',
+            'action': 'ðŸ“Ž Obtain dishonour memo from bank',
             'priority': 'CRITICAL',
             'reason': 'Statutory requirement under Section 138'
         })
 
     if 'postal_proof_missing' in documentary_gaps:
         checklist['critical_actions'].append({
-            'action': '📎 Attach postal proof/acknowledgment',
+            'action': 'ðŸ“Ž Attach postal proof/acknowledgment',
             'priority': 'CRITICAL',
             'reason': 'Proof of notice service essential'
         })
 
     if 'written_agreement_missing' in documentary_gaps:
         checklist['recommended_actions'].append({
-            'action': '📄 Attach written agreement/contract',
+            'action': 'ðŸ“„ Attach written agreement/contract',
             'priority': 'HIGH',
             'reason': 'Strengthens proof of legally enforceable debt'
         })
 
     if 'ledger_missing' in documentary_gaps:
         checklist['recommended_actions'].append({
-            'action': '📊 Include ledger extract',
+            'action': 'ðŸ“Š Include ledger extract',
             'priority': 'HIGH',
             'reason': 'Supports transaction authenticity'
         })
 
     checklist['optional_improvements'].append({
-        'action': '🏦 Attach bank statement trail',
+        'action': 'ðŸ¦ Attach bank statement trail',
         'priority': 'MEDIUM',
         'reason': 'Additional corroboration of transaction'
     })
 
     checklist['optional_improvements'].append({
-        'action': '👤 Prepare witness statements',
+        'action': 'ðŸ‘¤ Prepare witness statements',
         'priority': 'MEDIUM',
         'reason': 'Strengthens factual foundation'
     })
 
     checklist['optional_improvements'].append({
-        'action': '📧 Include email/SMS correspondence',
+        'action': 'ðŸ“§ Include email/SMS correspondence',
         'priority': 'MEDIUM',
         'reason': 'Demonstrates communication trail'
     })
@@ -9673,19 +9673,19 @@ def verify_documents_against_claims(
                 verified = False
                 if verified:
                     verification['verified_count'] += 1
-                    status = "✅ VERIFIED"
+                    status = "âœ… VERIFIED"
                     action = None
                 else:
                     verification['unverified_count'] += 1
-                    status = "⚠️ CLAIMED but NOT VERIFIED"
+                    status = "âš ï¸ CLAIMED but NOT VERIFIED"
                     action = f"Upload {doc_name.lower()} to confirm"
             else:
                 verification['unverified_count'] += 1
-                status = "⚠️ CLAIMED but NOT VERIFIED"
+                status = "âš ï¸ CLAIMED but NOT VERIFIED"
                 action = f"Upload {doc_name.lower()} to confirm"
         else:
             verification['missing_count'] += 1
-            status = "❌ NOT PROVIDED"
+            status = "âŒ NOT PROVIDED"
             action = f"Consider obtaining {doc_name.lower()}"
 
         verification['documents'].append({
@@ -9736,7 +9736,7 @@ def generate_filing_readiness_checklist(
     critical_warns = []
 
     doc_fatal = len(document_compliance.get('fatal_defects', [])) > 0
-    doc_ready = document_compliance.get('filing_readiness') == '✅ READY TO FILE'
+    doc_ready = document_compliance.get('filing_readiness') == 'âœ… READY TO FILE'
 
     if doc_fatal:
         fatal_blocks.append({
@@ -9745,7 +9745,7 @@ def generate_filing_readiness_checklist(
             'action': 'Filing will be rejected - Obtain mandatory documents'
         })
         checklist['clearance_items']['documents'] = {
-            'status': '🔴 BLOCKED',
+            'status': 'ðŸ”´ BLOCKED',
             'detail': f"{len(document_compliance.get('fatal_defects', []))} FATAL defects",
             'ready': False,
             'blocking': True
@@ -9753,14 +9753,14 @@ def generate_filing_readiness_checklist(
     elif doc_ready:
         ready_count += 1
         checklist['clearance_items']['documents'] = {
-            'status': '✅ Ready',
+            'status': 'âœ… Ready',
             'detail': f"Compliance: {document_compliance.get('compliance_score', 0)}/100",
             'ready': True
         }
     else:
         critical_warns.append('Document gaps present - High rejection risk')
         checklist['clearance_items']['documents'] = {
-            'status': '⚠️ RISKY',
+            'status': 'âš ï¸ RISKY',
             'detail': f"Compliance: {document_compliance.get('compliance_score', 0)}/100",
             'ready': False
         }
@@ -9775,7 +9775,7 @@ def generate_filing_readiness_checklist(
             'action': 'Filing will fail - Case is limitation-barred'
         })
         checklist['clearance_items']['limitation'] = {
-            'status': '🔴 BLOCKED',
+            'status': 'ðŸ”´ BLOCKED',
             'detail': 'LIMITATION EXPIRED',
             'ready': False,
             'blocking': True
@@ -9783,21 +9783,21 @@ def generate_filing_readiness_checklist(
     elif limitation_safe:
         ready_count += 1
         checklist['clearance_items']['limitation'] = {
-            'status': '✅ Safe',
+            'status': 'âœ… Safe',
             'detail': f"Risk: {timeline_result.get('limitation_risk', 'Unknown')}",
             'ready': True
         }
     else:
         critical_warns.append('Limitation timeline tight - Verify urgently')
         checklist['clearance_items']['limitation'] = {
-            'status': '⚠️ RISKY',
+            'status': 'âš ï¸ RISKY',
             'detail': f"Risk: {timeline_result.get('limitation_risk', 'Unknown')}",
             'ready': False
         }
 
     ingredients_ok = ingredients.get('overall_compliance', 0) >= 70
     checklist['clearance_items']['ingredients'] = {
-        'status': '✅ Compliant' if ingredients_ok else '⚠️ Gaps',
+        'status': 'âœ… Compliant' if ingredients_ok else 'âš ï¸ Gaps',
         'detail': f"Compliance: {ingredients.get('overall_compliance', 0):.1f}%",
         'ready': ingredients_ok
     }
@@ -9816,7 +9816,7 @@ def generate_filing_readiness_checklist(
             'action': 'Address fatal defence vulnerabilities before filing'
         })
         checklist['clearance_items']['defence_exposure'] = {
-            'status': '🔴 CRITICAL',
+            'status': 'ðŸ”´ CRITICAL',
             'detail': f"{len(defence_risks.get('fatal_defences', []))} fatal defence risks",
             'ready': False,
             'blocking': False
@@ -9824,21 +9824,21 @@ def generate_filing_readiness_checklist(
     elif defence_safe:
         ready_count += 1
         checklist['clearance_items']['defence_exposure'] = {
-            'status': '✅ Manageable',
+            'status': 'âœ… Manageable',
             'detail': defence_risks.get('overall_risk', 'Unknown'),
             'ready': True
         }
     else:
         critical_warns.append(f"Defence exposure: {defence_risks.get('overall_risk')}")
         checklist['clearance_items']['defence_exposure'] = {
-            'status': '⚠️ Elevated',
+            'status': 'âš ï¸ Elevated',
             'detail': defence_risks.get('overall_risk', 'Unknown'),
             'ready': False
         }
 
     _ = True
     checklist['clearance_items']['procedural'] = {
-        'status': '✅ Clear',
+        'status': 'âœ… Clear',
         'detail': 'No procedural defects detected',
         'ready': True
     }
@@ -9849,22 +9849,22 @@ def generate_filing_readiness_checklist(
     checklist['critical_warnings'] = critical_warns
 
     if len(fatal_blocks) > 0:
-        checklist['overall_status'] = '🔴 FILING BLOCKED'
+        checklist['overall_status'] = 'ðŸ”´ FILING BLOCKED'
         checklist['ready_to_file'] = False
         checklist['decisive_verdict'] = f"DO NOT FILE - {len(fatal_blocks)} fatal blockers detected"
         checklist['filing_recommendation'] = f"FILING WILL FAIL due to: {fatal_blocks[0]['blocker']}"
     elif len(critical_warns) >= 3:
-        checklist['overall_status'] = '⚠️ HIGH RISK - NOT ADVISABLE'
+        checklist['overall_status'] = 'âš ï¸ HIGH RISK - NOT ADVISABLE'
         checklist['ready_to_file'] = False
         checklist['decisive_verdict'] = f"FILING NOT ADVISABLE - {len(critical_warns)} critical gaps present"
         checklist['filing_recommendation'] = 'Address critical gaps before filing to avoid dismissal risk'
     elif len(critical_warns) > 0:
-        checklist['overall_status'] = '⚠️ RISKY - REVIEW REQUIRED'
+        checklist['overall_status'] = 'âš ï¸ RISKY - REVIEW REQUIRED'
         checklist['ready_to_file'] = False
         checklist['decisive_verdict'] = f"FILING POSSIBLE BUT RISKY - {len(critical_warns)} warnings present"
         checklist['filing_recommendation'] = 'Strengthen weak areas before filing'
     else:
-        checklist['overall_status'] = '✅ READY TO FILE'
+        checklist['overall_status'] = 'âœ… READY TO FILE'
         checklist['ready_to_file'] = True
         checklist['decisive_verdict'] = 'CLEAR TO FILE - All critical requirements satisfied'
         checklist['filing_recommendation'] = 'Proceed with filing - Case is ready'
@@ -9886,7 +9886,7 @@ def _safe(value, default="DATA NOT AVAILABLE", fmt=None):
             if not value.strip():
                 return default
     if fmt == "inr" and isinstance(value, (int, float)):
-        return f"₹{indian_number_format(value)}"
+        return f"â‚¹{indian_number_format(value)}"
     if fmt == "score" and isinstance(value, (int, float)):
         return f"{value:.1f}/100"
     if fmt == "pct" and isinstance(value, (int, float)):
@@ -9973,7 +9973,7 @@ def generate_case_scenario_summary(case_data: Dict, timeline: Dict) -> str:
     # Part 1: Transaction and cheque issuance
     parts.append(
         f"The complainant issued a cheque dated {cheque_date} "
-        f"for ₹{indian_number_format(cheque_amount)} towards {debt_nature}."
+        f"for â‚¹{indian_number_format(cheque_amount)} towards {debt_nature}."
     )
     
     # Part 2: Dishonour
@@ -10055,7 +10055,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
         'case_reference': _safe(analysis.get('case_id')),
         'analysis_date': analysis.get('analysis_timestamp', '')[:10] or 'Not available',
         'case_type': case_type,
-        'cheque_amount': f"₹{indian_number_format(amount)}",
+        'cheque_amount': f"â‚¹{indian_number_format(amount)}",
         'cheque_number': _safe(case_data.get('cheque_number')),
         'cheque_date': _safe(case_data.get('cheque_date')),
         'bank_name': _safe(case_data.get('bank_name')),
@@ -10143,11 +10143,11 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             f"Risk score: {score}/100. Filing possible but carries heightened acquittal risk."
         )
         recommended_action = (
-            "Obtain documentary proof of the debt — written agreement, ledger records, "
-            "or bank transfer evidence — before filing to reduce acquittal risk and strengthen prosecution position."
+            "Obtain documentary proof of the debt â€” written agreement, ledger records, "
+            "or bank transfer evidence â€” before filing to reduce acquittal risk and strengthen prosecution position."
         )
     else:
-        filing_status = "HIGH RISK — REMEDIATION REQUIRED"
+        filing_status = "HIGH RISK â€” REMEDIATION REQUIRED"
         filing_colour = "RED"
         one_liner = f"Case exhibits multiple critical compliance gaps that severely undermine maintainability. Risk score: {score}/100. Filing not advisable without substantial remediation."
         recommended_action = "Obtain missing documents, strengthen transaction proof, address procedural defects, then reassess."
@@ -10168,13 +10168,13 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
     for cat, data in (risk.get('category_scores') or {}).items():
         s = _safe_score(data.get('score') if isinstance(data, dict) else data)
         if s >= 75:
-            strengths.append(f"{cat}: {s}/100 — Strong")
+            strengths.append(f"{cat}: {s}/100 â€” Strong")
     if case_data.get('return_memo_available'):
-        strengths.append("Dishonour memo available — primary evidence secured")
+        strengths.append("Dishonour memo available â€” primary evidence secured")
     if case_data.get('postal_proof_available'):
-        strengths.append("Postal proof of notice available — service established")
+        strengths.append("Postal proof of notice available â€” service established")
     if case_data.get('original_cheque_available'):
-        strengths.append("Original cheque available — foundational document present")
+        strengths.append("Original cheque available â€” foundational document present")
     if not strengths:
         strengths.append("Core cheque transaction established")
 
@@ -10186,11 +10186,11 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             reason = data.get('reason', '') if isinstance(data, dict) else ''
             # Apply global sanitizer to clean all Missing patterns
             reason = sanitize_text(reason)
-            weaknesses.append(f"{cat}: {s}/100 — {_safe(reason, 'Insufficient evidence')}")
+            weaknesses.append(f"{cat}: {s}/100 â€” {_safe(reason, 'Insufficient evidence')}")
     if not case_data.get('written_agreement_exists'):
-        weaknesses.append("No documentary proof of legally enforceable debt — accused can challenge the fundamental Section 138 ingredient")
+        weaknesses.append("No documentary proof of legally enforceable debt â€” accused can challenge the fundamental Section 138 ingredient")
     if not case_data.get('ledger_available'):
-        weaknesses.append("No ledger or financial records — transaction trail incomplete, making debt proof difficult")
+        weaknesses.append("No ledger or financial records â€” transaction trail incomplete, making debt proof difficult")
     if not weaknesses:
         weaknesses.append("No critical weaknesses detected at this stage")
 
@@ -10237,7 +10237,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             {
                 'date': e.get('date', 'Unknown'),
                 'event': _safe(e.get('event')),
-                'status': _safe(e.get('status'), '—')
+                'status': _safe(e.get('status'), 'â€”')
             }
             for e in chart
         ],
@@ -10272,7 +10272,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
     }
     for cat, data in cat_scores.items():
         s = _safe_score(data.get('score') if isinstance(data, dict) else data)
-        weight, desc = weight_map.get(cat, ('—', 'Contributing factor'))
+        weight, desc = weight_map.get(cat, ('â€”', 'Contributing factor'))
         status = 'Strong' if s >= 75 else ('Adequate' if s >= 55 else 'Weak')
         breakdown.append({
             'category': cat,
@@ -10305,13 +10305,13 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
 
     # FIX 6: Document items with explicit priority levels
     doc_items = [
-        ('Original Cheque',         case_data.get('original_cheque_available'),   'CRITICAL', 'Primary instrument — essential for prosecution'),
-        ('Return Memo',             case_data.get('return_memo_available'),       'CRITICAL', 'Proof of dishonour — essential statutory requirement'),
-        ('Postal Proof',            case_data.get('postal_proof_available'),      'HIGH',     'Notice service evidence — critical for limitation compliance'),
-        ('Written Agreement',       case_data.get('written_agreement_exists'),    'CRITICAL', 'Debt proof — fundamental to establish legally enforceable debt'),
-        ('Ledger/Account Records',  case_data.get('ledger_available'),            'HIGH',     'Transaction trail — important corroboration'),
-        ('Email/SMS Evidence',      case_data.get('email_sms_evidence'),          'MEDIUM',   'Supporting evidence — strengthens case'),
-        ('Witness Available',       case_data.get('witness_available'),           'MEDIUM',   'Testimonial evidence — useful corroboration'),
+        ('Original Cheque',         case_data.get('original_cheque_available'),   'CRITICAL', 'Primary instrument â€” essential for prosecution'),
+        ('Return Memo',             case_data.get('return_memo_available'),       'CRITICAL', 'Proof of dishonour â€” essential statutory requirement'),
+        ('Postal Proof',            case_data.get('postal_proof_available'),      'HIGH',     'Notice service evidence â€” critical for limitation compliance'),
+        ('Written Agreement',       case_data.get('written_agreement_exists'),    'CRITICAL', 'Debt proof â€” fundamental to establish legally enforceable debt'),
+        ('Ledger/Account Records',  case_data.get('ledger_available'),            'HIGH',     'Transaction trail â€” important corroboration'),
+        ('Email/SMS Evidence',      case_data.get('email_sms_evidence'),          'MEDIUM',   'Supporting evidence â€” strengthens case'),
+        ('Witness Available',       case_data.get('witness_available'),           'MEDIUM',   'Testimonial evidence â€” useful corroboration'),
     ]
     
     # Categorize missing documents by priority
@@ -10335,7 +10335,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
         'documents': [
             {
                 'document': name,
-                'status': '✅ Available' if available else '❌ Missing',
+                'status': 'âœ… Available' if available else 'âŒ Missing',
                 'priority': priority,
                 'importance': description
             }
@@ -10353,7 +10353,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             f"Documentary strength: {R.get('documentary_score', _safe_score(documentary.get('overall_strength_score')))}/100. "
             + ("Very weak due to absence of written agreement, financial records, and proof of notice service, significantly weakening enforceability."
                if not case_data.get('written_agreement_exists') and not case_data.get('ledger_available') else
-               "No written agreement available — enforceability risk. "
+               "No written agreement available â€” enforceability risk. "
                "Obtain documentary evidence before filing."
                if not case_data.get('written_agreement_exists') else
                "Documentary evidence is in reasonable order.")
@@ -10369,7 +10369,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
     premature = next((d for d in proc_fatals if 'Premature' in d.get('defect', '') or '15-Day' in d.get('defect', '')), None)
     if premature and not any('Premature' in str(d) for d in high_risk):
         high_risk.insert(0, {
-            'defence': 'Premature Complaint — Cause of Action Not Yet Arisen',
+            'defence': 'Premature Complaint â€” Cause of Action Not Yet Arisen',
             'strength': 'FATAL',
             'legal_basis': 'Section 138(b) NI Act',
             'probability': 'CERTAIN',
@@ -10388,7 +10388,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             elif not case_data.get('ledger_available'):
                 d['factual_basis'] = 'Viable due to absence of financial records establishing transaction nature'
             else:
-                d['factual_basis'] = 'Possible defence angle — requires factual assessment'
+                d['factual_basis'] = 'Possible defence angle â€” requires factual assessment'
                 
         elif 'no debt' in defence_name or 'no liability' in defence_name:
             if not case_data.get('written_agreement_exists') and not case_data.get('ledger_available'):
@@ -10402,7 +10402,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             if not case_data.get('postal_proof_available'):
                 d['factual_basis'] = 'Strong due to lack of postal proof of notice delivery'
             else:
-                d['factual_basis'] = 'Limited viability — postal proof appears available'
+                d['factual_basis'] = 'Limited viability â€” postal proof appears available'
                 
         elif 'jurisdiction' in defence_name:
             if not case_data.get('court_location'):
@@ -10485,7 +10485,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             'court': R.get('court_name', _safe(case_data.get('court_location'), 'Not specified')),
             'confidence': 'INSUFFICIENT DATA',
             'note': R.get('court_note',
-                'Judicial behaviour analysis is unavailable — '
+                'Judicial behaviour analysis is unavailable â€” '
                 'insufficient case data for this court in the knowledge base. '
                 'Analysis will improve as more judgments are added.'
             ),
@@ -10516,13 +10516,13 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
         ] if vuln_zones else [],
         'likely_questions': R.get('cross_exam_questions') or likely_qs[:8] or [
             'Can you produce the original loan agreement in writing?',
-            'How was the money transferred — cash, cheque, or bank transfer?',
+            'How was the money transferred â€” cash, cheque, or bank transfer?',
             'Is it not true the cheque was given as security and not towards repayment?',
             'Why is there no ledger entry or bank record of this transaction?',
             'Who was present when the loan was given?',
         ] if not case_data.get('written_agreement_exists') else [
             'Please produce the original written agreement.',
-            'When exactly was the notice served — produce postal acknowledgment.',
+            'When exactly was the notice served â€” produce postal acknowledgment.',
         ],
         'preparation_tips': cross_exam.get('preparation_required', [])[:3]
     }
@@ -10854,7 +10854,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
 def generate_executive_report(analysis_data: Dict) -> Dict:
     """
     Generate a fully-populated executive report.
-    All fields have safe fallbacks — no null/undefined values.
+    All fields have safe fallbacks â€” no null/undefined values.
     """
     modules      = analysis_data.get('modules', {})
     exec_summ    = analysis_data.get('executive_summary', {})
@@ -10879,7 +10879,7 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
 
 
     one_liner = plain_summ.get('one_line_verdict') or exec_summ.get('case_overview') or (
-        f"{'⛔ FATAL DEFECT — Do not file.' if fatal_flag else ('✅ Strong case.' if score >= 75 else ('⚠️ Moderate case — evidence gaps.' if score >= 60 else '🔴 Weak case — major remediation required.'))}"
+        f"{'â›” FATAL DEFECT â€” Do not file.' if fatal_flag else ('âœ… Strong case.' if score >= 75 else ('âš ï¸ Moderate case â€” evidence gaps.' if score >= 60 else 'ðŸ”´ Weak case â€” major remediation required.'))}"
         f" Risk score: {score:.0f}/100."
     )
 
@@ -10896,7 +10896,7 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
     recommendation = (
         plain_summ.get('recommendation') or
         exec_summ.get('strategic_recommendations', [{}])[0].get('recommendation', '') or
-        ("Do not file — address fatal defect first." if fatal_flag else
+        ("Do not file â€” address fatal defect first." if fatal_flag else
          "Strengthen documentary evidence before filing." if score < 70 else
          "Ready to file. Obtain final legal review.")
     )
@@ -10919,9 +10919,9 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
             ("Limitation Deadline", "limitation_deadline"),
         ]:
             if cd.get(date_key):
-                status = timeline_data.get('compliance_status', {}).get(date_key, '—')
+                status = timeline_data.get('compliance_status', {}).get(date_key, 'â€”')
                 timeline_events.append({
-                    'date': cd[date_key], 'event': label, 'status': _safe(status, '—')
+                    'date': cd[date_key], 'event': label, 'status': _safe(status, 'â€”')
                 })
 
 
@@ -10951,15 +10951,15 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
     if not doc_gaps and doc_data.get('overall_strength_score', 100) < 70:
         for field, label, sev, imp in [
             ('written_agreement_exists', 'No documentary proof of legally enforceable debt', 'Severe',
-             'Accused can deny the existence of a legally enforceable debt — a fundamental Section 138 ingredient'),
+             'Accused can deny the existence of a legally enforceable debt â€” a fundamental Section 138 ingredient'),
             ('ledger_available',         'No financial records or ledger entries', 'High',
-             'No independent paper trail of the alleged transaction — debt story is entirely oral and uncorroborated'),
+             'No independent paper trail of the alleged transaction â€” debt story is entirely oral and uncorroborated'),
             ('original_cheque_available','Original Cheque', 'High',
-             'Primary instrument not secured — foundational evidence missing'),
+             'Primary instrument not secured â€” foundational evidence missing'),
             ('return_memo_available',    'Bank Dishonour Memo', 'Severe',
-             'Proof of dishonour not available — essential ingredient missing'),
+             'Proof of dishonour not available â€” essential ingredient missing'),
             ('postal_proof_available',   'Postal Proof of Notice', 'Moderate',
-             'Notice service cannot be established — accused may deny receipt'),
+             'Notice service cannot be established â€” accused may deny receipt'),
         ]:
             if not case_meta.get(field, True):
                 doc_gaps.append({
@@ -10981,9 +10981,9 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
         'premature' in str(d).lower() for d in high_risk_defences
     ):
         high_risk_defences = [{
-            'ground': 'Premature Complaint — Cause of Action Not Yet Arisen',
+            'ground': 'Premature Complaint â€” Cause of Action Not Yet Arisen',
             'strength': 'FATAL',
-            'legal_basis': 'Section 138 NI Act — complaint maintainable only after 15-day payment period expires',
+            'legal_basis': 'Section 138 NI Act â€” complaint maintainable only after 15-day payment period expires',
             'impact': 'Accused will succeed in getting complaint dismissed'
         }] + list(high_risk_defences)
 
@@ -11014,7 +11014,7 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
             'settlement_friendly':   _safe(jud_indices.get('settlement_friendly'),   'Insufficient data'),
             'patterns': judicial_data.get('observed_patterns', []),
             'note': (
-                'Judicial behaviour analysis unavailable — insufficient court-specific data in knowledge base.'
+                'Judicial behaviour analysis unavailable â€” insufficient court-specific data in knowledge base.'
                 if jud_confidence == 'LOW' else
                 f"Based on {_safe(judicial_data.get('sample_size'), 'limited')} cases from this court."
             )
@@ -11023,13 +11023,13 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
 
     report = {
         "header": {
-            "platform": "JUDIQ AI — Legal Intelligence Platform",
-            "report_type": "Section 138 NI Act — Litigation Intelligence Report",
-            "classification": "CONFIDENTIAL — ATTORNEY-CLIENT PRIVILEGED"
+            "platform": "JUDIQ AI â€” Legal Intelligence Platform",
+            "report_type": "Section 138 NI Act â€” Litigation Intelligence Report",
+            "classification": "CONFIDENTIAL â€” ATTORNEY-CLIENT PRIVILEGED"
         },
 
         "document_info": {
-            "title": "SECTION 138 NI ACT — LITIGATION INTELLIGENCE REPORT",
+            "title": "SECTION 138 NI ACT â€” LITIGATION INTELLIGENCE REPORT",
             "case_id": _safe(analysis_data.get('case_id'), 'N/A'),
             "date": datetime.now().strftime("%d %B %Y"),
             "processing_time": f"{proc_time:.2f}s" if proc_time else "< 1s",
@@ -11048,7 +11048,7 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
             "debt_nature":     _safe(case_meta.get('debt_nature'), 'Not specified'),
             "overall_score":   f"{score:.1f}/100",
             "risk_classification": _safe(risk_data.get('compliance_level'), 'Assessment Pending'),
-            "fatal_defects_present": "YES — DO NOT FILE" if fatal_flag else "None detected"
+            "fatal_defects_present": "YES â€” DO NOT FILE" if fatal_flag else "None detected"
         },
 
 
@@ -11096,7 +11096,7 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
         "page_4_risk_breakdown": {
             "title": "RISK SCORE BREAKDOWN",
             "overall_score": f"{score:.1f}/100",
-            "scoring_method": "Weighted deductions from 100 base — fatal defects cap score at 15",
+            "scoring_method": "Weighted deductions from 100 base â€” fatal defects cap score at 15",
             "breakdown": risk_breakdown,
             "fatal_override_applied": fatal_flag,
             "score_cap_reason": (
@@ -11113,7 +11113,7 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
             "gaps_count": len(doc_gaps),
             "impact_summary": (
                 "Strong documentary foundation" if doc_data.get('overall_strength_score', 0) >= 70 else
-                f"{len(doc_gaps)} document gap(s) identified — defence can exploit missing records"
+                f"{len(doc_gaps)} document gap(s) identified â€” defence can exploit missing records"
             )
         },
 
@@ -11140,7 +11140,7 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
             ],
             "no_defence_note": (
                 None if (fatal_defences or high_risk_defences) else
-                "Note: No specific defences detected by module — however verify for procedural defects manually"
+                "Note: No specific defences detected by module â€” however verify for procedural defects manually"
             )
         },
 
@@ -11200,8 +11200,8 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
             "generated_at": datetime.now().strftime("%d %B %Y, %H:%M"),
             "processing_time": f"{proc_time:.2f}s" if (proc_time and proc_time > 0) else "< 1s",
             "processing_time_seconds": round(proc_time, 2) if proc_time else 0,
-            "classification": "CONFIDENTIAL — FOR AUTHORIZED USE ONLY",
-            "disclaimer": "NOT LEGAL ADVICE — Consult qualified legal counsel before acting on this report."
+            "classification": "CONFIDENTIAL â€” FOR AUTHORIZED USE ONLY",
+            "disclaimer": "NOT LEGAL ADVICE â€” Consult qualified legal counsel before acting on this report."
         }
     }
 
@@ -11216,7 +11216,7 @@ def generate_executive_report_legacy(analysis_data: Dict) -> Dict:
 
     report = {
         "header": {
-            "platform": "JUDIQ AI — Legal Intelligence Platform",
+            "platform": "JUDIQ AI â€” Legal Intelligence Platform",
         },
 
         "document_info": {
@@ -11231,14 +11231,14 @@ def generate_executive_report_legacy(analysis_data: Dict) -> Dict:
             "case_overview": {
                 "title": "CASE OVERVIEW",
                 "case_type": analysis_data['case_metadata']['case_type'].upper(),
-                "cheque_amount": f"₹{analysis_data['case_metadata']['cheque_amount']:,.2f}",
+                "cheque_amount": f"â‚¹{analysis_data['case_metadata']['cheque_amount']:,.2f}",
                 "overall_assessment": executive_summary.get('overall_assessment', 'Assessment pending'),
                 "risk_classification": risk_data.get('compliance_level', 'Unknown'),
                 "overall_score": f"{risk_data.get('final_score', 0):.1f}/100"
             },
 
             "critical_findings": {
-                "title": "⚠️ CRITICAL FINDINGS",
+                "title": "âš ï¸ CRITICAL FINDINGS",
                 "items": [
                     {
                         "severity": issue.get('severity', 'HIGH'),
@@ -11250,12 +11250,12 @@ def generate_executive_report_legacy(analysis_data: Dict) -> Dict:
             },
 
             "key_strengths": {
-                "title": "✓ KEY STRENGTHS",
+                "title": "âœ“ KEY STRENGTHS",
                 "items": executive_summary.get('strengths', [])[:3]
             },
 
             "key_weaknesses": {
-                "title": "✗ KEY WEAKNESSES",
+                "title": "âœ— KEY WEAKNESSES",
                 "items": executive_summary.get('weaknesses', [])[:3]
             },
 
@@ -11622,16 +11622,16 @@ def enforce_defence_dependencies(case_data: Dict, defence_result: Dict, doc_comp
             dependencies['mandatory_requirements'].append('part_payment_proof')
 
     if case_data.get('electronic_evidence'):
-        has_65b = case_data.get('section_65b_certificate', False)
+        has_63 = case_data.get('section_63_certificate', False)
 
-        if not has_65b:
+        if not has_63:
             dependencies['violations'].append({
-                'requirement': 'Section 65B Certificate - Electronic Evidence',
+                'requirement': 'Section 63 Certificate - Electronic Evidence',
                 'severity': 'CRITICAL',
                 'consequence': 'Electronic evidence inadmissible',
-                'action': 'MANDATORY: Obtain Section 65B certificate'
+                'action': 'MANDATORY: Obtain Section 63 certificate'
             })
-            dependencies['mandatory_requirements'].append('section_65b')
+            dependencies['mandatory_requirements'].append('section_63')
 
     debt_disputed = not case_data.get('written_agreement_exists', False)
     if debt_disputed:
@@ -11690,14 +11690,14 @@ def cross_validate_defence_documents(case_data: Dict, defence_result: Dict, doc_
                 cross_validation['severity'] = 'CRITICAL'
 
     if case_data.get('electronic_evidence'):
-        if not case_data.get('section_65b_certificate'):
-            if not any(g['gap'] == 'ELECTRONIC_NO_65B' for g in cross_validation['gaps_identified']):
+        if not case_data.get('section_63_certificate'):
+            if not any(g['gap'] == 'ELECTRONIC_NO_63' for g in cross_validation['gaps_identified']):
                 cross_validation['gaps_identified'].append({
-                    'gap': 'ELECTRONIC_NO_65B',
-                    'description': 'Electronic evidence without Section 65B certificate',
+                    'gap': 'ELECTRONIC_NO_63',
+                    'description': 'Electronic evidence without Section 63 certificate',
                     'severity': 'CRITICAL',
                     'consequence': 'Electronic evidence inadmissible',
-                    'required_action': 'Obtain Section 65B certificate'
+                    'required_action': 'Obtain Section 63 certificate'
                 })
                 if cross_validation['severity'] == 'NONE':
                     cross_validation['severity'] = 'CRITICAL'
@@ -11754,17 +11754,17 @@ def save_analysis_to_db(analysis_report: Dict) -> bool:
 
         conn.commit()
         conn.close()
-        logger.info(f"✅ Analysis saved to DB: {analysis_report['case_id']}")
+        logger.info(f"âœ… Analysis saved to DB: {analysis_report['case_id']}")
         return True
 
     except sqlite3.Error as e:
-        logger.error(f"❌ Database error saving analysis: {e}")
+        logger.error(f"âŒ Database error saving analysis: {e}")
         return False
     except KeyError as e:
-        logger.error(f"❌ Missing required field in analysis: {e}")
+        logger.error(f"âŒ Missing required field in analysis: {e}")
         return False
     except Exception as e:
-        logger.error(f"❌ Unexpected error saving analysis: {e}")
+        logger.error(f"âŒ Unexpected error saving analysis: {e}")
         return False
 
 from contextlib import asynccontextmanager
@@ -11780,10 +11780,10 @@ def _safe_f(v, default=0.0) -> float:
 
 def get_decision_confidence(analysis: Dict, case_data: Dict) -> Dict:
     """
-    Feature 1 — DECISION CONFIDENCE ENGINE
+    Feature 1 â€” DECISION CONFIDENCE ENGINE
     Tells the lawyer how much to trust this system's output for this specific case.
     Based on: data completeness, module agreement, contradiction count, KB coverage.
-    NOT probability of winning — confidence in the analysis itself.
+    NOT probability of winning â€” confidence in the analysis itself.
     """
     try:
         risk   = analysis.get('modules', {}).get('risk_assessment', {}) or {}
@@ -11801,11 +11801,11 @@ def get_decision_confidence(analysis: Dict, case_data: Dict) -> Dict:
                              'detail': f'All required fields provided ({pct:.0f}%)', 'impact': 0})
         elif pct >= 55:
             factors.append({'factor': 'Data completeness', 'rating': 'MEDIUM',
-                             'detail': f'Some fields missing ({pct:.0f}%) — analysis estimated for gaps', 'impact': -15})
+                             'detail': f'Some fields missing ({pct:.0f}%) â€” analysis estimated for gaps', 'impact': -15})
             penalty += 15
         else:
             factors.append({'factor': 'Data completeness', 'rating': 'LOW',
-                             'detail': f'Critical fields missing ({pct:.0f}%) — analysis reliability reduced', 'impact': -30})
+                             'detail': f'Critical fields missing ({pct:.0f}%) â€” analysis reliability reduced', 'impact': -30})
             penalty += 30
 
 
@@ -11836,7 +11836,7 @@ def get_decision_confidence(analysis: Dict, case_data: Dict) -> Dict:
             penalty += 8
         else:
             factors.append({'factor': 'Internal consistency', 'rating': 'LOW',
-                             'detail': f'{n_issues} contradictions — review results carefully', 'impact': -20})
+                             'detail': f'{n_issues} contradictions â€” review results carefully', 'impact': -20})
             penalty += 20
 
 
@@ -11844,14 +11844,14 @@ def get_decision_confidence(analysis: Dict, case_data: Dict) -> Dict:
         missing_dates = [f for f in critical_dates if not case_data.get(f)]
         if not missing_dates:
             factors.append({'factor': 'Timeline data', 'rating': 'HIGH',
-                             'detail': 'All critical dates provided — timeline analysis is deterministic', 'impact': 0})
+                             'detail': 'All critical dates provided â€” timeline analysis is deterministic', 'impact': 0})
         elif len(missing_dates) <= 1:
             factors.append({'factor': 'Timeline data', 'rating': 'MEDIUM',
-                             'detail': f'Date unavailable: {missing_dates[0]} — some timeline figures are estimated', 'impact': -12})
+                             'detail': f'Date unavailable: {missing_dates[0]} â€” some timeline figures are estimated', 'impact': -12})
             penalty += 12
         else:
             factors.append({'factor': 'Timeline data', 'rating': 'LOW',
-                             'detail': f'{len(missing_dates)} critical dates missing — limitation analysis unreliable', 'impact': -25})
+                             'detail': f'{len(missing_dates)} critical dates missing â€” limitation analysis unreliable', 'impact': -25})
             penalty += 25
 
         base = 100
@@ -11859,15 +11859,15 @@ def get_decision_confidence(analysis: Dict, case_data: Dict) -> Dict:
 
         if confidence_score >= 80:
             level = 'HIGH'
-            label = 'High confidence — analysis is reliable for this case'
+            label = 'High confidence â€” analysis is reliable for this case'
             colour = 'GREEN'
         elif confidence_score >= 55:
             level = 'MEDIUM'
-            label = 'Medium confidence — analysis is reasonable but review flagged areas'
+            label = 'Medium confidence â€” analysis is reasonable but review flagged areas'
             colour = 'AMBER'
         else:
             level = 'LOW'
-            label = 'Low confidence — provide more data to improve reliability'
+            label = 'Low confidence â€” provide more data to improve reliability'
             colour = 'RED'
 
         return {
@@ -11880,7 +11880,7 @@ def get_decision_confidence(analysis: Dict, case_data: Dict) -> Dict:
         'penalty_total':      penalty,
         'trust_signal':       f'System confidence in this analysis: {level} ({confidence_score}/100)',
         'caveat':             ('This is system confidence in the analysis quality, not a prediction of case outcome.'
-                               ' A HIGH confidence score means the input data is complete and modules agree —'
+                               ' A HIGH confidence score means the input data is complete and modules agree â€”'
                                ' not that the case will succeed.'),
     }
 
@@ -11891,7 +11891,7 @@ def get_decision_confidence(analysis: Dict, case_data: Dict) -> Dict:
 
 def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
     """
-    Feature 2 — CONTRADICTION EXPLAINER
+    Feature 2 â€” CONTRADICTION EXPLAINER
     Finds and explains every contradiction in the analysis in plain language.
     """
     try:
@@ -11916,7 +11916,7 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
                 'id':           'C1',
                 'severity':     'MEDIUM',
                 'title':        'Timeline scores well but notice delivery is unproven',
-                'warning':      '⚠️ Timeline valid but notice proof missing → potential procedural risk at trial',
+                'warning':      'âš ï¸ Timeline valid but notice proof missing â†’ potential procedural risk at trial',
                 'explanation':  ('The timeline module scores the notice as within 30 days. However, no postal receipt'
                                   ' or AD card is available. The accused can dispute service, which would collapse'
                                   ' ingredient 5 regardless of the timeline score.'),
@@ -11929,10 +11929,10 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
                 'id':           'C2',
                 'severity':     'HIGH',
                 'title':        'High risk score conflicts with fatal flag',
-                'warning':      f'⚠️ Score is {overall:.0f}/100 (strong) but fatal_flag=True — contradiction',
+                'warning':      f'âš ï¸ Score is {overall:.0f}/100 (strong) but fatal_flag=True â€” contradiction',
                 'explanation':  (f'A fatal defect brings the actual filing viability to zero, regardless of the'
                                   f' {overall:.0f}/100 score. The score reflects the intrinsic strength of the'
-                                  f' ingredients — not the current filing status. Do not file until the fatal'
+                                  f' ingredients â€” not the current filing status. Do not file until the fatal'
                                   f' defect is resolved.'),
                 'action':       'Resolve the fatal defect first. Do not rely on the score to make a filing decision.',
             })
@@ -11943,7 +11943,7 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
                 'id':           'C3',
                 'severity':     'MEDIUM',
                 'title':        'No written agreement but documentary score is high',
-                'warning':      '⚠️ Documentary strength rated high despite no written loan agreement',
+                'warning':      'âš ï¸ Documentary strength rated high despite no written loan agreement',
                 'explanation':  ('The documentary module scored other evidence highly (bank records, memo, etc.)'
                                   ' but the written agreement is the single most important document for proving'
                                   ' legally enforceable debt. Its absence is a structural gap the score may'
@@ -11957,7 +11957,7 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
                 'id':           'C4',
                 'severity':     'MEDIUM',
                 'title':        'Complaint date provided but limitation cannot be assessed',
-                'warning':      '⚠️ Complaint filed date is given, but limitation calculation shows CANNOT ASSESS',
+                'warning':      'âš ï¸ Complaint filed date is given, but limitation calculation shows CANNOT ASSESS',
                 'explanation':  ('The notice received date is missing. Without it, the exact cause of action date'
                                   ' cannot be determined, making it impossible to verify whether the complaint'
                                   ' was filed within the 1-month period even though the date itself is provided.'),
@@ -11970,7 +11970,7 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
                 'id':           'C5',
                 'severity':     'HIGH',
                 'title':        'Security cheque defence active but score appears optimistic',
-                'warning':      '⚠️ Accused claims security cheque, no written agreement — score may be overstated',
+                'warning':      'âš ï¸ Accused claims security cheque, no written agreement â€” score may be overstated',
                 'explanation':  ('When the accused raises the security cheque defence and there is no written'
                                   ' agreement to prove the debt was presently payable, the case\u2019s effective'
                                   ' strength is lower than the score indicates. The score reflects procedural'
@@ -11986,7 +11986,7 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
                 'id':           'C6',
                 'severity':     'HIGH',
                 'title':        'Procedural fatal defect found but fatal_flag is False',
-                'warning':      f'⚠️ Procedural module found fatal defect ({defect}) but overall fatal_flag=False',
+                'warning':      f'âš ï¸ Procedural module found fatal defect ({defect}) but overall fatal_flag=False',
                 'explanation':  ('The procedural scanner flagged a fatal defect, but the main verdict'
                                   ' fatal_flag was not set. This can happen when the defect\u2019s severity'
                                   ' was classified differently by the risk aggregator. Treat this as fatal.'),
@@ -12001,9 +12001,9 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
         'contradiction_count':  len(contradictions),
         'contradictions':       contradictions,
         'high_count':           sum(1 for c in contradictions if c['severity'] == 'HIGH'),
-        'summary':              (f'{len(contradictions)} contradiction(s) found — review before filing'
+        'summary':              (f'{len(contradictions)} contradiction(s) found â€” review before filing'
                                   if contradictions else
-                                  'No contradictions detected — analysis is internally consistent'),
+                                  'No contradictions detected â€” analysis is internally consistent'),
         'overall_consistency':  'INCONSISTENT' if contradictions else 'CONSISTENT',
     }
 
@@ -12019,9 +12019,9 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
                 'id':          'C6',
                 'severity':    'HIGH',
                 'title':       'Strong score despite Section 269SS cash risk',
-                'warning':     '⚠️ Case scores well but cash transaction above ₹20,000 risks 269SS challenge',
+                'warning':     'âš ï¸ Case scores well but cash transaction above â‚¹20,000 risks 269SS challenge',
                 'explanation': ('The overall score is high, but the underlying transaction was in cash above '
-                                 '₹20,000. Defence will argue the debt itself violates Section 269SS Income Tax Act, '
+                                 'â‚¹20,000. Defence will argue the debt itself violates Section 269SS Income Tax Act, '
                                  'making the cheque given for an illegal consideration non-enforceable under Section 138.'),
                 'action':      'Obtain documentary proof of cash transaction. Prepare counter-arguments on 269SS applicability.',
             })
@@ -12034,9 +12034,9 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
                 'id':          'C7',
                 'severity':    'MEDIUM',
                 'title':       'Ingredient 5 (notice) scores well despite no service proof',
-                'warning':     '⚠️ Notice ingredient scores high but delivery is unproven',
+                'warning':     'âš ï¸ Notice ingredient scores high but delivery is unproven',
                 'explanation': ('Ingredient 5 (notice within 30 days) is scored as compliant, but no postal '
-                                 'receipt or AD card exists. At trial, accused can deny receipt — which collapses '
+                                 'receipt or AD card exists. At trial, accused can deny receipt â€” which collapses '
                                  'ingredient 5 even if notice was timely sent.'),
                 'action':      'Obtain postal tracking report or AD card to corroborate notice service.',
             })
@@ -12048,7 +12048,7 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
                 'id':          'C8',
                 'severity':    'MEDIUM',
                 'title':       f'Multiple cheques ({num_cheques}) may require separate complaints',
-                'warning':     f'⚠️ {num_cheques} cheques — each creates a SEPARATE offence under Section 138',
+                'warning':     f'âš ï¸ {num_cheques} cheques â€” each creates a SEPARATE offence under Section 138',
                 'explanation': ('Each dishonoured cheque under Section 138 is a separate offence requiring a separate '
                                  'complaint, separate notice, and separate cause of action. Clubbing in one complaint '
                                  'is procedurally incorrect and may lead to dismissal.'),
@@ -12064,10 +12064,10 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
                     contradictions.append({
                         'id':          'C9',
                         'severity':    'HIGH',
-                        'title':       f'Part payment of ₹{paid:,.0f} made — complaint may need amendment',
-                        'warning':     '⚠️ Part payment changes recoverable amount',
-                        'explanation': (f'A part payment of ₹{paid:,.0f} has been made out of the cheque amount '
-                                         f'of ₹{total:,.0f}. The balance of ₹{total-paid:,.0f} is still due. '
+                        'title':       f'Part payment of â‚¹{paid:,.0f} made â€” complaint may need amendment',
+                        'warning':     'âš ï¸ Part payment changes recoverable amount',
+                        'explanation': (f'A part payment of â‚¹{paid:,.0f} has been made out of the cheque amount '
+                                         f'of â‚¹{total:,.0f}. The balance of â‚¹{total-paid:,.0f} is still due. '
                                          'If the complaint claims the full cheque amount, it may need amendment '
                                          'to reflect the current balance.'),
                         'action':      'Amend complaint to claim balance amount. File affidavit confirming part payment received.',
@@ -12081,7 +12081,7 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
                 'id':          'C10',
                 'severity':    'HIGH',
                 'title':       'Company case but no directors named as accused',
-                'warning':     '⚠️ Company cannot be sole accused under Section 138 without responsible directors',
+                'warning':     'âš ï¸ Company cannot be sole accused under Section 138 without responsible directors',
                 'explanation': ('Section 141 NI Act requires that the persons "in charge of and responsible for '
                                  'conduct of business" of the company must also be prosecuted. Without naming '
                                  'responsible directors, enforcement is limited.'),
@@ -12092,9 +12092,9 @@ def get_contradiction_explainer(analysis: Dict, case_data: Dict) -> Dict:
 
 def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
     """
-    Feature 3 — LEGAL BASIS MAPPING
+    Feature 3 â€” LEGAL BASIS MAPPING
     Attaches the controlling legal provision to every key finding.
-    Adds authority and trust — lawyers can cite these in court.
+    Adds authority and trust â€” lawyers can cite these in court.
     """
     try:
         risk     = analysis.get('modules', {}).get('risk_assessment', {}) or {}
@@ -12107,7 +12107,7 @@ def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
 
 
         basis_map['core_offence'] = {
-            'finding':   'Section 138 NI Act — dishonour of cheque',
+            'finding':   'Section 138 NI Act â€” dishonour of cheque',
             'sections':  ['Section 138 NI Act'],
             'citations':  ['Dashrath Rupsingh Rathod v. State of Maharashtra (2014) 9 SCC 129'],
             'note':       'Seven ingredients must all be present for the offence to be complete.',
@@ -12117,8 +12117,8 @@ def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
         if 'BARRED' in lim_status or 'PREMATURE' in lim_status:
             basis_map['limitation'] = {
                 'finding':   'Complaint time-barred or premature',
-                'sections':  ['Section 142(b) NI Act — 1 month limitation from cause of action',
-                              'Section 142(c) NI Act — proviso for condonation'],
+                'sections':  ['Section 142(b) NI Act â€” 1 month limitation from cause of action',
+                              'Section 142(c) NI Act â€” proviso for condonation'],
                 'citations':  ['K. Bhaskaran v. Sankaran Vaidhyan Balan (1999) 7 SCC 510',
                                'Babulal Budhia v. SBI (2002)'],
                 'note':       'Cause of action arises on expiry of 15 days from notice receipt.',
@@ -12134,8 +12134,8 @@ def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
 
         basis_map['notice_requirement'] = {
             'finding':   'Legal notice is a mandatory pre-condition',
-            'sections':  ['Section 138(b) NI Act — notice within 30 days of dishonour',
-                          'Section 27 General Clauses Act — deemed service'],
+            'sections':  ['Section 138(b) NI Act â€” notice within 30 days of dishonour',
+                          'Section 27 General Clauses Act â€” deemed service'],
             'citations':  ['C.C. Alavi Haji v. Palapetty Muhammed (2007) 6 SCC 555'],
             'note':       'Notice must demand payment. Deemed service applies on refusal/unclaimed.',
         }
@@ -12143,8 +12143,8 @@ def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
 
         basis_map['presumption'] = {
             'finding':   'Section 139 presumption in favour of complainant',
-            'sections':  ['Section 139 NI Act — presumption of legally enforceable debt',
-                          'Section 118 NI Act — presumption of consideration'],
+            'sections':  ['Section 139 NI Act â€” presumption of legally enforceable debt',
+                          'Section 118 NI Act â€” presumption of consideration'],
             'citations':  ['Rangappa v. Sri Mohan (2010) 11 SCC 441',
                            'Kaushalya Devi Massand v. Roopak Saluja (2011) 11 SCC 363'],
             'note':       'Once cheque and dishonour are proved, burden shifts to accused to rebut.',
@@ -12153,9 +12153,9 @@ def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
 
         if not case_data.get('written_agreement_exists'):
             basis_map['enforceable_debt'] = {
-                'finding':   'No written agreement — oral debt relies on presumption',
+                'finding':   'No written agreement â€” oral debt relies on presumption',
                 'sections':  ['Section 139 NI Act', 'Section 25 Contract Act',
-                              'Section 91/92 Evidence Act — oral evidence to contradict documents'],
+                              'Section 91/92 Evidence Act â€” oral evidence to contradict documents'],
                 'citations':  ['Bir Singh v. Mukesh Kumar (2019) 4 SCC 197'],
                 'note':       'Accused must prove on preponderance that debt is not enforceable.',
             }
@@ -12163,8 +12163,8 @@ def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
 
         if case_data.get('is_company_case'):
             basis_map['company_liability'] = {
-                'finding':   'Section 141 — vicarious liability of directors',
-                'sections':  ['Section 141 NI Act — offences by companies'],
+                'finding':   'Section 141 â€” vicarious liability of directors',
+                'sections':  ['Section 141 NI Act â€” offences by companies'],
                 'citations':  ['SMS Pharmaceuticals Ltd v. Neeta Bhalla (2005) 8 SCC 89',
                                'National Small Industries Corp. Ltd v. Harmeet Singh Paintal (2010) 3 SCC 330'],
                 'note':       'Each director must be specifically averred as in-charge of company business.',
@@ -12173,16 +12173,16 @@ def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
 
         if case_data.get('electronic_evidence'):
             basis_map['electronic_evidence'] = {
-                'finding':   'Section 65B certificate mandatory for electronic evidence',
-                'sections':  ['Section 65B Evidence Act — admissibility of electronic records'],
+                'finding':   'Section 63 certificate mandatory for electronic evidence',
+                'sections':  ['Section 63 Evidence Act â€” admissibility of electronic records'],
                 'citations':  ['Anvar P.V. v. P.K. Basheer (2014) 10 SCC 473',
                                'Arjun Panditrao Khotkar v. Kailash Kushanrao Gorantyal (2020) 7 SCC 1'],
-                'note':       'No override — electronic evidence inadmissible without S.65B certificate.',
+                'note':       'No override â€” electronic evidence inadmissible without S.63 certificate.',
             }
 
 
         basis_map['appeal_deposit'] = {
-            'finding':   'Section 148 — mandatory deposit for suspension of sentence in appeal',
+            'finding':   'Section 148 â€” mandatory deposit for suspension of sentence in appeal',
             'sections':  ['Section 148 NI Act (as amended 2018)'],
             'citations':  ['Surinder Singh Deswal v. Virender Gandhi (2019) 11 SCC 341'],
             'note':       'Minimum 20% of fine/compensation must be deposited within 60 days of conviction.',
@@ -12203,9 +12203,9 @@ def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
 
     if case_data.get('is_company_case'):
         basis_map['company_liability'] = {
-            'finding':   'Company case — Section 141 NI Act applies',
-            'sections':  ['Section 141 NI Act — liability of companies',
-                          'Section 142 NI Act — cognizance of offences'],
+            'finding':   'Company case â€” Section 141 NI Act applies',
+            'sections':  ['Section 141 NI Act â€” liability of companies',
+                          'Section 142 NI Act â€” cognizance of offences'],
             'citations':  ['SMS Pharmaceuticals Ltd. v. Neeta Bhalla (2005) 8 SCC 89',
                             'National Small Industries Corp. Ltd. v. Harmeet Singh Paintal (2010) 3 SCC 330',
                             'Sunita Palita v. Panchami Stone Quarry (2022) 10 SCC 152'],
@@ -12214,12 +12214,12 @@ def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
 
 
     basis_map['section_139_presumption'] = {
-        'finding':   'Section 139 presumption — cheque issued for legally enforceable debt',
-        'sections':  ['Section 139 NI Act — presumption in favour of holder',
-                      'Section 118 NI Act — presumptions as to negotiable instruments'],
-        'citations':  ['Rangappa v. Sri Mohan (2010) 11 SCC 441 — presumption is rebuttable on preponderance',
+        'finding':   'Section 139 presumption â€” cheque issued for legally enforceable debt',
+        'sections':  ['Section 139 NI Act â€” presumption in favour of holder',
+                      'Section 118 NI Act â€” presumptions as to negotiable instruments'],
+        'citations':  ['Rangappa v. Sri Mohan (2010) 11 SCC 441 â€” presumption is rebuttable on preponderance',
                         'M.S. Narayana Menon v. State of Kerala (2006) 6 SCC 39',
-                        'Bir Singh v. Mukesh Kumar (2019) 4 SCC 197 — mere denial insufficient'],
+                        'Bir Singh v. Mukesh Kumar (2019) 4 SCC 197 â€” mere denial insufficient'],
         'note':       'Once cheque and dishonour are proved, burden shifts to accused to rebut presumption. Accused must show it is more probable than not that cheque was not for legally enforceable debt.',
     }
 
@@ -12227,33 +12227,33 @@ def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
     has_postal = case_data.get('postal_proof_available') or case_data.get('ad_card_signed')
     basis_map['notice_service'] = {
         'finding':   'Notice service under Section 138(b)',
-        'sections':  ['Section 138(b) NI Act — notice within 30 days of dishonour',
-                      'Section 27 General Clauses Act — postal service presumption'],
-        'citations':  ['C. C. Alavi Haji v. Palapetty Muhammed (2007) 6 SCC 555 — deemed service on refusal',
+        'sections':  ['Section 138(b) NI Act â€” notice within 30 days of dishonour',
+                      'Section 27 General Clauses Act â€” postal service presumption'],
+        'citations':  ['C. C. Alavi Haji v. Palapetty Muhammed (2007) 6 SCC 555 â€” deemed service on refusal',
                         'K. Bhaskaran v. Sankaran Vaidhyan Balan (1999) 7 SCC 510',
-                        'Ajeet Seeds Ltd. v. K. Gopala Krishnaiah (2014) — notice at registered address sufficient'],
+                        'Ajeet Seeds Ltd. v. K. Gopala Krishnaiah (2014) â€” notice at registered address sufficient'],
         'note':       ('Notice served by registered post to last known address is sufficient. '
                         'Refusal or non-acceptance by accused does not invalidate service.' if has_postal else
-                        'Notice proof must be established — obtain postal receipt or AD card.'),
+                        'Notice proof must be established â€” obtain postal receipt or AD card.'),
     }
 
 
     basis_map['interim_compensation'] = {
-        'finding':   'Section 143A — interim compensation payable during trial',
-        'sections':  ['Section 143A NI Act — power to order interim compensation',
-                      'Section 148 NI Act — power to order payment pending appeal'],
-        'citations':  ['Rakesh Bhasin v. Sonal Mehta — S.143A applies from first hearing',
+        'finding':   'Section 143A â€” interim compensation payable during trial',
+        'sections':  ['Section 143A NI Act â€” power to order interim compensation',
+                      'Section 148 NI Act â€” power to order payment pending appeal'],
+        'citations':  ['Rakesh Bhasin v. Sonal Mehta â€” S.143A applies from first hearing',
                         'Supreme Court guidance: 20% of cheque amount is standard interim compensation'],
         'note':       'Apply for interim compensation under Section 143A at the FIRST HEARING. Court has discretion to award up to 20% of cheque amount.',
     }
 
 
     basis_map['compounding'] = {
-        'finding':   'Section 147 — offence is compoundable at any stage',
-        'sections':  ['Section 147 NI Act — offences under the Act are compoundable',
-                      'Section 320 CrPC — compounding of offences'],
-        'citations':  ['Meters and Instruments Pvt. Ltd. v. Kanchan Mehta (2018) 1 SCC 560 — S.147 allows compounding even after conviction',
-                        'Dayawati v. Yogesh Kumar Gosain (2017) — compounding with permission of court'],
+        'finding':   'Section 147 â€” offence is compoundable at any stage',
+        'sections':  ['Section 147 NI Act â€” offences under the Act are compoundable',
+                      'Section 320 CrPC â€” compounding of offences'],
+        'citations':  ['Meters and Instruments Pvt. Ltd. v. Kanchan Mehta (2018) 1 SCC 560 â€” S.147 allows compounding even after conviction',
+                        'Dayawati v. Yogesh Kumar Gosain (2017) â€” compounding with permission of court'],
         'note':       'Complainant and accused may compound at any stage including appeal. Court approval required. Full payment + costs typical condition.',
     }
 
@@ -12262,32 +12262,32 @@ def get_legal_basis_map(analysis: Dict, case_data: Dict) -> Dict:
     amount      = float(case_data.get('cheque_amount', 0) or 0)
     if 'cash' in cash_status and amount > 20000:
         basis_map['section_269ss'] = {
-            'finding':   'Section 269SS Income Tax Act — cash transaction risk',
-            'sections':  ['Section 269SS Income Tax Act — prohibition on cash loans above ₹20,000',
-                          'Section 271D — penalty for violation of Section 269SS'],
-            'citations':  ['Shri Ishwardas Jain v. CIT — cash loans above threshold are prohibited',
+            'finding':   'Section 269SS Income Tax Act â€” cash transaction risk',
+            'sections':  ['Section 269SS Income Tax Act â€” prohibition on cash loans above â‚¹20,000',
+                          'Section 271D â€” penalty for violation of Section 269SS'],
+            'citations':  ['Shri Ishwardas Jain v. CIT â€” cash loans above threshold are prohibited',
                             'Various High Courts: cheque for illegal debt may not attract S.138'],
-            'note':       'If underlying loan was given in cash above ₹20,000, defence can argue the debt itself is illegal under Section 269SS — weakening Section 138 maintainability. Obtain documentary proof of transaction.',
+            'note':       'If underlying loan was given in cash above â‚¹20,000, defence can argue the debt itself is illegal under Section 269SS â€” weakening Section 138 maintainability. Obtain documentary proof of transaction.',
         }
 
 
     if case_data.get('electronic_evidence'):
-        basis_map['section_65b'] = {
-            'finding':   'Section 65B Evidence Act — electronic evidence certificate',
-            'sections':  ['Section 65B Indian Evidence Act — admissibility of electronic records',
-                          'Section 65A — special provisions for evidence relating to electronic records'],
-            'citations':  ['Anvar P.V. v. P.K. Basheer (2014) 10 SCC 473 — MANDATORY certificate without exception',
-                            'Arjun Panditrao Khotkar v. Kailash Kushanrao Gorantyal (2020) 7 SCC 1 — affirmed Anvar'],
-            'note':       'Without Section 65B certificate, ALL electronic evidence (WhatsApp, SMS, email screenshots) is INADMISSIBLE. File certificate before evidence stage.',
+        basis_map['section_63'] = {
+            'finding':   'Section 63 Evidence Act â€” electronic evidence certificate',
+            'sections':  ['Section 63 Indian Evidence Act â€” admissibility of electronic records',
+                          'Section 65A â€” special provisions for evidence relating to electronic records'],
+            'citations':  ['Anvar P.V. v. P.K. Basheer (2014) 10 SCC 473 â€” MANDATORY certificate without exception',
+                            'Arjun Panditrao Khotkar v. Kailash Kushanrao Gorantyal (2020) 7 SCC 1 â€” affirmed Anvar'],
+            'note':       'Without Section 63 certificate, ALL electronic evidence (WhatsApp, SMS, email screenshots) is INADMISSIBLE. File certificate before evidence stage.',
         }
 
     return {'module': 'Legal Basis Map', 'basis_map': {}, 'note': 'Legal basis map could not be generated.'}
 
 def get_outcome_scenarios(analysis: Dict, case_data: Dict) -> Dict:
     """
-    Outcome Scenario Engine — Deterministic projection of 5 legal outcomes.
+    Outcome Scenario Engine â€” Deterministic projection of 5 legal outcomes.
     Best / Worst / Most Likely / Settlement / Acquittal scenarios.
-    Derived from module scores + case facts. NOT statistical — legally deterministic.
+    Derived from module scores + case facts. NOT statistical â€” legally deterministic.
     """
     risk    = analysis.get('modules', {}).get('risk_assessment', {}) or {}
     proc    = analysis.get('modules', {}).get('procedural_defects', {}) or {}
@@ -12318,24 +12318,24 @@ def get_outcome_scenarios(analysis: Dict, case_data: Dict) -> Dict:
     is_premature  = any('premature' in str(d.get('defect','')).lower() or '15-day' in str(d.get('defect',''))
                         for d in fatal_defs)
 
-    amt_str    = f"₹{amount:,.0f}"
-    s143a      = f"₹{amount*0.20:,.0f}"
+    amt_str    = f"â‚¹{amount:,.0f}"
+    s143a      = f"â‚¹{amount*0.20:,.0f}"
 
 
     if fatal and is_limitation:
         best = {
-            'outcome': 'Apply for condonation — slim chance of revival',
+            'outcome': 'Apply for condonation â€” slim chance of revival',
             'path': ['File application under Section 142(b) with strong cause for delay',
                      'If condonation granted: proceed to trial',
                      'If condonation rejected: complaint is dismissed permanently'],
-            'probability': 'Very Low — courts rarely condone delay beyond 30 days without compelling reason',
+            'probability': 'Very Low â€” courts rarely condone delay beyond 30 days without compelling reason',
         }
     elif fatal and is_premature:
         best = {
             'outcome': 'Refile fresh complaint after cause of action arises',
             'path': ['Wait for 15-day payment period to expire',
                      'File fresh complaint within 30 days of cause of action',
-                     'All documents already in order — complaint should proceed smoothly'],
+                     'All documents already in order â€” complaint should proceed smoothly'],
             'probability': 'Achievable if refiling is done promptly within limitation',
         }
     elif fatal:
@@ -12343,23 +12343,23 @@ def get_outcome_scenarios(analysis: Dict, case_data: Dict) -> Dict:
             'outcome': 'Cure defect and proceed',
             'path': ['Address the specific fatal defect (see Procedural tab)',
                      'File with all corrected documents',
-                     'Court takes cognizance — case proceeds'],
-            'probability': 'Moderate — depends on nature of defect and remaining limitation window',
+                     'Court takes cognizance â€” case proceeds'],
+            'probability': 'Moderate â€” depends on nature of defect and remaining limitation window',
         }
     elif score >= 75:
         best = {
-            'outcome': f'Conviction — full fine + {amt_str} compensation to complainant',
-            'path': [f'Court takes cognizance — S.143A interim compensation of {s143a} at first hearing',
+            'outcome': f'Conviction â€” full fine + {amt_str} compensation to complainant',
+            'path': [f'Court takes cognizance â€” S.143A interim compensation of {s143a} at first hearing',
                      'Accused fails to rebut Section 139 presumption',
-                     f'Conviction: fine up to {amt_str}×2 + imprisonment up to 2 years + compensation {amt_str}',
-                     'Section 357(3) CrPC — full compensation ordered'],
+                     f'Conviction: fine up to {amt_str}Ã—2 + imprisonment up to 2 years + compensation {amt_str}',
+                     'Section 357(3) CrPC â€” full compensation ordered'],
             'probability': 'Likely if all documents are properly exhibited',
         }
     else:
         best = {
             'outcome': 'Conviction after strengthening documentary evidence',
             'path': ['Gather missing evidence (agreement, postal proof, bank records)',
-                     'Court admits complaint — accused cannot rebut Section 139',
+                     'Court admits complaint â€” accused cannot rebut Section 139',
                      f'Conviction: fine + compensation of {amt_str}'],
             'probability': 'Achievable with diligent pre-trial evidence gathering',
         }
@@ -12367,18 +12367,18 @@ def get_outcome_scenarios(analysis: Dict, case_data: Dict) -> Dict:
 
     if fatal and is_limitation:
         worst = {
-            'outcome': 'Complaint permanently dismissed — time-barred, no remedy',
+            'outcome': 'Complaint permanently dismissed â€” time-barred, no remedy',
             'path': ['Court refuses to take cognizance',
-                     'Limitation expired — condonation also denied',
+                     'Limitation expired â€” condonation also denied',
                      'Complainant loses {amt_str} with no criminal remedy; must pursue civil recovery'],
             'probability': 'High if no valid reason for delay',
         }
     elif fatal:
         worst = {
-            'outcome': 'Complaint dismissed at first hearing — defect incurable',
+            'outcome': 'Complaint dismissed at first hearing â€” defect incurable',
             'path': ['Court scrutinises complaint at cognizance stage',
-                     'Defect identified — complaint returned or dismissed',
-                     'Limitation for fresh complaint may have expired — no remedy'],
+                     'Defect identified â€” complaint returned or dismissed',
+                     'Limitation for fresh complaint may have expired â€” no remedy'],
             'probability': 'High if limitation window closes before defect is cured',
         }
     elif score < 40:
@@ -12386,7 +12386,7 @@ def get_outcome_scenarios(analysis: Dict, case_data: Dict) -> Dict:
             'outcome': 'Acquittal on multiple grounds simultaneously',
             'path': ['Accused raises security cheque + no debt + notice challenge simultaneously',
                      'Complainant unable to produce independent transaction proof',
-                     'Court acquits — no recovery; complainant bears legal costs'],
+                     'Court acquits â€” no recovery; complainant bears legal costs'],
             'probability': 'High without substantial remediation',
         }
     else:
@@ -12394,7 +12394,7 @@ def get_outcome_scenarios(analysis: Dict, case_data: Dict) -> Dict:
             'outcome': 'Acquittal due to documentary failure at trial',
             'path': ['Accused mounts strong defence: security cheque / debt discharge / notice defect',
                      'Complainant cannot prove legally enforceable debt by preponderance',
-                     'Court acquits — no fine, no compensation; complainant bears costs'],
+                     'Court acquits â€” no fine, no compensation; complainant bears costs'],
             'probability': 'Possible if missing documents cannot be produced before trial',
         }
 
@@ -12404,48 +12404,48 @@ def get_outcome_scenarios(analysis: Dict, case_data: Dict) -> Dict:
             'outcome': 'Case stalled pending resolution of fatal defect',
             'path': ['Current complaint cannot be admitted in its present form',
                      'If curable: advocate files amendment / fresh complaint within limitation',
-                     'If limitation expired: limited options — civil suit is the remaining remedy'],
-            'basis': f'Score: {score:.0f}/100 — fatal defect(s) override procedural scoring',
+                     'If limitation expired: limited options â€” civil suit is the remaining remedy'],
+            'basis': f'Score: {score:.0f}/100 â€” fatal defect(s) override procedural scoring',
         }
     elif score >= 75:
-        sett_amt = f"₹{amount*0.85:,.0f}–₹{amount:,.0f}"
+        sett_amt = f"â‚¹{amount*0.85:,.0f}â€“â‚¹{amount:,.0f}"
         likely = {
             'outcome': f'Early settlement ({sett_amt}) or conviction',
             'path': ['Court takes cognizance at first hearing',
                      f'S.143A interim compensation ({s143a}) creates immediate settlement pressure',
                      f'Accused likely settles in range {sett_amt} to avoid conviction record',
                      'If no settlement: high conviction probability at trial'],
-            'basis': f'Score: {score:.0f}/100 — strong case, accused has high incentive to settle',
+            'basis': f'Score: {score:.0f}/100 â€” strong case, accused has high incentive to settle',
         }
     elif score >= 55:
-        sett_low  = f"₹{amount*0.55:,.0f}"
-        sett_high = f"₹{amount*0.80:,.0f}"
+        sett_low  = f"â‚¹{amount*0.55:,.0f}"
+        sett_high = f"â‚¹{amount*0.80:,.0f}"
         def_name  = high_defs[0].get('defence', 'security cheque') if high_defs else 'documentary gaps'
         likely = {
-            'outcome': f'Contested — settlement in range {sett_low}–{sett_high}',
-            'path': ['Complaint admitted — accused contests on merits',
+            'outcome': f'Contested â€” settlement in range {sett_low}â€“{sett_high}',
+            'path': ['Complaint admitted â€” accused contests on merits',
                      f'Primary defence: {def_name}',
-                     f'Settlement most likely in range {sett_low}–{sett_high}',
+                     f'Settlement most likely in range {sett_low}â€“{sett_high}',
                      'If no settlement: outcome depends on trial evidence quality'],
-            'basis': f'Score: {score:.0f}/100 — moderate case, both parties have incentive to settle',
+            'basis': f'Score: {score:.0f}/100 â€” moderate case, both parties have incentive to settle',
         }
     elif score >= 35:
         likely = {
-            'outcome': 'Weak case — settlement at significant discount or loss',
+            'outcome': 'Weak case â€” settlement at significant discount or loss',
             'path': ['Complaint may be admitted but defence is strong',
-                     f'If settlement: expected range ₹{amount*0.25:,.0f}–₹{amount*0.50:,.0f}',
+                     f'If settlement: expected range â‚¹{amount*0.25:,.0f}â€“â‚¹{amount*0.50:,.0f}',
                      'Without remediation: acquittal risk is HIGH',
                      'Recommended: strengthen evidence before proceeding to trial'],
-            'basis': f'Score: {score:.0f}/100 — multiple gaps, defence has significant leverage',
+            'basis': f'Score: {score:.0f}/100 â€” multiple gaps, defence has significant leverage',
         }
     else:
         likely = {
-            'outcome': 'Acquittal likely — major remediation needed before proceeding',
+            'outcome': 'Acquittal likely â€” major remediation needed before proceeding',
             'path': ['If filed in current state: acquittal risk is very high',
                      'Better path: gather all missing evidence first',
                      'Negotiate settlement while evidence is being gathered',
                      'Only file if evidence picture improves significantly'],
-            'basis': f'Score: {score:.0f}/100 — critical deficiencies in current case',
+            'basis': f'Score: {score:.0f}/100 â€” critical deficiencies in current case',
         }
 
 
@@ -12453,13 +12453,13 @@ def get_outcome_scenarios(analysis: Dict, case_data: Dict) -> Dict:
     settle_low  = amount * (settle_pct - 0.15)
     settle_high = amount * settle_pct
     settlement = {
-        'outcome': f'Settlement in range ₹{settle_low:,.0f}–₹{settle_high:,.0f}',
+        'outcome': f'Settlement in range â‚¹{settle_low:,.0f}â€“â‚¹{settle_high:,.0f}',
         'path': ['Send strong legal notice to accused citing conviction risk',
                  f'Apply for S.143A interim compensation ({s143a}) at first hearing',
-                 f'Negotiate: accused to pay ₹{settle_high:,.0f} as full and final settlement',
+                 f'Negotiate: accused to pay â‚¹{settle_high:,.0f} as full and final settlement',
                  'File joint application for compounding under Section 147 NI Act'],
-        'probability': ('High' if score >= 65 else 'Moderate' if score >= 45 else 'Low — weak leverage'),
-        'recommendation': ('Pursue aggressively — strong case means accused has high motivation to settle'
+        'probability': ('High' if score >= 65 else 'Moderate' if score >= 45 else 'Low â€” weak leverage'),
+        'recommendation': ('Pursue aggressively â€” strong case means accused has high motivation to settle'
                            if score >= 65 else
                            'Explore settlement while strengthening evidence simultaneously'),
     }
@@ -12474,9 +12474,9 @@ def get_outcome_scenarios(analysis: Dict, case_data: Dict) -> Dict:
         'likely_grounds': (
             ['Complaint dismissed as premature / time-barred'] if fatal else
             ['Accused successfully rebuts Section 139 presumption',
-             'Absence of written agreement — debt existence not proved',
-             'Notice service challenged — 15-day period not validly triggered',
-             'Security cheque defence — no legally enforceable debt'] if score < 50 else
+             'Absence of written agreement â€” debt existence not proved',
+             'Notice service challenged â€” 15-day period not validly triggered',
+             'Security cheque defence â€” no legally enforceable debt'] if score < 50 else
             ['Aggressive cross-examination on documentary gaps',
              'Accused challenges specific ingredient compliance',
              'Notice service deficiency creates reasonable doubt']
@@ -12500,7 +12500,7 @@ def get_outcome_scenarios(analysis: Dict, case_data: Dict) -> Dict:
         'score_basis':  score,
         'fatal_flag':   fatal,
         'disclaimer': (
-            'Scenarios are deterministic projections based on legal rules and case facts — '
+            'Scenarios are deterministic projections based on legal rules and case facts â€” '
             'not statistical or machine-learning predictions. Actual outcome depends on '
             'trial evidence, judicial discretion, and facts that emerge during proceedings.'
         ),
@@ -12509,8 +12509,8 @@ def get_outcome_scenarios(analysis: Dict, case_data: Dict) -> Dict:
 
 def get_evidence_gap_priority(analysis: Dict, case_data: Dict) -> Dict:
     """
-    Feature 5 — EVIDENCE GAP PRIORITIZATION
-    Ranked list of missing evidence — not just missing docs, but ranked by impact.
+    Feature 5 â€” EVIDENCE GAP PRIORITIZATION
+    Ranked list of missing evidence â€” not just missing docs, but ranked by impact.
     """
     risk  = analysis.get('modules', {}).get('risk_assessment', {}) or {}
     _ = _safe_f(risk.get('final_score', 0))
@@ -12526,26 +12526,26 @@ def get_evidence_gap_priority(analysis: Dict, case_data: Dict) -> Dict:
 
     if not case_data.get('original_cheque_available'):
         gaps.append(gap('Original cheque', rank, 'CRITICAL',
-            'Court requires original cheque as primary instrument — cannot proceed without it',
+            'Court requires original cheque as primary instrument â€” cannot proceed without it',
             'Retrieve original from your file or collect from bank (impounded cheque)', '+8 to score'))
         rank += 1
 
     if not case_data.get('return_memo_available'):
         gaps.append(gap('Bank dishonour memo', rank, 'CRITICAL',
-            'Proves the cheque was actually dishonoured — ingredient 4 cannot be established without it',
+            'Proves the cheque was actually dishonoured â€” ingredient 4 cannot be established without it',
             'Request bank memo directly; bank must issue under RBI guidelines', '+10 to score'))
         rank += 1
 
     if not case_data.get('notice_date') and not case_data.get('notice_copy_available'):
         gaps.append(gap('Copy of legal notice sent', rank, 'CRITICAL',
-            'Without notice proof, ingredient 5 fails entirely — the complaint is not maintainable',
+            'Without notice proof, ingredient 5 fails entirely â€” the complaint is not maintainable',
             'Retain signed copy of notice; obtain lawyer\u2019s file copy if lost', '+15 to score'))
         rank += 1
 
 
     if not case_data.get('postal_proof_available') and not case_data.get('ad_card_signed'):
         gaps.append(gap('Postal receipt / AD card', rank, 'HIGH',
-            'Without service proof, accused claims no notice received — the 15-day period never started',
+            'Without service proof, accused claims no notice received â€” the 15-day period never started',
             'Collect from post office (up to 6 months); check postal portal for track report', '+8 to score'))
         rank += 1
 
@@ -12564,27 +12564,27 @@ def get_evidence_gap_priority(analysis: Dict, case_data: Dict) -> Dict:
 
     if not case_data.get('bank_transfer_proof'):
         gaps.append(gap('Bank transfer proof (NEFT/IMPS/RTGS)', rank, 'IMPORTANT',
-            'Electronic transfer proof is the strongest single transaction evidence — undeniable',
+            'Electronic transfer proof is the strongest single transaction evidence â€” undeniable',
             'Obtain NEFT/IMPS reference and bank confirmation of transfer', '+6 to score'))
         rank += 1
 
     if not case_data.get('witness_available'):
         gaps.append(gap('Transaction witness', rank, 'IMPORTANT',
-            'Corroborates oral account of how cheque was given — important when documents are weak',
+            'Corroborates oral account of how cheque was given â€” important when documents are weak',
             'Identify anyone who witnessed the transaction or was present when cheque was handed over', '+4 to score'))
         rank += 1
 
 
-    if case_data.get('electronic_evidence') and not case_data.get('section_65b_certificate'):
-        gaps.append(gap('Section 65B certificate', rank, 'CRITICAL',
+    if case_data.get('electronic_evidence') and not case_data.get('section_63_certificate'):
+        gaps.append(gap('Section 63 certificate', rank, 'CRITICAL',
             'Without this, all electronic evidence (WhatsApp, SMS, email) is inadmissible',
-            'Obtain from device owner / IT custodian before filing — Anvar P.V. is binding', '+10 to score'))
+            'Obtain from device owner / IT custodian before filing â€” Anvar P.V. is binding', '+10 to score'))
         rank += 1
 
     if not case_data.get('email_sms_evidence'):
         gaps.append(gap('Email / SMS / WhatsApp correspondence', rank, 'OPTIONAL',
             'Corroborative: acknowledgment of debt in messages strengthens the presumption',
-            'Collect printed screenshots; ensure S.65B certificate is obtained', '+3 to score'))
+            'Collect printed screenshots; ensure S.63 certificate is obtained', '+3 to score'))
         rank += 1
 
 
@@ -12603,31 +12603,31 @@ def get_evidence_gap_priority(analysis: Dict, case_data: Dict) -> Dict:
 
     if case_data.get('part_payment_made') and not case_data.get('part_payment_amount'):
         gaps.append(gap('Part payment receipt / amount confirmation', rank, 'HIGH',
-            'Exact balance amount must be established — complaint may need to be amended to reflect balance.',
+            'Exact balance amount must be established â€” complaint may need to be amended to reflect balance.',
             'Obtain payment receipt or bank transfer record for any payment made.', '+5 to score'))
         rank += 1
 
     if not case_data.get('witness_available'):
         gaps.append(gap('Transaction witness', rank, 'IMPORTANT',
             'Oral testimony of a witness to the transaction strengthens the debt narrative significantly.',
-            'Identify any person present when money was given — even an informal witness.', '+6 to score'))
+            'Identify any person present when money was given â€” even an informal witness.', '+6 to score'))
         rank += 1
 
     if case_data.get('is_savkari_loan') and not case_data.get('savkari_loan_registered'):
         gaps.append(gap('Moneylender registration certificate', rank, 'IMPORTANT',
-            'If complainant operates as moneylender, registration is required — absence is a defence ground.',
+            'If complainant operates as moneylender, registration is required â€” absence is a defence ground.',
             'Obtain registration under applicable State Moneylenders Act before proceeding.', '+8 to viability'))
         rank += 1
 
     if case_data.get('bank_merger_occurred') and not case_data.get('merged_bank_name'):
         gaps.append(gap('Bank merger notification / RBI order', rank, 'IMPORTANT',
-            'Proves dishonour by successor bank is valid under Section 138 — defence may challenge this.',
+            'Proves dishonour by successor bank is valid under Section 138 â€” defence may challenge this.',
             'Obtain RBI gazette notification of bank merger.', '+5 to score'))
         rank += 1
 
     if case_data.get('is_multiple_cheques') and int(case_data.get('number_of_cheques', 1) or 1) > 1:
         gaps.append(gap('Separate complaints for each dishonoured cheque', rank, 'IMPORTANT',
-            'Each cheque is a separate offence — clubbing is procedurally incorrect.',
+            'Each cheque is a separate offence â€” clubbing is procedurally incorrect.',
             'Verify separate notices and complaints are filed for each dishonoured cheque.', 'Procedural compliance'))
         rank += 1
 
@@ -12651,14 +12651,14 @@ def get_evidence_gap_priority(analysis: Dict, case_data: Dict) -> Dict:
         'critical_count': len(critical),
         'high_count':     len(high),
         'top_priority':   gaps[0] if gaps else None,
-        'summary':        (f'{len(critical)} critical and {len(high)} high-priority gap(s) — address in order'
+        'summary':        (f'{len(critical)} critical and {len(high)} high-priority gap(s) â€” address in order'
                            if gaps else 'No significant evidence gaps detected'),
     }
 
 
 def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
     """
-    Feature 6 — TIME-SENSITIVITY ENGINE
+    Feature 6 â€” TIME-SENSITIVITY ENGINE
     Calculates all deadline-related urgency signals for the lawyer.
     """
     from datetime import datetime as _dt
@@ -12688,19 +12688,19 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
                                'MEDIUM' if days_left <= 30 else 'OK'),
             })
             if days_left < 0:
-                alerts.append({'level': 'FATAL', 'message': f'⛔ LIMITATION EXPIRED {abs(days_left)} days ago — complaint is time-barred'})
+                alerts.append({'level': 'FATAL', 'message': f'â›” LIMITATION EXPIRED {abs(days_left)} days ago â€” complaint is time-barred'})
                 urgency_level = 'CRITICAL'
             elif days_left <= 3:
-                alerts.append({'level': 'CRITICAL', 'message': f'🚨 ONLY {days_left} DAY(S) LEFT to file complaint — file immediately'})
+                alerts.append({'level': 'CRITICAL', 'message': f'ðŸš¨ ONLY {days_left} DAY(S) LEFT to file complaint â€” file immediately'})
                 urgency_level = 'CRITICAL'
             elif days_left <= 7:
-                alerts.append({'level': 'URGENT', 'message': f'⚠️ {days_left} days remaining — file this week without fail'})
+                alerts.append({'level': 'URGENT', 'message': f'âš ï¸ {days_left} days remaining â€” file this week without fail'})
                 urgency_level = 'URGENT'
             elif days_left <= 14:
-                alerts.append({'level': 'HIGH', 'message': f'📅 {days_left} days remaining — finalise complaint this week'})
+                alerts.append({'level': 'HIGH', 'message': f'ðŸ“… {days_left} days remaining â€” finalise complaint this week'})
                 if urgency_level == 'NORMAL': urgency_level = 'HIGH'
             elif days_left <= 30:
-                alerts.append({'level': 'MEDIUM', 'message': f'📅 {days_left} days remaining to file complaint'})
+                alerts.append({'level': 'MEDIUM', 'message': f'ðŸ“… {days_left} days remaining to file complaint'})
                 if urgency_level == 'NORMAL': urgency_level = 'MEDIUM'
         except (ValueError, TypeError) as _e:
             logger.debug(f'Time sensitivity urgency calc suppressed: {_e}')
@@ -12718,10 +12718,10 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
                 'status':    'EXPIRED' if nd_left < 0 else 'CRITICAL' if nd_left <= 3 else 'URGENT' if nd_left <= 7 else 'OK',
             })
             if nd_left < 0:
-                alerts.append({'level': 'FATAL', 'message': f'⛔ Notice window expired {abs(nd_left)} days ago — notice is time-barred'})
+                alerts.append({'level': 'FATAL', 'message': f'â›” Notice window expired {abs(nd_left)} days ago â€” notice is time-barred'})
                 urgency_level = 'CRITICAL'
             elif nd_left <= 7:
-                alerts.append({'level': 'CRITICAL', 'message': f'🚨 Only {nd_left} day(s) left to send legal notice — send TODAY'})
+                alerts.append({'level': 'CRITICAL', 'message': f'ðŸš¨ Only {nd_left} day(s) left to send legal notice â€” send TODAY'})
                 urgency_level = 'CRITICAL'
         except Exception as _e:
             logger.debug(f"Non-critical exception suppressed: {_e}")
@@ -12730,7 +12730,7 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
     if case_data.get('complaint_filed_date') and not case_data.get('interim_compensation_applied'):
         alerts.append({
             'level':   'OPPORTUNITY',
-            'message': '💡 Section 143A: Apply for interim compensation at first hearing (up to 20% of cheque amount)',
+            'message': 'ðŸ’¡ Section 143A: Apply for interim compensation at first hearing (up to 20% of cheque amount)',
         })
 
 
@@ -12746,7 +12746,7 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
                 'status':    'EXPIRED' if dd_left < 0 else 'CRITICAL' if dd_left <= 7 else 'URGENT' if dd_left <= 14 else 'OK',
             })
             if dd_left <= 14:
-                alerts.append({'level': 'URGENT', 'message': f'⚠️ Section 148 deposit due in {dd_left} days — deposit to suspend sentence'})
+                alerts.append({'level': 'URGENT', 'message': f'âš ï¸ Section 148 deposit due in {dd_left} days â€” deposit to suspend sentence'})
                 if urgency_level == 'NORMAL': urgency_level = 'URGENT'
         except Exception as _e:
             logger.debug(f"Non-critical exception suppressed: {_e}")
@@ -12765,13 +12765,13 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
             if days_for_notice > 30:
                 alerts.append({
                     'level':   'FATAL',
-                    'message': f'⛔ Notice sent {days_for_notice} days after dishonour — BEYOND 30-day limit (ingredient 5 FAILS)'
+                    'message': f'â›” Notice sent {days_for_notice} days after dishonour â€” BEYOND 30-day limit (ingredient 5 FAILS)'
                 })
                 urgency_level = 'CRITICAL'
             elif days_for_notice >= 25:
                 alerts.append({
                     'level':   'HIGH',
-                    'message': f'⚠️ Notice sent on day {days_for_notice}/30 — very close to limit; verify exact date'
+                    'message': f'âš ï¸ Notice sent on day {days_for_notice}/30 â€” very close to limit; verify exact date'
                 })
                 if urgency_level not in ('CRITICAL',):
                     urgency_level = 'HIGH'
@@ -12791,19 +12791,19 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
                 if days_after_coa < 0:
                     alerts.append({
                         'level':   'FATAL',
-                        'message': f'⛔ Complaint filed {abs(days_after_coa)} day(s) BEFORE cause of action ({coa_date}) — PREMATURE'
+                        'message': f'â›” Complaint filed {abs(days_after_coa)} day(s) BEFORE cause of action ({coa_date}) â€” PREMATURE'
                     })
                     urgency_level = 'CRITICAL'
                 elif days_after_coa > 30:
                     alerts.append({
                         'level':   'FATAL',
-                        'message': f'⛔ Complaint filed {days_after_coa} days after cause of action — beyond 30-day limit'
+                        'message': f'â›” Complaint filed {days_after_coa} days after cause of action â€” beyond 30-day limit'
                     })
                     urgency_level = 'CRITICAL'
                 elif days_after_coa >= 25:
                     alerts.append({
                         'level':   'HIGH',
-                        'message': f'⚠️ Complaint filed on day {days_after_coa}/30 after cause of action — very close to limit'
+                        'message': f'âš ï¸ Complaint filed on day {days_after_coa}/30 after cause of action â€” very close to limit'
                     })
             else:
 
@@ -12812,19 +12812,19 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
                     if remaining < 0:
                         alerts.append({
                             'level':   'FATAL',
-                            'message': f'⛔ Cause of action arose {abs(remaining)} days ago — complaint filing window CLOSED'
+                            'message': f'â›” Cause of action arose {abs(remaining)} days ago â€” complaint filing window CLOSED'
                         })
                         urgency_level = 'CRITICAL'
                     elif remaining <= 3:
                         alerts.append({
                             'level':   'CRITICAL',
-                            'message': f'🚨 ONLY {remaining} DAY(S) LEFT to file complaint — file immediately'
+                            'message': f'ðŸš¨ ONLY {remaining} DAY(S) LEFT to file complaint â€” file immediately'
                         })
                         urgency_level = 'CRITICAL'
                     elif remaining <= 7:
                         alerts.append({
                             'level':   'URGENT',
-                            'message': f'⚠️ {remaining} days left to file — file this week'
+                            'message': f'âš ï¸ {remaining} days left to file â€” file this week'
                         })
                         if urgency_level not in ('CRITICAL',):
                             urgency_level = 'URGENT'
@@ -12840,7 +12840,7 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
 
 
     _ = (alerts[0]['message'] if alerts else
-                     f'Case within time limits — {len(deadlines)} deadline(s) to monitor' if deadlines else
+                     f'Case within time limits â€” {len(deadlines)} deadline(s) to monitor' if deadlines else
                      'No urgent time constraints detected')
 
     return {
@@ -12850,17 +12850,17 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
         'alerts':         alerts,
         'deadlines':      deadlines,
         'today':          today.isoformat(),
-        'summary':        (f'🚨 URGENT action required — {top_alert}' if urgency_level in ('CRITICAL', 'URGENT')
-                           else f'No immediate deadline pressure — {top_alert}' if urgency_level == 'NORMAL'
+        'summary':        (f'ðŸš¨ URGENT action required â€” {top_alert}' if urgency_level in ('CRITICAL', 'URGENT')
+                           else f'No immediate deadline pressure â€” {top_alert}' if urgency_level == 'NORMAL'
                            else top_alert),
     }
 
 
 def run_input_sanity_check(case_data: Dict) -> Dict:
     """
-    Feature 7 — INPUT SANITY CHECK
+    Feature 7 â€” INPUT SANITY CHECK
     Detects impossible, contradictory, or nonsensical input combinations.
-    Prevents garbage-in → garbage-out before any analysis runs.
+    Prevents garbage-in â†’ garbage-out before any analysis runs.
     """
     errors   = []
     warnings = []
@@ -12872,7 +12872,7 @@ def run_input_sanity_check(case_data: Dict) -> Dict:
             from datetime import datetime as _dt
             return _dt.strptime(str(val), '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            errors.append({'field': field, 'error': f'Invalid date format: {val!r} — expected YYYY-MM-DD'})
+            errors.append({'field': field, 'error': f'Invalid date format: {val!r} â€” expected YYYY-MM-DD'})
             return None
 
     cheque_dt    = _parse('cheque_date')
@@ -12887,27 +12887,27 @@ def run_input_sanity_check(case_data: Dict) -> Dict:
     if cheque_dt and dishonour_dt and dishonour_dt < cheque_dt:
         errors.append({'check': 'CHQ_BEFORE_DISHONOUR',
                         'error': f'Dishonour date ({dishonour_dt}) is BEFORE cheque date ({cheque_dt})',
-                        'impact': 'Impossible — a cheque cannot be dishonoured before it is issued'})
+                        'impact': 'Impossible â€” a cheque cannot be dishonoured before it is issued'})
 
     if dishonour_dt and notice_dt and notice_dt < dishonour_dt:
         errors.append({'check': 'NOTICE_BEFORE_DISHONOUR',
                         'error': f'Notice date ({notice_dt}) is BEFORE dishonour date ({dishonour_dt})',
-                        'impact': 'Impossible — legal notice must be sent after dishonour'})
+                        'impact': 'Impossible â€” legal notice must be sent after dishonour'})
 
     if notice_dt and received_dt and received_dt < notice_dt:
         errors.append({'check': 'RECEIVED_BEFORE_SENT',
                         'error': f'Notice received ({received_dt}) BEFORE notice sent ({notice_dt})',
-                        'impact': 'Impossible — receipt must be after dispatch'})
+                        'impact': 'Impossible â€” receipt must be after dispatch'})
 
     if received_dt and complaint_dt and complaint_dt < received_dt:
         warnings.append({'check': 'COMPLAINT_BEFORE_RECEIPT',
                           'warning': f'Complaint filed ({complaint_dt}) before notice was received ({received_dt})',
-                          'impact': 'Complaint may be premature — cause of action arises after notice receipt'})
+                          'impact': 'Complaint may be premature â€” cause of action arises after notice receipt'})
 
     if complaint_dt and notice_dt and complaint_dt < notice_dt:
         errors.append({'check': 'COMPLAINT_BEFORE_NOTICE',
                         'error': f'Complaint filed ({complaint_dt}) BEFORE notice was sent ({notice_dt})',
-                        'impact': 'Impossible — complaint requires prior notice'})
+                        'impact': 'Impossible â€” complaint requires prior notice'})
 
 
     for field, dt in [('cheque_date', cheque_dt), ('dishonour_date', dishonour_dt),
@@ -12915,25 +12915,25 @@ def run_input_sanity_check(case_data: Dict) -> Dict:
         if dt and dt > today:
             warnings.append({'check': f'FUTURE_DATE_{field.upper()}',
                               'warning': f'{field} ({dt}) is in the future',
-                              'impact': 'Analysis uses a future date — verify this is correct'})
+                              'impact': 'Analysis uses a future date â€” verify this is correct'})
 
 
     amount = float(case_data.get('cheque_amount', 0) or 0)
     if amount <= 0:
         errors.append({'check': 'INVALID_AMOUNT',
-                        'error': f'Cheque amount is {amount} — must be a positive number',
+                        'error': f'Cheque amount is {amount} â€” must be a positive number',
                         'impact': 'All financial calculations will be incorrect'})
     elif amount > 50_00_00_000:
         warnings.append({'check': 'LARGE_AMOUNT',
-                          'warning': f'Cheque amount ₹{amount:,.0f} exceeds ₹50 crore — verify input',
+                          'warning': f'Cheque amount â‚¹{amount:,.0f} exceeds â‚¹50 crore â€” verify input',
                           'impact': 'Possible data entry error'})
 
 
     part_payment = float(case_data.get('part_payment_amount', 0) or 0)
     if part_payment > amount > 0:
         errors.append({'check': 'PART_PAYMENT_EXCEEDS_CHEQUE',
-                        'error': f'Part payment ₹{part_payment:,.0f} > cheque amount ₹{amount:,.0f}',
-                        'impact': 'Debt fully discharged — Section 138 complaint not maintainable'})
+                        'error': f'Part payment â‚¹{part_payment:,.0f} > cheque amount â‚¹{amount:,.0f}',
+                        'impact': 'Debt fully discharged â€” Section 138 complaint not maintainable'})
 
 
     if notice_dt and dishonour_dt:
@@ -12941,7 +12941,7 @@ def run_input_sanity_check(case_data: Dict) -> Dict:
         if days_to_notice > 30:
             errors.append({'check': 'NOTICE_BEYOND_30_DAYS',
                             'error': f'Notice sent {days_to_notice} days after dishonour (limit: 30)',
-                            'impact': 'FATAL — notice is time-barred under Section 138(b)'})
+                            'impact': 'FATAL â€” notice is time-barred under Section 138(b)'})
         elif days_to_notice < 0:
             pass
 
@@ -12951,7 +12951,7 @@ def run_input_sanity_check(case_data: Dict) -> Dict:
         if days > 90:
             warnings.append({'check': 'CHEQUE_EXPIRED_AT_PRESENTATION',
                               'warning': f'Cheque presented {days} days after issue date (limit: 90 days)',
-                              'impact': 'Cheque may be stale — validity issue affects ingredient 3'})
+                              'impact': 'Cheque may be stale â€” validity issue affects ingredient 3'})
 
     is_clean = len(errors) == 0
 
@@ -12962,16 +12962,16 @@ def run_input_sanity_check(case_data: Dict) -> Dict:
         'warning_count':  len(warnings),
         'errors':         errors,
         'warnings':       warnings,
-        'summary':        ('✅ All inputs are logically consistent' if is_clean and not warnings else
-                           f'⚠️ {len(warnings)} warning(s) — verify inputs' if is_clean else
-                           f'❌ {len(errors)} input error(s) detected — analysis may be unreliable'),
+        'summary':        ('âœ… All inputs are logically consistent' if is_clean and not warnings else
+                           f'âš ï¸ {len(warnings)} warning(s) â€” verify inputs' if is_clean else
+                           f'âŒ {len(errors)} input error(s) detected â€” analysis may be unreliable'),
         'proceed':        is_clean,
     }
 
 
 def get_defence_counter_strategy(analysis: Dict, case_data: Dict) -> Dict:
     """
-    Feature 8 — DEFENCE COUNTER STRATEGY
+    Feature 8 â€” DEFENCE COUNTER STRATEGY
     For every identified defence, provides a specific counter-argument with legal basis.
     Turns JUDIQ from analyser to litigation co-pilot.
     """
@@ -12992,7 +12992,7 @@ def get_defence_counter_strategy(analysis: Dict, case_data: Dict) -> Dict:
             'attack_point':     'Ask in cross-examination: why did you sign a blank cheque? For whom? When? What security?',
         },
         'no debt': {
-            'counter_argument': ('Section 139 shifts burden — accused must prove no debt on preponderance.'
+            'counter_argument': ('Section 139 shifts burden â€” accused must prove no debt on preponderance.'
                                   ' Mere denial is insufficient. Court must believe accused\u2019s explanation'
                                   ' is more probable than complainant\u2019s claim.'),
             'evidence_needed': ['Bank statements showing credit to accused', 'Loan agreement',
@@ -13002,7 +13002,7 @@ def get_defence_counter_strategy(analysis: Dict, case_data: Dict) -> Dict:
         },
         'time-barred debt': {
             'counter_argument': ('The cheque itself constitutes acknowledgment of debt under Section 18'
-                                  ' Limitation Act — it resets the limitation clock. The S.138 limitation'
+                                  ' Limitation Act â€” it resets the limitation clock. The S.138 limitation'
                                   ' is on the complaint (1 month from COA), not on the underlying debt.'),
             'evidence_needed': ['Show cheque date as acknowledgment', 'Part payment records',
                                   'Any correspondence within 3 years'],
@@ -13013,7 +13013,7 @@ def get_defence_counter_strategy(analysis: Dict, case_data: Dict) -> Dict:
         'stop payment': {
             'counter_argument': ('A stop payment instruction is itself evidence of cheque execution and'
                                   ' knowledge of the cheque. The accused must prove a lawful reason for the'
-                                  ' stop — mere economic difficulty or convenience is not a defence.'),
+                                  ' stop â€” mere economic difficulty or convenience is not a defence.'),
             'evidence_needed': ['Bank stop payment record', 'Timeline of stop payment vs. transaction',
                                   'Communications about the stop payment'],
             'legal_basis':      ['Rangappa v. Sri Mohan (2010) 11 SCC 441',
@@ -13026,8 +13026,8 @@ def get_defence_counter_strategy(analysis: Dict, case_data: Dict) -> Dict:
                                   ' they must explain how the cheque got into complainant\u2019s possession.'),
             'evidence_needed': ['Account opening form signature', 'Previous cheque specimens',
                                   'Handwriting expert report', 'Admission of account ownership'],
-            'legal_basis':      ['Section 45 Evidence Act — handwriting expert',
-                                   'Section 73 Evidence Act — court comparison'],
+            'legal_basis':      ['Section 45 Evidence Act â€” handwriting expert',
+                                   'Section 73 Evidence Act â€” court comparison'],
             'attack_point':     'Cross: Is this your bank account? Did you authorise anyone else to sign cheques on your account?',
         },
         'notice not received': {
@@ -13044,13 +13044,13 @@ def get_defence_counter_strategy(analysis: Dict, case_data: Dict) -> Dict:
         'forgery': {
             'counter_argument': ('File a handwriting expert report under Section 45 Evidence Act comparing specimen signatures with cheque. Bank records confirm cheque was drawn from accused account. Accused must have reported loss before dishonour to be credible.'),
             'evidence_needed': ['Handwriting expert report', 'Bank account statement showing cheque issuance', 'Proof accused never reported chequebook stolen'],
-            'legal_basis': ['Section 45 Indian Evidence Act', 'Section 73 Evidence Act — court comparison of signatures'],
+            'legal_basis': ['Section 45 Indian Evidence Act', 'Section 73 Evidence Act â€” court comparison of signatures'],
             'attack_point': 'Cross: Did you report your chequebook stolen to the bank before dishonour? When? Produce the FIR or bank complaint.',
         },
         'insolvency': {
-            'counter_argument': ('Section 138 NI Act is a criminal proceeding — IBC moratorium does not stay it. Supreme Court held in Ajay Kumar Radheshyam Goenka (2023) that criminal proceedings under Section 138 are not affected by IBC moratorium. Personal criminal liability of directors survives IBC.'),
+            'counter_argument': ('Section 138 NI Act is a criminal proceeding â€” IBC moratorium does not stay it. Supreme Court held in Ajay Kumar Radheshyam Goenka (2023) that criminal proceedings under Section 138 are not affected by IBC moratorium. Personal criminal liability of directors survives IBC.'),
             'evidence_needed': ['Supreme Court judgment on S.138 and IBC', 'Show personal criminal liability of accused'],
-            'legal_basis': ['Ajay Kumar Radheshyam Goenka v. Tourism Finance Corp (2023)', 'Section 14 IBC — moratorium does not extinguish criminal liability'],
+            'legal_basis': ['Ajay Kumar Radheshyam Goenka v. Tourism Finance Corp (2023)', 'Section 14 IBC â€” moratorium does not extinguish criminal liability'],
             'attack_point': 'Cross: Are you personally named as accused? The moratorium covers company assets, not your personal criminal liability.',
         },
         'director not in charge': {
@@ -13060,9 +13060,9 @@ def get_defence_counter_strategy(analysis: Dict, case_data: Dict) -> Dict:
             'attack_point': 'Cross: Were you a signatory to the company bank account? Did you attend board meetings? Who authorised issuance of this cheque?',
         },
         'notice not served': {
-            'counter_argument': ('Deemed service doctrine applies — refusal or avoidance does not invalidate service. Postal tracking confirms notice was sent. Accused cannot benefit from own refusal. India Post track report establishes delivery attempt.'),
+            'counter_argument': ('Deemed service doctrine applies â€” refusal or avoidance does not invalidate service. Postal tracking confirms notice was sent. Accused cannot benefit from own refusal. India Post track report establishes delivery attempt.'),
             'evidence_needed': ['India Post tracking printout', 'AD card or refusal/unclaimed endorsement', 'Affidavit of postal peon if required'],
-            'legal_basis': ['C. C. Alavi Haji v. Palapetty Muhammed (2007) 6 SCC 555', 'Section 27 General Clauses Act — postal service presumption', 'K. Bhaskaran v. Sankaran Vaidhyan Balan (1999)'],
+            'legal_basis': ['C. C. Alavi Haji v. Palapetty Muhammed (2007) 6 SCC 555', 'Section 27 General Clauses Act â€” postal service presumption', 'K. Bhaskaran v. Sankaran Vaidhyan Balan (1999)'],
             'attack_point': 'Cross: Is this your registered address on the cheque? When did you change address? Did you inform your bank?',
         },
     }
@@ -13094,7 +13094,7 @@ def get_defence_counter_strategy(analysis: Dict, case_data: Dict) -> Dict:
         cm = COUNTER_MAP['security cheque']
         counters.insert(0, {
             'defence':          'Security Cheque / No Legally Enforceable Debt (anticipated)',
-            'defence_strength': 'HIGH — likely to be raised given no written agreement',
+            'defence_strength': 'HIGH â€” likely to be raised given no written agreement',
             'counter_argument': cm['counter_argument'],
             'evidence_needed':  cm['evidence_needed'],
             'legal_basis':      cm['legal_basis'],
@@ -13105,15 +13105,15 @@ def get_defence_counter_strategy(analysis: Dict, case_data: Dict) -> Dict:
         'module':         'Defence Counter Strategy',
         'counters':       counters,
         'counter_count':  len(counters),
-        'summary':        (f'{len(counters)} defence counter(s) prepared — review before trial'
-                           if counters else 'No high-risk defences identified — proceed with standard strategy'),
-        'note':           'Use these as brief-preparation guides — adapt to specific facts of each case.',
+        'summary':        (f'{len(counters)} defence counter(s) prepared â€” review before trial'
+                           if counters else 'No high-risk defences identified â€” proceed with standard strategy'),
+        'note':           'Use these as brief-preparation guides â€” adapt to specific facts of each case.',
     }
 
 
 def get_module_confidence_scores(analysis: Dict, case_data: Dict) -> Dict:
     """
-    Feature 10 — MODULE CONFIDENCE SCORES
+    Feature 10 â€” MODULE CONFIDENCE SCORES
     Each module rates its own output reliability based on data available to it.
     Helps lawyers know which parts of the report to trust most.
     """
@@ -13130,8 +13130,8 @@ def get_module_confidence_scores(analysis: Dict, case_data: Dict) -> Dict:
     tl_present = sum(1 for f in tl_fields if case_data.get(f))
     tl_score = (tl_present / len(tl_fields)) * 100
     modules_conf['timeline'] = _conf(tl_score,
-        'Timeline analysis is deterministic — fully reliable when all 5 dates are provided' if tl_score == 100
-        else f'Unavailable: {len(tl_fields)-tl_present} date(s) — some calculations are estimated')
+        'Timeline analysis is deterministic â€” fully reliable when all 5 dates are provided' if tl_score == 100
+        else f'Unavailable: {len(tl_fields)-tl_present} date(s) â€” some calculations are estimated')
 
 
     doc_fields = ['original_cheque_available', 'return_memo_available', 'postal_proof_available',
@@ -13139,7 +13139,7 @@ def get_module_confidence_scores(analysis: Dict, case_data: Dict) -> Dict:
     doc_present = sum(1 for f in doc_fields if case_data.get(f) is not None)
     doc_score = 60 + (doc_present / len(doc_fields)) * 40
     modules_conf['documentary'] = _conf(doc_score,
-        'Documentary scores are based on availability of each document — highly reliable')
+        'Documentary scores are based on availability of each document â€” highly reliable')
 
 
     ing_fields = ['cheque_date', 'dishonour_date', 'notice_date', 'dishonour_reason',
@@ -13147,7 +13147,7 @@ def get_module_confidence_scores(analysis: Dict, case_data: Dict) -> Dict:
     ing_present = sum(1 for f in ing_fields if case_data.get(f) not in (None, ''))
     ing_score = (ing_present / len(ing_fields)) * 100
     modules_conf['ingredients'] = _conf(ing_score,
-        'Ingredient compliance is deterministic — confidence depends on completeness of input')
+        'Ingredient compliance is deterministic â€” confidence depends on completeness of input')
 
 
     jur = analysis.get('modules', {}).get('territorial_jurisdiction', {}) or {}
@@ -13158,7 +13158,7 @@ def get_module_confidence_scores(analysis: Dict, case_data: Dict) -> Dict:
                  else 50)
     modules_conf['jurisdiction'] = _conf(jur_score,
         'Jurisdiction is confirmed by court/bank location data' if jur_score >= 80
-        else 'Jurisdiction inferred — provide filing_court_location for full validation')
+        else 'Jurisdiction inferred â€” provide filing_court_location for full validation')
 
 
     def_fields = ['defence_type', 'dishonour_reason', 'written_agreement_exists']
@@ -13176,7 +13176,7 @@ def get_module_confidence_scores(analysis: Dict, case_data: Dict) -> Dict:
 
     set_score = 60 if case_data.get('cheque_amount') else 30
     modules_conf['settlement'] = _conf(set_score,
-        'Settlement range is calculated from cheque amount and case score — reliable when amount is provided')
+        'Settlement range is calculated from cheque amount and case score â€” reliable when amount is provided')
 
     overall_conf = round(sum(v['score'] for v in modules_conf.values()) / len(modules_conf))
     weakest = min(modules_conf.items(), key=lambda x: x[1]['score'])
@@ -13194,7 +13194,7 @@ def get_module_confidence_scores(analysis: Dict, case_data: Dict) -> Dict:
 
 def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
     """
-    Generate a short, plain-language summary of the analysis —
+    Generate a short, plain-language summary of the analysis â€”
     the kind a lawyer can read in 30 seconds and immediately act on.
 
     Returned as 'plain_summary' at the top level of the API response.
@@ -13232,31 +13232,31 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
     li_score  = float(cat_scores.get('Proper Impleading', {}).get('score', 0) if isinstance(cat_scores.get('Proper Impleading'), dict) else cat_scores.get('Proper Impleading', 0) or 0)
 
     if tl_score >= 80:
-        strengths.append('Timeline compliance is strong — notice sent in time and dates are in order')
+        strengths.append('Timeline compliance is strong â€” notice sent in time and dates are in order')
     elif tl_score >= 60:
-        strengths.append('Timeline compliance is adequate — key statutory dates are within limits')
+        strengths.append('Timeline compliance is adequate â€” key statutory dates are within limits')
 
     if ing_score >= 80:
         strengths.append('All seven key ingredients of Section 138 are substantially in place')
     elif ing_score >= 60:
-        strengths.append('Core ingredients of Section 138 are present — minor gaps exist')
+        strengths.append('Core ingredients of Section 138 are present â€” minor gaps exist')
 
     if case_data.get('return_memo_available'):
-        strengths.append('Dishonour memo available — primary evidence of dishonour secured')
+        strengths.append('Dishonour memo available â€” primary evidence of dishonour secured')
     if case_data.get('original_cheque_available'):
-        strengths.append('Original cheque available — foundational instrument document present')
+        strengths.append('Original cheque available â€” foundational instrument document present')
     if case_data.get('postal_proof_available') or case_data.get('ad_card_signed'):
-        strengths.append('Postal proof of notice available — statutory service presumption established')
+        strengths.append('Postal proof of notice available â€” statutory service presumption established')
     if case_data.get('written_agreement_exists'):
-        strengths.append('Written agreement available — debt enforceability is well-documented')
+        strengths.append('Written agreement available â€” debt enforceability is well-documented')
     if case_data.get('bank_statement_proof') or case_data.get('ledger_available'):
-        strengths.append('Financial records available — independent transaction trail established')
+        strengths.append('Financial records available â€” independent transaction trail established')
     if case_data.get('witness_available'):
-        strengths.append('Witness available — oral testimony can corroborate the transaction')
+        strengths.append('Witness available â€” oral testimony can corroborate the transaction')
     if li_score >= 90:
         strengths.append('Proper Impleading: all required parties correctly named under Section 141')
     if doc_score >= 70:
-        strengths.append('Documentary strength is good — key documents are in place')
+        strengths.append('Documentary strength is good â€” key documents are in place')
 
 
     _es = analysis.get('executive_summary', {}) or {}
@@ -13266,7 +13266,7 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
             strengths.append(_s_text)
 
     if not strengths:
-        strengths.append('Case ingredients are partially in place — review modules for gaps')
+        strengths.append('Case ingredients are partially in place â€” review modules for gaps')
 
 
     weaknesses = []
@@ -13285,25 +13285,25 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
 
 
     if not case_data.get('written_agreement_exists'):
-        weaknesses.append('No written agreement — accused can challenge the existence of legally enforceable debt (fundamental S.138 ingredient)')
+        weaknesses.append('No written agreement â€” accused can challenge the existence of legally enforceable debt (fundamental S.138 ingredient)')
     if not case_data.get('ledger_available') and not case_data.get('bank_statement_proof'):
-        weaknesses.append('No financial records — transaction trail is entirely oral and uncorroborated')
+        weaknesses.append('No financial records â€” transaction trail is entirely oral and uncorroborated')
     if not case_data.get('return_memo_available'):
-        weaknesses.append('Bank dishonour memo not available — proof of dishonour may be contestable')
+        weaknesses.append('Bank dishonour memo not available â€” proof of dishonour may be contestable')
     if not case_data.get('postal_proof_available') and not case_data.get('ad_card_signed'):
-        weaknesses.append('No postal proof of notice — accused may deny receiving the legal demand')
+        weaknesses.append('No postal proof of notice â€” accused may deny receiving the legal demand')
     if not case_data.get('original_cheque_available'):
-        weaknesses.append('Original cheque not secured — admissibility of copy may be challenged')
+        weaknesses.append('Original cheque not secured â€” admissibility of copy may be challenged')
 
 
     if doc_score < 40:
-        weaknesses.append('Documentary Strength score is critically low — substantial strengthening needed before filing')
+        weaknesses.append('Documentary Strength score is critically low â€” substantial strengthening needed before filing')
     elif doc_score < 60:
-        weaknesses.append('Documentary evidence is weak — transaction proof requires reinforcement before filing')
+        weaknesses.append('Documentary evidence is weak â€” transaction proof requires reinforcement before filing')
     if tl_score < 50:
-        weaknesses.append('Timeline compliance is below threshold — risk of dismissal on technical grounds')
+        weaknesses.append('Timeline compliance is below threshold â€” risk of dismissal on technical grounds')
     if ing_score < 50:
-        weaknesses.append('Ingredient compliance is below threshold — statutory requirements are not fully satisfied')
+        weaknesses.append('Ingredient compliance is below threshold â€” statutory requirements are not fully satisfied')
 
 
     _def_data = analysis.get('modules', {}).get('defence_matrix', {}) or {}
@@ -13312,7 +13312,7 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
     for _hd in _high_def[:2]:
         _hd_name = str(_hd.get('defence', _hd.get('type', 'defence argument')) or '')
         if _hd_name:
-            weaknesses.append(f'Strong defence exposure: {_hd_name} — prepare counter-evidence')
+            weaknesses.append(f'Strong defence exposure: {_hd_name} â€” prepare counter-evidence')
 
 
     _es_weak = (_es.get('weaknesses') or [])
@@ -13322,7 +13322,7 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
             weaknesses.append(_w_text)
 
     if not weaknesses:
-        weaknesses.append('No critical weaknesses detected — case appears adequately positioned')
+        weaknesses.append('No critical weaknesses detected â€” case appears adequately positioned')
 
 
     if fatal_flag:
@@ -13336,17 +13336,17 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
         except Exception:
             pass
         one_line = (
-            f"⛔ Case is NOT maintainable — {_fd_msg}." if _fd_msg else
-            "⛔ Case has a fatal defect — do not file until the issue is resolved."
+            f"â›” Case is NOT maintainable â€” {_fd_msg}." if _fd_msg else
+            "â›” Case has a fatal defect â€” do not file until the issue is resolved."
         )
     elif score >= 75:
-        one_line = "✅ Strong case — statutory requirements are substantially satisfied. Proceed to file after final document review."
+        one_line = "âœ… Strong case â€” statutory requirements are substantially satisfied. Proceed to file after final document review."
     elif score >= 55:
-        one_line = "⚠️ Case is valid but has evidentiary gaps — strengthen documentary proof before filing for better conviction prospects."
+        one_line = "âš ï¸ Case is valid but has evidentiary gaps â€” strengthen documentary proof before filing for better conviction prospects."
     elif score >= 35:
-        one_line = "🔴 Weak case — significant evidentiary and procedural gaps require remediation before filing."
+        one_line = "ðŸ”´ Weak case â€” significant evidentiary and procedural gaps require remediation before filing."
     else:
-        one_line = "⛔ Very weak case — multiple critical deficiencies make filing highly inadvisable without major remediation."
+        one_line = "â›” Very weak case â€” multiple critical deficiencies make filing highly inadvisable without major remediation."
 
 
     settlement_data = analysis.get('modules', {}).get('settlement_intelligence', {})
@@ -13354,14 +13354,14 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
 
     if fatal_flag:
 
-        recommendation = "Do not file. Address the fatal defect first (e.g. wait for 15-day period to expire and refile) — consult your lawyer on remediation."
+        recommendation = "Do not file. Address the fatal defect first (e.g. wait for 15-day period to expire and refile) â€” consult your lawyer on remediation."
     elif settlement_recommended or score < 60:
         settlement_value = settlement_data.get('recommended_settlement_range', {})
         low  = settlement_value.get('minimum', amount * 0.5)
         high = settlement_value.get('maximum', amount * 0.8)
         recommendation = (
             f"Consider negotiating a settlement "
-            f"(estimated range: ₹{indian_number_format(low)}–₹{indian_number_format(high)}) "
+            f"(estimated range: â‚¹{indian_number_format(low)}â€“â‚¹{indian_number_format(high)}) "
             f"while simultaneously strengthening documentary evidence. "
             f"Filing now carries a meaningful acquittal risk."
         )
@@ -13400,9 +13400,9 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
     module_confidence      = get_module_confidence_scores(analysis, case_data)
 
     return {
-        'one_line_verdict': one_line or 'Analysis complete — see details below',
+        'one_line_verdict': one_line or 'Analysis complete â€” see details below',
         'perspective': perspective or 'Not specified',
-        'cheque_amount': f"₹{indian_number_format(amount)}" if amount else 'Not specified',
+        'cheque_amount': f"â‚¹{indian_number_format(amount)}" if amount else 'Not specified',
         'score_display': f"{score:.1f}/100",
         'risk_score': round(score, 1),
         'case_classification': compliance or 'Assessment Pending',
@@ -13434,49 +13434,49 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
 async def lifespan(app: FastAPI):
 
     print("\n" + "="*100)
-    print("🚀 JUDIQ AI - LEGAL INTELLIGENCE PLATFORM")
+    print("ðŸš€ JUDIQ AI - LEGAL INTELLIGENCE PLATFORM")
     print("="*100 + "\n")
 
 
-    print(f"📂 Data directory: {DATA_DIR}")
+    print(f"ðŸ“‚ Data directory: {DATA_DIR}")
     init_analytics_db()
 
 
     print("\n" + "="*80)
-    print("📚 LOADING KNOWLEDGE BASE FROM GOOGLE DRIVE")
+    print("ðŸ“š LOADING KNOWLEDGE BASE FROM GOOGLE DRIVE")
     print("="*80)
     load_kb()
 
     print("="*100)
-    print("✅ JUDIQ AI READY - PROFESSIONAL LEGAL INTELLIGENCE")
+    print("âœ… JUDIQ AI READY - PROFESSIONAL LEGAL INTELLIGENCE")
     print("="*100)
-    print(f"📚 Knowledge Base: {len(kb_data) if kb_loaded else 'Minimal fallback'} rows | Drive: {'✅' if kb_loaded else '❌ Set GDRIVE_FILE_ID env var'}")
-    print("🤖 LLM Enhancement: Disabled (Render — cross-exam uses rule-based engine)")
-    print(f"💾 Analytics DB: {analytics_db_path}")
-    print("⚡ Embedding Cache: Disabled (Render)")
+    print(f"ðŸ“š Knowledge Base: {len(kb_data) if kb_loaded else 'Minimal fallback'} rows | Drive: {'âœ…' if kb_loaded else 'âŒ Set GDRIVE_FILE_ID env var'}")
+    print("ðŸ¤– LLM Enhancement: Disabled (Render â€” cross-exam uses rule-based engine)")
+    print(f"ðŸ’¾ Analytics DB: {analytics_db_path}")
+    print("âš¡ Embedding Cache: Disabled (Render)")
     print("="*100 + "\n")
-    print("🎯 INTELLIGENCE CAPABILITIES (90% ELITE-GRADE):")
-    print("  ✅ Layer 1: Timeline Intelligence (Deterministic + Confidence)")
-    print("  ✅ Layer 2: Ingredient Compliance (Calibrated Weights)")
-    print("  ✅ Layer 3: Documentary Strength (Severity Tiers)")
-    print("  ✅ Layer 4: Liability Expansion (Section 141)")
-    print("  ✅ Layer 5: Defence Vulnerability (Logic)")
-    print("  ✅ Layer 6: Procedural Defect Scanner (Rule-Based)")
-    print("  ✅ Layer 7: Risk Scoring (Fatal Override + Confidence)")
-    print("  ✅ Layer 8: Settlement & Financial Exposure")
-    print("  ✅ Layer 9: Contradiction Detector")
-    print("  ✅ Layer 10: Judicial Behavior (RATIO-BASED ANALYTICS)")
-    print("  ✅ Layer 11: Presumption Rebuttal (Evidence-Based)")
-    print("  ✅ Layer 12: Cross-Examination Risk")
-    print("  ✅ Layer 13: Professional Reports (Dual Format)")
-    print("\n🏗️  ARCHITECTURE:")
-    print("  📐 Deterministic: 9 modules (100% rule-based)")
-    print("  🔍 RAG Analytics: Ratio-based court statistics")
-    print("  🤖 LLM: Optional (explanation only)")
-    print("  ⚠️  Fatal Override: Active (auto-caps scores)")
-    print("  📊 Data Calibration: Weights from dismissal rates")
-    print("  🎯 Confidence Layer: Every output scored")
-    print("  ✅ Validation: Methodology documented")
+    print("ðŸŽ¯ INTELLIGENCE CAPABILITIES (90% ELITE-GRADE):")
+    print("  âœ… Layer 1: Timeline Intelligence (Deterministic + Confidence)")
+    print("  âœ… Layer 2: Ingredient Compliance (Calibrated Weights)")
+    print("  âœ… Layer 3: Documentary Strength (Severity Tiers)")
+    print("  âœ… Layer 4: Liability Expansion (Section 141)")
+    print("  âœ… Layer 5: Defence Vulnerability (Logic)")
+    print("  âœ… Layer 6: Procedural Defect Scanner (Rule-Based)")
+    print("  âœ… Layer 7: Risk Scoring (Fatal Override + Confidence)")
+    print("  âœ… Layer 8: Settlement & Financial Exposure")
+    print("  âœ… Layer 9: Contradiction Detector")
+    print("  âœ… Layer 10: Judicial Behavior (RATIO-BASED ANALYTICS)")
+    print("  âœ… Layer 11: Presumption Rebuttal (Evidence-Based)")
+    print("  âœ… Layer 12: Cross-Examination Risk")
+    print("  âœ… Layer 13: Professional Reports (Dual Format)")
+    print("\nðŸ—ï¸  ARCHITECTURE:")
+    print("  ðŸ“ Deterministic: 9 modules (100% rule-based)")
+    print("  ðŸ” RAG Analytics: Ratio-based court statistics")
+    print("  ðŸ¤– LLM: Optional (explanation only)")
+    print("  âš ï¸  Fatal Override: Active (auto-caps scores)")
+    print("  ðŸ“Š Data Calibration: Weights from dismissal rates")
+    print("  ðŸŽ¯ Confidence Layer: Every output scored")
+    print("  âœ… Validation: Methodology documented")
     print("="*100 + "\n")
 
 
@@ -13485,7 +13485,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-    print("\n✅ JUDIQ v5.0 shutting down...")
+    print("\nâœ… JUDIQ v5.0 shutting down...")
 
 app = FastAPI(
     title="JUDIQ v5.0 - Legal Intelligence Platform",
@@ -13502,13 +13502,13 @@ if RATE_LIMITING_AVAILABLE:
         limiter = Limiter(key_func=get_remote_address)
         app.state.limiter = limiter
         app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-        logger.info("✅ Rate limiting enabled (30 requests/minute)")
+        logger.info("âœ… Rate limiting enabled (30 requests/minute)")
     except Exception:
         limiter = DummyLimiter()
-        logger.warning("⚠️ Rate limiting disabled - slowapi handler unavailable")
+        logger.warning("âš ï¸ Rate limiting disabled - slowapi handler unavailable")
 else:
     limiter = DummyLimiter()
-    logger.warning("⚠️ Rate limiting disabled - install slowapi to enable")
+    logger.warning("âš ï¸ Rate limiting disabled - install slowapi to enable")
 
 app.add_middleware(
     CORSMiddleware,
@@ -13532,7 +13532,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
 
     This function ensures NO contradictions in final output.
     """
-    logger.info("  🎯 Reconciling all decision modules...")
+    logger.info("  ðŸŽ¯ Reconciling all decision modules...")
 
 
     _ = analysis_report.get('fatal_flag', False)
@@ -13543,11 +13543,11 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
     if 'modules' in analysis_report and 'risk_assessment' in analysis_report['modules']:
         risk_module = analysis_report['modules'].get('risk_assessment', {})
         risk_score = risk_module.get('overall_risk_score', 50)
-        logger.info(f"  📊 Reading authoritative risk score: {risk_score}")
+        logger.info(f"  ðŸ“Š Reading authoritative risk score: {risk_score}")
     else:
 
         risk_score = analysis_report.get('risk_score', 50)
-        logger.warning(f"  ⚠️ Using fallback risk score: {risk_score}")
+        logger.warning(f"  âš ï¸ Using fallback risk score: {risk_score}")
 
 
     fatal_sources = []
@@ -13574,10 +13574,10 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
             fatal_sources.append('risk_assessment')
 
 
-    if 'modules' in analysis_report and 'section_65b_compliance' in analysis_report['modules']:
-        section_65b = analysis_report['modules'].get('section_65b_compliance', {})
-        if section_65b.get('risk_level') == 'FATAL':
-            fatal_sources.append('section_65b')
+    if 'modules' in analysis_report and 'section_63_compliance' in analysis_report['modules']:
+        section_63 = analysis_report['modules'].get('section_63_compliance', {})
+        if section_63.get('risk_level') == 'FATAL':
+            fatal_sources.append('section_63')
 
 
     _ = False
@@ -13608,7 +13608,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
 
         if jurisdiction_status == 'INSUFFICIENT_DATA':
 
-            logger.info("  ℹ️ Jurisdiction: Insufficient data - no penalty applied")
+            logger.info("  â„¹ï¸ Jurisdiction: Insufficient data - no penalty applied")
         elif not jurisdiction.get('jurisdiction_valid', True):
 
             jurisdiction_risk = jurisdiction.get('risk_level', 'MEDIUM')
@@ -13616,70 +13616,70 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
 
                 fatal_sources.append('jurisdiction_critical')
                 jurisdiction_penalty = 40
-                logger.error("  🔴 Jurisdiction CRITICAL - FATAL condition (filing blocked)")
+                logger.error("  ðŸ”´ Jurisdiction CRITICAL - FATAL condition (filing blocked)")
             elif jurisdiction_risk == 'HIGH':
                 jurisdiction_penalty = 20
-                logger.warning("  ⚠️ Jurisdiction INVALID (HIGH) - score reduction applied")
+                logger.warning("  âš ï¸ Jurisdiction INVALID (HIGH) - score reduction applied")
 
 
-    section_65b_penalty = 0
-    if 'modules' in analysis_report and 'section_65b_compliance' in analysis_report['modules']:
-        section_65b = analysis_report['modules'].get('section_65b_compliance', {})
-        if section_65b.get('applicable', False) and not section_65b.get('compliant', True):
-            risk_level = section_65b.get('risk_level', 'LOW')
+    section_63_penalty = 0
+    if 'modules' in analysis_report and 'section_63_compliance' in analysis_report['modules']:
+        section_63 = analysis_report['modules'].get('section_63_compliance', {})
+        if section_63.get('applicable', False) and not section_63.get('compliant', True):
+            risk_level = section_63.get('risk_level', 'LOW')
 
 
             if risk_level in ['FATAL', 'CRITICAL']:
-                section_65b_penalty = 10
-                logger.warning("  ⚠️ Section 65B - Electronic evidence is PRIMARY proof - penalty applied")
+                section_63_penalty = 10
+                logger.warning("  âš ï¸ Section 63 - Electronic evidence is PRIMARY proof - penalty applied")
             elif risk_level == 'HIGH':
 
-                logger.info("  ℹ️ Section 65B - Electronic evidence is supporting only - minimal impact")
+                logger.info("  â„¹ï¸ Section 63 - Electronic evidence is supporting only - minimal impact")
 
 
-    risk_score = round(max(15, risk_score - jurisdiction_penalty - section_65b_penalty), 1)
-    logger.info(f"  📊 Adjusted risk score after jurisdiction/65B: {risk_score}")
+    risk_score = round(max(15, risk_score - jurisdiction_penalty - section_63_penalty), 1)
+    logger.info(f"  ðŸ“Š Adjusted risk score after jurisdiction/63: {risk_score}")
 
 
     if 'modules' in analysis_report and 'risk_assessment' in analysis_report['modules']:
         risk_module = analysis_report['modules'].get('risk_assessment', {})
-        base_score = risk_module.get('overall_risk_score_base', risk_score + jurisdiction_penalty + section_65b_penalty)
+        base_score = risk_module.get('overall_risk_score_base', risk_score + jurisdiction_penalty + section_63_penalty)
 
 
         _orig_risk_score = risk_module.get('overall_risk_score', risk_score)
-        _adjusted_score  = round(max(15, _orig_risk_score - jurisdiction_penalty - section_65b_penalty), 1)
+        _adjusted_score  = round(max(15, _orig_risk_score - jurisdiction_penalty - section_63_penalty), 1)
         risk_module['overall_risk_score']      = _adjusted_score
         risk_module['overall_risk_score_base'] = _orig_risk_score
         risk_module['adjusted'] = True
         risk_module['adjustments'] = {
             'jurisdiction_penalty': jurisdiction_penalty,
-            'section_65b_penalty': section_65b_penalty,
-            'total_penalty': jurisdiction_penalty + section_65b_penalty
+            'section_63_penalty': section_63_penalty,
+            'total_penalty': jurisdiction_penalty + section_63_penalty
         }
 
 
         if 'explanation' in risk_module and isinstance(risk_module['explanation'], dict):
             if 'calculation_steps' in risk_module['explanation']:
 
-                if jurisdiction_penalty > 0 or section_65b_penalty > 0:
+                if jurisdiction_penalty > 0 or section_63_penalty > 0:
                     penalty_text = "Step 3: Apply penalties\n"
                     if jurisdiction_penalty > 0:
                         penalty_text += f"  - Jurisdiction penalty: -{jurisdiction_penalty} points\n"
-                    if section_65b_penalty > 0:
-                        penalty_text += f"  - Section 65B penalty: -{section_65b_penalty} points\n"
-                    penalty_text += f"  Adjusted Score: {base_score:.2f} - {jurisdiction_penalty + section_65b_penalty} = {risk_score:.2f}"
+                    if section_63_penalty > 0:
+                        penalty_text += f"  - Section 63 penalty: -{section_63_penalty} points\n"
+                    penalty_text += f"  Adjusted Score: {base_score:.2f} - {jurisdiction_penalty + section_63_penalty} = {risk_score:.2f}"
 
                     risk_module['explanation']['calculation_steps'].append(penalty_text)
                     risk_module['explanation']['final_score'] = risk_score
 
 
     _real_fatal_sources = [s for s in fatal_sources
-                           if s in ('risk_assessment', 'jurisdiction_critical', 'section_65b')]
+                           if s in ('risk_assessment', 'jurisdiction_critical', 'section_63')]
     is_fatal = len(_real_fatal_sources) > 0 and len(fatal_defects) > 0
 
 
     if is_fatal:
-        logger.warning(f"  ⚠️ FATAL condition detected from: {', '.join(fatal_sources) if fatal_sources else 'primary flag'}")
+        logger.warning(f"  âš ï¸ FATAL condition detected from: {', '.join(fatal_sources) if fatal_sources else 'primary flag'}")
         fatal_reasoning = f"Fatal defects detected: {', '.join(fatal_sources)}" if fatal_sources else 'Fatal defects override all positive assessments'
 
         final_verdict = {
@@ -13696,7 +13696,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
 
 
     elif len(fatal_defects) > 0 or risk_score < 30:
-        logger.warning("  ⚠️ Critical issues detected")
+        logger.warning("  âš ï¸ Critical issues detected")
         final_verdict = {
             'status': 'CRITICAL',
             'category': 'HIGH RISK',
@@ -13744,16 +13744,16 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
         }
 
 
-    logger.info(f"  ✅ Final verdict: {final_verdict['status']} - {final_verdict['category']}")
+    logger.info(f"  âœ… Final verdict: {final_verdict['status']} - {final_verdict['category']}")
 
 
     if is_fatal:
-        logger.warning("  ⚠️ FATAL override: Syncing all module scores to reflect fatal condition")
+        logger.warning("  âš ï¸ FATAL override: Syncing all module scores to reflect fatal condition")
         for module_name in analysis_report.get('modules', {}):
             module = analysis_report['modules'][module_name]
             if isinstance(module, dict):
                 module['fatal_override_applied'] = True
-                module['fatal_note'] = 'Case has fatal defect — see procedural_defects module'
+                module['fatal_note'] = 'Case has fatal defect â€” see procedural_defects module'
 
 
     analysis_report['final_verdict'] = final_verdict
@@ -13792,34 +13792,34 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
         _ = final_verdict['status'] in ['STRONG', 'MODERATE'] and not final_verdict['filing_blocked']
 
         if final_verdict['status'] in ['FATAL', 'CRITICAL']:
-            filing_module['filing_readiness'] = '❌ NOT READY TO FILE'
+            filing_module['filing_readiness'] = 'âŒ NOT READY TO FILE'
             filing_module['ready_to_file'] = False
-            filing_module['overall_status'] = '🔴 FILING BLOCKED' if final_verdict['filing_blocked'] else '⚠️ HIGH RISK'
+            filing_module['overall_status'] = 'ðŸ”´ FILING BLOCKED' if final_verdict['filing_blocked'] else 'âš ï¸ HIGH RISK'
             filing_module['decisive_verdict'] = final_verdict['recommendation']
             filing_module['final_status'] = 'NOT READY TO FILE'
         elif final_verdict['status'] == 'WEAK':
-            filing_module['filing_readiness'] = '⚠️ RISKY - SETTLEMENT ADVISED'
+            filing_module['filing_readiness'] = 'âš ï¸ RISKY - SETTLEMENT ADVISED'
             filing_module['ready_to_file'] = False
-            filing_module['overall_status'] = '⚠️ HIGH RISK'
+            filing_module['overall_status'] = 'âš ï¸ HIGH RISK'
             filing_module['decisive_verdict'] = final_verdict['recommendation']
             filing_module['final_status'] = 'RISKY - REVIEW REQUIRED'
         elif final_verdict['status'] == 'MODERATE':
-            filing_module['filing_readiness'] = '⚠️ READY - STRENGTHEN RECOMMENDED'
+            filing_module['filing_readiness'] = 'âš ï¸ READY - STRENGTHEN RECOMMENDED'
             filing_module['ready_to_file'] = True
-            filing_module['overall_status'] = '⚠️ MODERATE'
+            filing_module['overall_status'] = 'âš ï¸ MODERATE'
             filing_module['decisive_verdict'] = final_verdict['recommendation']
             filing_module['final_status'] = 'READY TO FILE'
         else:
-            filing_module['filing_readiness'] = '✅ READY TO FILE'
+            filing_module['filing_readiness'] = 'âœ… READY TO FILE'
             filing_module['ready_to_file'] = True
-            filing_module['overall_status'] = '✅ STRONG'
+            filing_module['overall_status'] = 'âœ… STRONG'
             filing_module['decisive_verdict'] = final_verdict['recommendation']
             filing_module['final_status'] = 'READY TO FILE'
 
 
     if 'modules' in analysis_report and 'document_compliance' in analysis_report['modules']:
         if final_verdict['status'] in ['FATAL', 'CRITICAL']:
-            analysis_report['modules'].get('document_compliance', {})['filing_readiness'] = '❌ NOT READY TO FILE'
+            analysis_report['modules'].get('document_compliance', {})['filing_readiness'] = 'âŒ NOT READY TO FILE'
 
 
     if 'executive_summary' in analysis_report:
@@ -13831,7 +13831,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
             if is_fatal and len(fatal_defects) > 0:
 
                 es['overall_assessment'] = 'FATAL FAILURE'
-                es['filing_verdict']     = 'DO NOT FILE — FATAL DEFECTS PRESENT'
+                es['filing_verdict']     = 'DO NOT FILE â€” FATAL DEFECTS PRESENT'
                 es['filing_status']      = 'DO NOT FILE'
                 es['fatal_defects_count']= len([d for d in fatal_defects if d.get('severity') in ('FATAL','CRITICAL')])
             else:
@@ -13848,16 +13848,16 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
                     es['overall_assessment'] = 'STRONG CASE'
                 elif risk_score >= 55:
                     _reason = 'Weak documentary evidence' if _doc_score < 60 else ('Procedural gaps present' if _proc_def else 'Evidentiary gaps present')
-                    es['filing_verdict']  = f'FILE WITH CAUTION — {_reason.upper()}'
+                    es['filing_verdict']  = f'FILE WITH CAUTION â€” {_reason.upper()}'
                     es['filing_status']   = 'FILE WITH CAUTION'
                     es['overall_assessment'] = final_verdict.get('category', 'MODERATE RISK')
                 else:
-                    es['filing_verdict']  = 'HIGH RISK — REMEDIATION REQUIRED'
+                    es['filing_verdict']  = 'HIGH RISK â€” REMEDIATION REQUIRED'
                     es['filing_status']   = 'HIGH RISK'
                     es['overall_assessment'] = 'HIGH RISK'
 
 
-            status_marker = '🔴' if is_fatal else ('⚠️' if final_verdict['status'] in ['CRITICAL', 'WEAK'] else '✅')
+            status_marker = 'ðŸ”´' if is_fatal else ('âš ï¸' if final_verdict['status'] in ['CRITICAL', 'WEAK'] else 'âœ…')
             es['case_overview'] = f"{status_marker} {final_verdict['status']}: {final_verdict['reasoning']}"
 
             es['final_score']     = _es_score
@@ -13866,7 +13866,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
 
             if is_fatal:
                 es['strategic_recommendations'] = [
-                    {'priority': 'URGENT', 'action': 'Do not file — fatal defects present',
+                    {'priority': 'URGENT', 'action': 'Do not file â€” fatal defects present',
                      'recommendation': 'Address all fatal defects before filing', 'rationale': ', '.join(fatal_sources)}
                 ]
             elif final_verdict['status'] == 'CRITICAL':
@@ -13889,14 +13889,14 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
                 analysis_report['professional_report']['summary']['final_verdict'] = final_verdict['category']
                 analysis_report['professional_report']['summary']['recommendation'] = final_verdict['recommendation']
 
-    logger.info("  ✅ Verdict integrity enforced - all modules synchronized")
+    logger.info("  âœ… Verdict integrity enforced - all modules synchronized")
 
     return analysis_report
 
 
 def deduplicate_fatal_defects(defects: List[Dict]) -> List[Dict]:
     """
-    Normalize fatal defects — collapse duplicate premature/limitation defects
+    Normalize fatal defects â€” collapse duplicate premature/limitation defects
     into a single canonical entry with supporting details.
     """
     if not defects:
@@ -13933,7 +13933,7 @@ def deduplicate_fatal_defects(defects: List[Dict]) -> List[Dict]:
 
         supporting = '; '.join({d.get('impact','') for d in premature_group if d.get('impact','') and d.get('impact','') != best.get('impact','')})
         result.append({
-            'defect':    'Premature Complaint — Cause of Action Had Not Yet Arisen',
+            'defect':    'Premature Complaint â€” Cause of Action Had Not Yet Arisen',
             'severity':  'CRITICAL',
             'impact':    best.get('impact') or 'Complaint is not maintainable under Section 138 NI Act',
             'remedy':    'Current complaint is not maintainable. Wait until cause of action arises (15-day expiry), then file a fresh complaint within the 30-day limitation period.',
@@ -13958,7 +13958,7 @@ def deduplicate_fatal_defects(defects: List[Dict]) -> List[Dict]:
     if sameday_group:
         best = sameday_group[0]
         result.append({
-            'defect':    'Same-Day Filing — Borderline Procedural Risk',
+            'defect':    'Same-Day Filing â€” Borderline Procedural Risk',
             'severity':  'HIGH',
             'impact':    best.get('impact') or 'Courts are split on whether complaint filed on same day as cause of action is maintainable',
             'remedy':    'Strongly recommend refiling one day after cause of action if still within limitation period.',
@@ -13973,7 +13973,7 @@ def deduplicate_fatal_defects(defects: List[Dict]) -> List[Dict]:
 
 def _calculate_data_completeness_v1(case_data: Dict) -> Dict:
     """
-    Calculate how complete the input data is. (V1 — use calculate_data_completeness() instead)
+    Calculate how complete the input data is. (V1 â€” use calculate_data_completeness() instead)
     """
     required   = ['cheque_date','dishonour_date','notice_date','complaint_filed_date',
                   'notice_received_date','cheque_amount','bank_name']
@@ -13995,9 +13995,9 @@ def _calculate_data_completeness_v1(case_data: Dict) -> Dict:
     missing_important = [f for f in important if case_data.get(f) in (None,'',False)]
 
     reliability = (
-        'HIGH — All critical fields provided'          if req_filled == len(required) and imp_filled >= 6 else
-        'MEDIUM — Key fields present, some gaps'       if req_filled == len(required) else
-        'LOW — Missing critical dates or amounts'
+        'HIGH â€” All critical fields provided'          if req_filled == len(required) and imp_filled >= 6 else
+        'MEDIUM â€” Key fields present, some gaps'       if req_filled == len(required) else
+        'LOW â€” Missing critical dates or amounts'
     )
 
     return {
@@ -14009,9 +14009,9 @@ def _calculate_data_completeness_v1(case_data: Dict) -> Dict:
         'missing_required':    [f.replace('_',' ') for f in missing_required],
         'missing_important':   [f.replace('_',' ') for f in missing_important[:4]],
         'analysis_note':       (
-            'Analysis is fully reliable — all required data provided.'
+            'Analysis is fully reliable â€” all required data provided.'
             if not missing_required else
-            f'Analysis partially reliable — {len(missing_required)} required field(s) missing: '
+            f'Analysis partially reliable â€” {len(missing_required)} required field(s) missing: '
             + ', '.join(f.replace("_"," ") for f in missing_required[:3])
         )
     }
@@ -14048,8 +14048,8 @@ def calculate_data_completeness(case_data: Dict) -> Dict:
         'missing_required':   missing_required,
         'missing_optional':   missing_optional[:5],
         'reliability_note':   ('High confidence' if pct >= 85 else
-                               'Moderate confidence — some optional data missing' if pct >= 65 else
-                               'Reduced confidence — key fields missing'),
+                               'Moderate confidence â€” some optional data missing' if pct >= 65 else
+                               'Reduced confidence â€” key fields missing'),
         'warning':            f"Missing required fields: {', '.join(missing_required)}" if missing_required else None,
     }
 
@@ -14088,7 +14088,7 @@ def analyze_dishonour_reason(case_data: Dict) -> Dict:
                 reason = alt_reason
                 result['raw_reason'] = alt_reason
             else:
-                result['legal_impact']   = 'Dishonour reason not provided — weakens the case'
+                result['legal_impact']   = 'Dishonour reason not provided â€” weakens the case'
                 result['recommendation'] = 'Obtain dishonour memo from bank clearly stating the reason'
                 result['risk_level']     = 'HIGH'
                 result['score_impact']   = -10
@@ -14104,8 +14104,8 @@ def analyze_dishonour_reason(case_data: Dict) -> Dict:
                 'Section 139 presumption operates fully. Accused must prove absence of debt.'
             )
             result['defence_risk']    = (
-                'Accused may claim: (a) cheque given as security — rebut with transaction evidence; '
-                '(b) amount deposited before dishonour — check bank statement dates carefully.'
+                'Accused may claim: (a) cheque given as security â€” rebut with transaction evidence; '
+                '(b) amount deposited before dishonour â€” check bank statement dates carefully.'
             )
             result['recommendation']  = 'Highlight this reason prominently. Get certified copy of dishonour memo.'
             result['score_impact']    = +5
@@ -14121,7 +14121,7 @@ def analyze_dishonour_reason(case_data: Dict) -> Dict:
                 'Requires stronger documentary proof of debt than "insufficient funds" cases.'
             )
             result['defence_risk']    = (
-                'HIGH defence risk — stop payment shows deliberate act, which accused will use to argue '
+                'HIGH defence risk â€” stop payment shows deliberate act, which accused will use to argue '
                 'no obligation existed. Complainant must have strong proof of underlying debt.'
             )
             result['recommendation']  = (
@@ -14138,12 +14138,12 @@ def analyze_dishonour_reason(case_data: Dict) -> Dict:
             result['rebuttable']      = False
             result['legal_impact']    = (
                 'Account closed at time of presentation is a very strong dishonour. '
-                'Shows clear intention to defraud — hard for accused to rebut. '
+                'Shows clear intention to defraud â€” hard for accused to rebut. '
                 'May also attract Section 420 IPC charges in addition to Section 138. '
                 'Courts have consistently held this as clear evidence of dishonest intention.'
             )
             result['defence_risk']    = (
-                'LOW defence risk — very difficult for accused to explain account closure. '
+                'LOW defence risk â€” very difficult for accused to explain account closure. '
                 'May argue: (a) administrative error; (b) did not know account was closed. '
                 'Both arguments weak.'
             )
@@ -14160,11 +14160,11 @@ def analyze_dishonour_reason(case_data: Dict) -> Dict:
             result['rebuttable']      = True
             result['legal_impact']    = (
                 'Signature mismatch is technically dishonour under Section 138, but courts are divided. '
-                'Some courts hold: if signatures differ, identity of drawer uncertain — Section 138 may not apply. '
+                'Some courts hold: if signatures differ, identity of drawer uncertain â€” Section 138 may not apply. '
                 'Risk of complaint being dismissed on this ground alone.'
             )
             result['defence_risk']    = (
-                'CRITICAL — accused will argue they did not sign the cheque, potentially attacking the very '
+                'CRITICAL â€” accused will argue they did not sign the cheque, potentially attacking the very '
                 'foundation of the complaint. Handwriting expert may be required.'
             )
             result['recommendation']  = (
@@ -14183,7 +14183,7 @@ def analyze_dishonour_reason(case_data: Dict) -> Dict:
                 'However, accused may argue the freezing itself shows financial distress beyond their control. '
                 'Complexity increases if a court order caused the dishonour.'
             )
-            result['defence_risk'] = 'MEDIUM — accused may use court-ordered freeze as partial defence.'
+            result['defence_risk'] = 'MEDIUM â€” accused may use court-ordered freeze as partial defence.'
             result['recommendation'] = 'Verify the freeze order details, who applied it, and whether it was in force at time of presentation.'
             result['score_impact']   = -5
             result['risk_level']     = 'MEDIUM'
@@ -14191,7 +14191,7 @@ def analyze_dishonour_reason(case_data: Dict) -> Dict:
         else:
             result['reason_category'] = f'Other: {reason_raw}'
             result['legal_impact']    = (
-                f'Dishonour reason "{reason_raw}" — verify with bank. '
+                f'Dishonour reason "{reason_raw}" â€” verify with bank. '
                 'Any dishonour for non-payment is covered by Section 138 if other ingredients are met.'
             )
             result['recommendation']  = 'Obtain clear dishonour memo from bank specifying exact reason.'
@@ -14230,30 +14230,30 @@ def analyze_legally_enforceable_debt(case_data: Dict) -> Dict:
     payment_mode = (case_data.get('payment_mode') or '').lower()
     if 'cash' in payment_mode and amount > 20000:
         result['fatal_issues'].append({
-            'issue':       'Cash Loan Exceeds ₹20,000 — Section 269SS Violation',
+            'issue':       'Cash Loan Exceeds â‚¹20,000 â€” Section 269SS Violation',
             'severity':    'FATAL',
-            'legal_basis': 'Section 269SS Income Tax Act: No person shall take or accept any loan/deposit otherwise than by account payee cheque/NEFT if amount ≥ ₹20,000',
-            'impact':      'Court may hold the underlying debt itself is illegal — cheque given for illegal debt is not enforceable under Section 138. Several High Courts have dismissed complaints on this ground.',
+            'legal_basis': 'Section 269SS Income Tax Act: No person shall take or accept any loan/deposit otherwise than by account payee cheque/NEFT if amount â‰¥ â‚¹20,000',
+            'impact':      'Court may hold the underlying debt itself is illegal â€” cheque given for illegal debt is not enforceable under Section 138. Several High Courts have dismissed complaints on this ground.',
             'remedy':      'Complainant must prove cash was actually given AND produce banking/cash book records. Without this, defence will argue debt is unenforceable.'
         })
         result['is_enforceable'] = False
         result['risk_level']     = 'FATAL'
-        result['tax_compliance'] = 'VIOLATION — Section 269SS'
+        result['tax_compliance'] = 'VIOLATION â€” Section 269SS'
 
     elif 'cash' in payment_mode and amount > 0:
         result['warnings'].append({
-            'issue':   f'Cash transaction of ₹{amount:,.0f}',
-            'note':    'Below Section 269SS threshold (₹20,000) but cash loans are harder to prove without banking records.',
+            'issue':   f'Cash transaction of â‚¹{amount:,.0f}',
+            'note':    'Below Section 269SS threshold (â‚¹20,000) but cash loans are harder to prove without banking records.',
             'remedy':  'Obtain witness statements, diary entries, or any other documentary proof of cash payment.'
         })
-        result['tax_compliance'] = 'CAUTION — Cash transaction'
+        result['tax_compliance'] = 'CAUTION â€” Cash transaction'
 
 
     if case_data.get('is_moneylender') or 'savkari' in (case_data.get('loan_type') or '').lower():
         result['issues'].append({
             'issue':       'Moneylender / Savkari Transaction',
             'severity':    'HIGH',
-            'legal_basis': 'Maharashtra Moneylenders Act 2014 — unregistered moneylenders cannot recover debt through court',
+            'legal_basis': 'Maharashtra Moneylenders Act 2014 â€” unregistered moneylenders cannot recover debt through court',
             'impact':      'If complainant is unlicensed moneylender, debt recovery is barred. Accused will raise this as absolute defence.',
             'remedy':      'Complainant must prove: (a) not a professional moneylender, or (b) holds valid moneylending licence.'
         })
@@ -14277,7 +14277,7 @@ def analyze_legally_enforceable_debt(case_data: Dict) -> Dict:
             result['fatal_issues'].append({
                 'issue':   'Part Payment Equals or Exceeds Cheque Amount',
                 'severity':'FATAL',
-                'impact':  'If accused has paid the full amount, debt is extinguished — Section 138 complaint fails.',
+                'impact':  'If accused has paid the full amount, debt is extinguished â€” Section 138 complaint fails.',
                 'remedy':  'Complainant must verify and account for all prior payments. If payment was received, complaint should not be filed.'
             })
             result['is_enforceable'] = False
@@ -14288,12 +14288,12 @@ def analyze_legally_enforceable_debt(case_data: Dict) -> Dict:
                 'remaining_debt': remaining,
                 'pct_paid':       round(pct, 1),
                 'note':           (
-                    f'Accused has paid ₹{part_payment:,.0f} ({pct:.1f}%). '
-                    f'Remaining enforceable debt: ₹{remaining:,.0f}. '
+                    f'Accused has paid â‚¹{part_payment:,.0f} ({pct:.1f}%). '
+                    f'Remaining enforceable debt: â‚¹{remaining:,.0f}. '
                     'Part payment does not extinguish the offence but may mitigate sentence.'
                 )
             }
-            result['warnings'].append({'issue': f'Part payment of ₹{part_payment:,.0f} made by accused', 'note': f'₹{remaining:,.0f} remains outstanding'})
+            result['warnings'].append({'issue': f'Part payment of â‚¹{part_payment:,.0f} made by accused', 'note': f'â‚¹{remaining:,.0f} remains outstanding'})
 
 
     if case_data.get('debt_for_illegal_purpose'):
@@ -14301,7 +14301,7 @@ def analyze_legally_enforceable_debt(case_data: Dict) -> Dict:
             'issue':       'Debt for Illegal Purpose',
             'severity':    'FATAL',
             'legal_basis': 'Section 23 Contract Act: Agreement void if object is unlawful',
-            'impact':      'Cheque given for illegal consideration — unenforceable in law.',
+            'impact':      'Cheque given for illegal consideration â€” unenforceable in law.',
             'remedy':      'Cannot file Section 138 complaint for an illegal debt.'
         })
         result['is_enforceable'] = False
@@ -14312,7 +14312,7 @@ def analyze_legally_enforceable_debt(case_data: Dict) -> Dict:
         result['issues'].append({
             'issue':       'Underlying Debt May Be Time-Barred',
             'severity':    'HIGH',
-            'legal_basis': 'Limitation Act 1963 — 3 years for simple money recovery',
+            'legal_basis': 'Limitation Act 1963 â€” 3 years for simple money recovery',
             'impact':      'If the underlying debt is time-barred for recovery, Section 138 may still apply to the cheque, but accused will raise limitation of underlying claim as defence.',
             'remedy':      'Check dates carefully. Section 138 has its own limitation period (1 month from COA).'
         })
@@ -14320,10 +14320,10 @@ def analyze_legally_enforceable_debt(case_data: Dict) -> Dict:
 
     fatal_count = len(result['fatal_issues'])
     if fatal_count == 0 and not result['issues']:
-        result['overall_assessment'] = 'Underlying debt appears legally enforceable — no major compliance issues detected'
+        result['overall_assessment'] = 'Underlying debt appears legally enforceable â€” no major compliance issues detected'
         result['recommendation']     = 'Ensure documentary proof of debt transaction is available'
     elif fatal_count > 0:
-        result['overall_assessment'] = f'FATAL: {fatal_count} legal enforceability issue(s) detected — complaint may fail at root'
+        result['overall_assessment'] = f'FATAL: {fatal_count} legal enforceability issue(s) detected â€” complaint may fail at root'
         result['is_enforceable']     = False
         result['recommendation']     = '; '.join(i['remedy'] for i in result['fatal_issues'])
     else:
@@ -14358,7 +14358,7 @@ def analyze_delay_condonation(case_data: Dict, timeline_result: Dict) -> Dict:
     limitation_risk   = timeline_result.get('limitation_risk', 'LOW')
 
     if limitation_risk not in ('CRITICAL', 'EXPIRED', 'HIGH') and 'BARRED' not in str(limitation_status).upper():
-        result['recommendation'] = 'No delay condonation required — complaint within limitation period'
+        result['recommendation'] = 'No delay condonation required â€” complaint within limitation period'
         return result
 
 
@@ -14377,7 +14377,7 @@ def analyze_delay_condonation(case_data: Dict, timeline_result: Dict) -> Dict:
     result['legal_standard'] = (
         'Section 142(b) NI Act: Complaint must be filed within 1 month of cause of action. '
         'Proviso: Court may take cognizance after 1 month if complainant satisfies court of sufficient cause. '
-        'Standard: Not mere inconvenience — must be genuine cause beyond complainant\'s control.'
+        'Standard: Not mere inconvenience â€” must be genuine cause beyond complainant\'s control.'
     )
 
 
@@ -14385,7 +14385,7 @@ def analyze_delay_condonation(case_data: Dict, timeline_result: Dict) -> Dict:
         result['grounds'].append({
             'ground':      'Parties Were in Active Negotiation',
             'strength':    'HIGH',
-            'legal_basis': 'Babulal Agrawal v. State of M.P. (1999) — settlement negotiations = sufficient cause',
+            'legal_basis': 'Babulal Agrawal v. State of M.P. (1999) â€” settlement negotiations = sufficient cause',
             'requirement': 'Produce correspondence showing negotiation (letters, emails, WhatsApp)'
         })
         result['sufficient_cause_exists'] = True
@@ -14412,7 +14412,7 @@ def analyze_delay_condonation(case_data: Dict, timeline_result: Dict) -> Dict:
         result['grounds'].append({
             'ground':      'Bona Fide Error by Advocate',
             'strength':    'LOW',
-            'legal_basis': 'Limited — courts not always sympathetic to advocate errors',
+            'legal_basis': 'Limited â€” courts not always sympathetic to advocate errors',
             'requirement': 'Affidavit explaining the error; supporting correspondence'
         })
 
@@ -14430,27 +14430,27 @@ def analyze_delay_condonation(case_data: Dict, timeline_result: Dict) -> Dict:
     delay  = result['delay_days']
 
     if strong and delay <= 30:
-        result['condonation_strength'] = 'GOOD — Strong grounds, moderate delay'
+        result['condonation_strength'] = 'GOOD â€” Strong grounds, moderate delay'
     elif strong and delay <= 90:
-        result['condonation_strength'] = 'MODERATE — Strong grounds but longer delay'
+        result['condonation_strength'] = 'MODERATE â€” Strong grounds but longer delay'
     elif medium and delay <= 30:
-        result['condonation_strength'] = 'MODERATE — Reasonable grounds, short delay'
+        result['condonation_strength'] = 'MODERATE â€” Reasonable grounds, short delay'
     elif delay > 180:
-        result['condonation_strength'] = 'WEAK — Long delay requires exceptional cause'
+        result['condonation_strength'] = 'WEAK â€” Long delay requires exceptional cause'
     else:
-        result['condonation_strength'] = 'WEAK — Insufficient grounds on record'
+        result['condonation_strength'] = 'WEAK â€” Insufficient grounds on record'
 
     result['case_law'] = [
-        'Babulal Agrawal v. State of M.P. (1999) — settlement negotiations = sufficient cause',
-        'Rajesh Arora v. State (2011) — liberal construction of sufficient cause in cheque bounce cases',
-        'Nagar Palika Nigam v. Krishi Upaj Mandi Samiti (1994) — condonation within court\'s discretion',
+        'Babulal Agrawal v. State of M.P. (1999) â€” settlement negotiations = sufficient cause',
+        'Rajesh Arora v. State (2011) â€” liberal construction of sufficient cause in cheque bounce cases',
+        'Nagar Palika Nigam v. Krishi Upaj Mandi Samiti (1994) â€” condonation within court\'s discretion',
     ]
 
     result['recommendation'] = (
         'Delay condonation application MUST be filed along with complaint. '
         + (f'Strongest ground: {strong[0]["ground"]}. ' if strong else '')
         + f'Produce: {"; ".join(g["requirement"] for g in result["grounds"][:2])}. '
-        + (f'Delay of {delay} days is ' + ('manageable' if delay <= 60 else 'significant — expect challenge') + '.' if delay else '')
+        + (f'Delay of {delay} days is ' + ('manageable' if delay <= 60 else 'significant â€” expect challenge') + '.' if delay else '')
     )
 
     return result
@@ -14480,15 +14480,15 @@ def analyze_complaint_drafting_compliance(case_data: Dict) -> Dict:
         result['missing_averments'].append({
             'averment':    'Legally Enforceable Debt',
             'requirement': 'Complaint must aver that cheque was issued in discharge of legally enforceable liability',
-            'risk':        'Absence may lead to dismissal — accused will file discharge application',
-            'fix':         'Include specific averment: "The cheque was issued in discharge of legally enforceable debt/liability of ₹X arising from [transaction details]"'
+            'risk':        'Absence may lead to dismissal â€” accused will file discharge application',
+            'fix':         'Include specific averment: "The cheque was issued in discharge of legally enforceable debt/liability of â‚¹X arising from [transaction details]"'
         })
         deductions += 15
 
 
     result['required_averments'].append({
         'averment':    'Dishonour Fact',
-        'status':      '✅ Can be averred from bank dishonour memo',
+        'status':      'âœ… Can be averred from bank dishonour memo',
         'requirement': 'Date of dishonour, reason, bank name, cheque details'
     })
 
@@ -14497,7 +14497,7 @@ def analyze_complaint_drafting_compliance(case_data: Dict) -> Dict:
         result['critical_gaps'].append({
             'gap':      'Notice Date Missing',
             'severity': 'CRITICAL',
-            'impact':   'Cannot aver notice was sent — Ingredient 4 fails',
+            'impact':   'Cannot aver notice was sent â€” Ingredient 4 fails',
             'fix':      'Obtain and record exact date of notice dispatch'
         })
         deductions += 20
@@ -14505,7 +14505,7 @@ def analyze_complaint_drafting_compliance(case_data: Dict) -> Dict:
 
     result['required_averments'].append({
         'averment':    '15-Day Demand Period',
-        'status':      '✅ Averrable from notice and dishonour dates',
+        'status':      'âœ… Averrable from notice and dishonour dates',
         'requirement': 'Aver that accused was called upon to pay within 15 days and failed'
     })
 
@@ -14523,32 +14523,32 @@ def analyze_complaint_drafting_compliance(case_data: Dict) -> Dict:
         else:
             result['required_averments'].append({
                 'averment': 'Director/Company Averments (S.141)',
-                'status':   '✅ Directors impleaded — ensure specific role averments added',
-                'requirement': 'Must specifically state each director was "in charge of and responsible for conduct of business" — Pooja Ravinder Devidasani v. State of Maharashtra (2014) 16 SCC 1'
+                'status':   'âœ… Directors impleaded â€” ensure specific role averments added',
+                'requirement': 'Must specifically state each director was "in charge of and responsible for conduct of business" â€” Pooja Ravinder Devidasani v. State of Maharashtra (2014) 16 SCC 1'
             })
 
 
     if not case_data.get('court_location'):
-        result['warnings'].append({'warning': 'Court location not specified — jurisdiction averment cannot be verified'})
+        result['warnings'].append({'warning': 'Court location not specified â€” jurisdiction averment cannot be verified'})
         deductions += 5
     else:
         result['required_averments'].append({
             'averment': 'Territorial Jurisdiction',
-            'status':   '✅ Court location specified',
+            'status':   'âœ… Court location specified',
             'requirement': 'Aver that cheque was presented at bank within court jurisdiction, OR notice was sent from within jurisdiction'
         })
 
 
     result['required_averments'].append({
         'averment':    'Complaint on Oath',
-        'status':      '✅ Standard requirement — ensure complainant is present to verify',
+        'status':      'âœ… Standard requirement â€” ensure complainant is present to verify',
         'requirement': 'Section 200 CrPC: Complainant must be examined on oath at the time of filing'
     })
 
 
     result['required_averments'].append({
         'averment':    'Cause of Action',
-        'status':      '✅ Averrable from timeline',
+        'status':      'âœ… Averrable from timeline',
         'requirement': 'State exact date of expiry of 15-day notice period (cause of action date)'
     })
 
@@ -14557,13 +14557,13 @@ def analyze_complaint_drafting_compliance(case_data: Dict) -> Dict:
 
     if result['compliance_score'] >= 80 and not result['critical_gaps']:
         result['risk_level']      = 'LOW'
-        result['overall_verdict'] = 'Complaint draftable — follow required averment checklist'
+        result['overall_verdict'] = 'Complaint draftable â€” follow required averment checklist'
     elif result['compliance_score'] >= 60 or (result['critical_gaps'] and result['compliance_score'] >= 50):
         result['risk_level']      = 'MEDIUM'
-        result['overall_verdict'] = f'{len(result["critical_gaps"])} critical gap(s) in complaint drafting — must be addressed'
+        result['overall_verdict'] = f'{len(result["critical_gaps"])} critical gap(s) in complaint drafting â€” must be addressed'
     else:
         result['risk_level']      = 'HIGH'
-        result['overall_verdict'] = 'Multiple critical drafting gaps — complaint likely to be challenged'
+        result['overall_verdict'] = 'Multiple critical drafting gaps â€” complaint likely to be challenged'
 
     if result['critical_gaps']:
         result['recommendation'] = (
@@ -14579,7 +14579,7 @@ def analyze_complaint_drafting_compliance(case_data: Dict) -> Dict:
 def analyze_document_validity(case_data: Dict) -> Dict:
     """
     Checks admissibility and validity of key documents.
-    Courts require specific document standards — originals, certified copies, etc.
+    Courts require specific document standards â€” originals, certified copies, etc.
     """
     result = {
         'module':             'Document Validity & Admissibility',
@@ -14600,23 +14600,23 @@ def analyze_document_validity(case_data: Dict) -> Dict:
     if cheque_available and not cheque_is_copy:
         result['valid_documents'].append({
             'document': 'Original Cheque',
-            'status':   'VALID — Original available',
+            'status':   'VALID â€” Original available',
             'note':     'Present as Exhibit. Mark on cheque itself. Court will examine original.'
         })
     elif cheque_is_copy:
         result['risk_documents'].append({
-            'document': 'Cheque — Photocopy Only',
+            'document': 'Cheque â€” Photocopy Only',
             'risk':     'HIGH',
             'issue':    'Photocopy of cheque may not be admitted without proof of original being produced',
-            'fix':      'Obtain original from bank records or court process. File Section 65B certificate if electronic image.',
+            'fix':      'Obtain original from bank records or court process. File Section 63 certificate if electronic image.',
             'legal_basis': 'Best Evidence Rule: Original document required unless production excused under S.65 Evidence Act'
         })
         deductions += 15
     else:
         result['invalid_documents'].append({
             'document': 'Original Cheque',
-            'issue':    'Not available — critical document missing',
-            'impact':   'Complaint may fail — cheque is primary exhibit in Section 138 case',
+            'issue':    'Not available â€” critical document missing',
+            'impact':   'Complaint may fail â€” cheque is primary exhibit in Section 138 case',
             'fix':      'Apply to bank for certified copy, or obtain from court records if impounded'
         })
         deductions += 25
@@ -14627,13 +14627,13 @@ def analyze_document_validity(case_data: Dict) -> Dict:
         result['valid_documents'].append({
             'document': 'Bank Dishonour Memo (Return Memo)',
             'status':   'VALID',
-            'note':     'Critical document — obtain original stamped copy from bank with dishonour reason clearly stated'
+            'note':     'Critical document â€” obtain original stamped copy from bank with dishonour reason clearly stated'
         })
     else:
         result['invalid_documents'].append({
             'document': 'Bank Dishonour Memo',
             'issue':    'Not available',
-            'impact':   'Cannot prove dishonour — Ingredient 2 weakened',
+            'impact':   'Cannot prove dishonour â€” Ingredient 2 weakened',
             'fix':      'Obtain from presenting bank: stamped return memo with date, reason, and bank seal'
         })
         deductions += 20
@@ -14644,15 +14644,15 @@ def analyze_document_validity(case_data: Dict) -> Dict:
     if postal_proof and ad_card:
         result['valid_documents'].append({
             'document': 'Postal Proof (AD Card Signed)',
-            'status':   'STRONG — Signed AD card available',
+            'status':   'STRONG â€” Signed AD card available',
             'note':     'Best evidence of service. Produce signed card as Exhibit.'
         })
     elif postal_proof:
         result['risk_documents'].append({
             'document': 'Postal Proof (No Signed AD Card)',
             'risk':     'MEDIUM',
-            'issue':    'Postal receipt without AD card — service may be challenged',
-            'fix':      'Obtain track-and-trace report from India Post website. If electronic, file Section 65B certificate.',
+            'issue':    'Postal receipt without AD card â€” service may be challenged',
+            'fix':      'Obtain track-and-trace report from India Post website. If electronic, file Section 63 certificate.',
             'note':     'Deemed service doctrine may apply if accused refused or left unclaimed'
         })
         deductions += 5
@@ -14660,7 +14660,7 @@ def analyze_document_validity(case_data: Dict) -> Dict:
         result['invalid_documents'].append({
             'document': 'Postal Proof of Notice',
             'issue':    'No postal proof',
-            'impact':   'Service of notice cannot be proven — Ingredient 4 fails',
+            'impact':   'Service of notice cannot be proven â€” Ingredient 4 fails',
             'fix':      'Check if RPAD tracking available online. Collect delivery records from post office.'
         })
         deductions += 20
@@ -14673,20 +14673,20 @@ def analyze_document_validity(case_data: Dict) -> Dict:
     if case_data.get('electronic_evidence'):    electronic_docs.append('Other Electronic Records')
 
     if electronic_docs:
-        has_65b = case_data.get('section_65b_certificate', False)
-        if has_65b:
+        has_63 = case_data.get('section_63_certificate', False)
+        if has_63:
             result['valid_documents'].append({
                 'document': f'Electronic Evidence ({", ".join(electronic_docs)})',
-                'status':   'VALID — Section 65B certificate available',
+                'status':   'VALID â€” Section 63 certificate available',
                 'note':     'Admissible as per Anvar P.V. v. P.K. Basheer (2014) 10 SCC 473'
             })
         else:
             result['risk_documents'].append({
-                'document':  f'Electronic Evidence ({", ".join(electronic_docs)}) — No Section 65B Certificate',
+                'document':  f'Electronic Evidence ({", ".join(electronic_docs)}) â€” No Section 63 Certificate',
                 'risk':      'HIGH',
-                'issue':     'Electronic evidence INADMISSIBLE without Section 65B certificate',
-                'legal_basis': 'Anvar P.V. v. P.K. Basheer (2014) 10 SCC 473: Electronic records must be accompanied by certificate under S.65B Evidence Act',
-                'fix':       'Obtain S.65B certificate from officer responsible for device/server. Must certify: device description, process used, document integrity, and identity of maker.'
+                'issue':     'Electronic evidence INADMISSIBLE without Section 63 certificate',
+                'legal_basis': 'Anvar P.V. v. P.K. Basheer (2014) 10 SCC 473: Electronic records must be accompanied by certificate under S.63 Evidence Act',
+                'fix':       'Obtain S.63 certificate from officer responsible for device/server. Must certify: device description, process used, document integrity, and identity of maker.'
             })
             deductions += 15
 
@@ -14694,14 +14694,14 @@ def analyze_document_validity(case_data: Dict) -> Dict:
     if case_data.get('written_agreement_exists'):
         result['valid_documents'].append({
             'document': 'Written Loan/Transaction Agreement',
-            'status':   'VALID — Strong supporting document',
+            'status':   'VALID â€” Strong supporting document',
             'note':     'Check: properly stamped, signed by both parties, consideration mentioned, date matches transaction'
         })
     else:
         result['risk_documents'].append({
             'document': 'Written Agreement',
             'risk':     'MEDIUM',
-            'issue':    'No written agreement — debt enforceability weaker',
+            'issue':    'No written agreement â€” debt enforceability weaker',
             'fix':      'Collect any alternate proof: bank transfer records, SMS/WhatsApp acknowledgment, witnesses'
         })
         deductions += 10
@@ -14709,13 +14709,13 @@ def analyze_document_validity(case_data: Dict) -> Dict:
 
     result['admissibility_score'] = max(0, 100 - deductions)
     if result['admissibility_score'] >= 75 and not result['invalid_documents']:
-        result['overall_strength'] = 'ADEQUATE — Core documents available'
+        result['overall_strength'] = 'ADEQUATE â€” Core documents available'
         result['risk_level']       = 'LOW'
     elif result['admissibility_score'] >= 50:
-        result['overall_strength'] = 'WEAK — Critical documents missing or at risk'
+        result['overall_strength'] = 'WEAK â€” Critical documents missing or at risk'
         result['risk_level']       = 'MEDIUM'
     else:
-        result['overall_strength'] = 'VERY WEAK — Multiple admissibility issues'
+        result['overall_strength'] = 'VERY WEAK â€” Multiple admissibility issues'
         result['risk_level']       = 'HIGH'
 
     result['recommendation'] = (
@@ -14723,7 +14723,7 @@ def analyze_document_validity(case_data: Dict) -> Dict:
         if result['invalid_documents'] else
         'Risk documents: ' + ' | '.join(d['fix'] for d in result['risk_documents'][:2])
         if result['risk_documents'] else
-        'Core documents appear in order — verify originals before filing'
+        'Core documents appear in order â€” verify originals before filing'
     )
 
     return result
@@ -14753,7 +14753,7 @@ def analyze_fraud_signals(case_data: Dict) -> Dict:
         result['fraud_signals'].append({
             'signal':   'Round-Figure Amount Without Written Agreement',
             'severity': 'LOW',
-            'note':     f'Cheque of ₹{amount:,.0f} (exact round figure) with no documentary proof of debt — accused may claim cheque was given as security or blank cheque',
+            'note':     f'Cheque of â‚¹{amount:,.0f} (exact round figure) with no documentary proof of debt â€” accused may claim cheque was given as security or blank cheque',
             'check':    'Ensure you can explain why exactly this round figure was transacted'
         })
         score += 10
@@ -14763,7 +14763,7 @@ def analyze_fraud_signals(case_data: Dict) -> Dict:
         result['fraud_signals'].append({
             'signal':   'Accused Claims Cheque Was Blank When Given',
             'severity': 'HIGH',
-            'legal_basis': 'M.S. Narayana Menon v. State of Kerala (2006) — blank cheque cases create presumption complexities',
+            'legal_basis': 'M.S. Narayana Menon v. State of Kerala (2006) â€” blank cheque cases create presumption complexities',
             'note':     'Accused will argue amount was filled fraudulently. Burden will shift significantly.',
             'check':    'Check cheque: same handwriting for amount and signature? Any date alterations? Produce handwriting expert if needed.'
         })
@@ -14793,7 +14793,7 @@ def analyze_fraud_signals(case_data: Dict) -> Dict:
     dishonour = (case_data.get('dishonour_reason') or '').lower()
     if 'signature' in dishonour and 'mismatch' in dishonour:
         result['fraud_signals'].append({
-            'signal':   'Signature Mismatch Dishonour — Possible Forgery Allegation',
+            'signal':   'Signature Mismatch Dishonour â€” Possible Forgery Allegation',
             'severity': 'HIGH',
             'note':     'If accused claims signature is forged, this becomes a criminal forgery case (IPC 465/468) not Section 138. Entire complaint strategy changes.',
             'check':    'Obtain comparison of signature with other known documents. Consider handwriting expert report.'
@@ -14830,7 +14830,7 @@ def analyze_fraud_signals(case_data: Dict) -> Dict:
     ])
     if not has_any_proof and amount > 500000:
         result['fraud_signals'].append({
-            'signal':   f'Large Amount (₹{amount:,.0f}) With Zero Supporting Documentation',
+            'signal':   f'Large Amount (â‚¹{amount:,.0f}) With Zero Supporting Documentation',
             'severity': 'HIGH',
             'note':     'Very difficult to prove debt for a large amount with no documentary trail. Courts will be skeptical.',
             'check':    'Urgently identify any bank records, phone records, or witnesses who can corroborate the transaction.'
@@ -14842,19 +14842,19 @@ def analyze_fraud_signals(case_data: Dict) -> Dict:
 
     if score == 0:
         result['risk_level']    = 'LOW'
-        result['overall_verdict'] = 'No fraud indicators detected — case appears genuine'
+        result['overall_verdict'] = 'No fraud indicators detected â€” case appears genuine'
     elif score <= 20:
         result['risk_level']    = 'LOW'
-        result['overall_verdict'] = 'Minor risk factors — standard precautions sufficient'
+        result['overall_verdict'] = 'Minor risk factors â€” standard precautions sufficient'
     elif score <= 40:
         result['risk_level']    = 'MEDIUM'
-        result['overall_verdict'] = 'Moderate fraud risk factors — proactive measures recommended'
+        result['overall_verdict'] = 'Moderate fraud risk factors â€” proactive measures recommended'
     elif score <= 70:
         result['risk_level']    = 'HIGH'
-        result['overall_verdict'] = 'High fraud risk signals — case viability may be challenged'
+        result['overall_verdict'] = 'High fraud risk signals â€” case viability may be challenged'
     else:
         result['risk_level']    = 'CRITICAL'
-        result['overall_verdict'] = 'Multiple serious fraud indicators — fundamental case review required'
+        result['overall_verdict'] = 'Multiple serious fraud indicators â€” fundamental case review required'
 
 
     for sig in result['fraud_signals']:
@@ -14865,9 +14865,9 @@ def analyze_fraud_signals(case_data: Dict) -> Dict:
     result['recommendation'] = (
         'CRITICAL review required: ' + ' | '.join(s['signal'] for s in result['fraud_signals'] if s['severity'] in ('HIGH','CRITICAL'))
         if any(s['severity'] in ('HIGH','CRITICAL') for s in result['fraud_signals']) else
-        'Minor signals noted — document thoroughly to preempt defence challenges'
+        'Minor signals noted â€” document thoroughly to preempt defence challenges'
         if result['fraud_signals'] else
-        'No action required — standard case preparation applies'
+        'No action required â€” standard case preparation applies'
     )
 
     return result
@@ -14909,7 +14909,7 @@ SCORE_INTERPRETATION = {
 def interpret_score(score: float) -> Dict:
     for (lo, hi), interp in SCORE_INTERPRETATION.items():
         if lo <= score < hi:
-            return {**interp, 'score': round(score, 1), 'range': f'{lo}–{hi}'}
+            return {**interp, 'score': round(score, 1), 'range': f'{lo}â€“{hi}'}
     return {'label': 'Very Weak', 'colour': '#8B0000', 'description': 'Score out of range', 'score': round(score, 1)}
 
 
@@ -14926,7 +14926,7 @@ def generate_score_explanation(risk_result: Dict) -> Dict:
     if fdo.get('applied') and orig != score:
         cap_story = (
             f"Base weighted score: {orig}/100. "
-            f"Fatal defect detected → score capped to {score}/100. "
+            f"Fatal defect detected â†’ score capped to {score}/100. "
             f"Reason: {fdo.get('reason', 'Fatal procedural defect')}."
         )
     elif fatals:
@@ -14939,7 +14939,7 @@ def generate_score_explanation(risk_result: Dict) -> Dict:
         'original_base_score':  orig,
         'final_score':          score,
         'fatal_cap_applied':    fdo.get('applied', False),
-        'methodology':          'Weighted severity-based deduction from 100. CRITICAL: −20 to −30, MAJOR: −10 to −15, MINOR: −5.',
+        'methodology':          'Weighted severity-based deduction from 100. CRITICAL: âˆ’20 to âˆ’30, MAJOR: âˆ’10 to âˆ’15, MINOR: âˆ’5.',
         'category_explanations': {
             cat: {
                 'score':       round(float((data.get('score') if isinstance(data,dict) else data) or 0), 1),
@@ -14949,7 +14949,7 @@ def generate_score_explanation(risk_result: Dict) -> Dict:
                     'Ingredient Compliance': 'All 7 statutory ingredients of Section 138 NI Act',
                     'Documentary Strength':  'Cheque, dishonour memo, notice proof, agreement, ledger',
                     'Procedural Compliance': 'Jurisdiction, averments, proper parties',
-                    'Proper Impleading':     'Section 141 — directors/company correctly named',
+                    'Proper Impleading':     'Section 141 â€” directors/company correctly named',
                 }.get(cat, 'Contributing factor'),
             }
             for cat, data in (risk_result.get('category_scores') or {}).items()
@@ -14963,14 +14963,14 @@ def run_consistency_check(analysis_report: Dict) -> Dict:
 
     Verifies that fatal_flag, overall_risk_score, and filing_status are all
     mutually consistent after verdict integrity enforcement. Auto-corrects
-    stale fatal_flag (False direction only — Phase 1 owns True direction).
+    stale fatal_flag (False direction only â€” Phase 1 owns True direction).
 
     Returns a dict with:
-      - 'passed'      : bool   — True if no blocking issues
-      - 'blocked'     : bool   — True if output should be suppressed (severe contradiction)
-      - 'issues'      : list   — detected inconsistencies (each a str)
-      - 'corrections' : dict   — proposed auto-corrections
-      - 'message'     : str    — human-readable summary
+      - 'passed'      : bool   â€” True if no blocking issues
+      - 'blocked'     : bool   â€” True if output should be suppressed (severe contradiction)
+      - 'issues'      : list   â€” detected inconsistencies (each a str)
+      - 'corrections' : dict   â€” proposed auto-corrections
+      - 'message'     : str    â€” human-readable summary
     """
     issues      = []
     corrections = {}
@@ -14993,7 +14993,7 @@ def run_consistency_check(analysis_report: Dict) -> Dict:
 
     if fatal_flag and risk_score > 65:
         issues.append(
-            f'fatal_flag=True but risk_score={risk_score:.1f} (>65) — possible stale fatal flag'
+            f'fatal_flag=True but risk_score={risk_score:.1f} (>65) â€” possible stale fatal flag'
         )
 
         real_fatals = []
@@ -15009,7 +15009,7 @@ def run_consistency_check(analysis_report: Dict) -> Dict:
 
     if not fatal_flag and risk_score < 20:
         issues.append(
-            f'fatal_flag=False but risk_score={risk_score:.1f} (<20) — unusually low score without fatal flag'
+            f'fatal_flag=False but risk_score={risk_score:.1f} (<20) â€” unusually low score without fatal flag'
         )
 
 
@@ -15019,7 +15019,7 @@ def run_consistency_check(analysis_report: Dict) -> Dict:
             issues.append(
                 f'fatal_flag=True but filing_status suggests filing is advised: "{filing_status}"'
             )
-            corrections['filing_status_override'] = 'DO NOT FILE — Fatal defect(s) detected'
+            corrections['filing_status_override'] = 'DO NOT FILE â€” Fatal defect(s) detected'
         elif not fatal_flag and ('do not file' in status_lower or 'cannot file' in status_lower):
             issues.append(
                 f'fatal_flag=False but filing_status blocks filing: "{filing_status}"'
@@ -15028,14 +15028,14 @@ def run_consistency_check(analysis_report: Dict) -> Dict:
 
     if fatal_flag and overall_status and 'strong' in overall_status.lower():
         issues.append(
-            f'fatal_flag=True but overall_status="{overall_status}" — contradiction in final verdict'
+            f'fatal_flag=True but overall_status="{overall_status}" â€” contradiction in final verdict'
         )
         blocked = len(issues) >= 3
 
 
     passed  = len(issues) == 0
     if passed:
-        message = 'All checks passed — fatal_flag, score, and filing_status are consistent'
+        message = 'All checks passed â€” fatal_flag, score, and filing_status are consistent'
     elif corrections:
         message = f'{len(issues)} issue(s) detected; {len(corrections)} auto-correction(s) applied'
     else:
@@ -15068,7 +15068,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
     if user_email:
         is_allowed, current_count = check_daily_limit(user_email)
         if not is_allowed:
-            logger.warning(f"🚫 Daily limit reached for {user_email}: {current_count}/3 analyses used")
+            logger.warning(f"ðŸš« Daily limit reached for {user_email}: {current_count}/3 analyses used")
             _limit_val = get_user_limit(user_email)
             return {
                 'success': False,
@@ -15100,11 +15100,11 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'timestamp': analysis_start_time.isoformat()
             }
         else:
-            logger.info(f"✅ Daily limit check passed for {user_email}: {current_count}/3 analyses used")
+            logger.info(f"âœ… Daily limit check passed for {user_email}: {current_count}/3 analyses used")
 
     try:
         if not case_data or not isinstance(case_data, dict):
-            logger.error("❌ Invalid input: case_data must be a non-empty dictionary")
+            logger.error("âŒ Invalid input: case_data must be a non-empty dictionary")
             return {
                 'error': 'INVALID_INPUT',
                 'error_type': 'VALIDATION_ERROR',
@@ -15120,7 +15120,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         missing_fields = [f for f in required_fields if f not in case_data or not case_data[f]]
 
         if missing_fields:
-            logger.error(f"❌ Missing required fields: {missing_fields}")
+            logger.error(f"âŒ Missing required fields: {missing_fields}")
 
             field_names = {
                 'cheque_date': 'Cheque Date',
@@ -15134,14 +15134,14 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'error_type': 'VALIDATION_ERROR',
                 'missing_fields': missing_fields,
                 'message': f"Required fields missing: {', '.join(missing_fields)}",
-                'user_friendly_message': f'⚠️ Insufficient Data\n\nPlease provide the following required fields to evaluate your case properly:\n\n• {chr(10).join("• " + f for f in friendly_fields)}\n\nThese dates are essential for accurate timeline compliance analysis under Section 138.',
+                'user_friendly_message': f'âš ï¸ Insufficient Data\n\nPlease provide the following required fields to evaluate your case properly:\n\nâ€¢ {chr(10).join("â€¢ " + f for f in friendly_fields)}\n\nThese dates are essential for accurate timeline compliance analysis under Section 138.',
                 'fatal_flag': True,
                 'overall_status': 'ERROR - INCOMPLETE DATA',
                 'engine_version': ENGINE_VERSION,
                 'timestamp': analysis_start_time.isoformat()
             }
 
-        logger.info("🚀 Starting comprehensive legal intelligence analysis...")
+        logger.info("ðŸš€ Starting comprehensive legal intelligence analysis...")
         start_time = time.time()
 
 
@@ -15185,7 +15185,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['processing_flags'] = processing_flags
 
 
-        logger.info("🔧 PHASE 1: FATAL EVALUATION (Pre-Analysis)")
+        logger.info("ðŸ”§ PHASE 1: FATAL EVALUATION (Pre-Analysis)")
         analysis_report['audit_log']['phases_executed'].append('PHASE_1_FATAL_EVALUATION')
 
 
@@ -15193,7 +15193,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             timeline_result = analyze_timeline(case_data)
             analysis_report['modules']['timeline_intelligence'] = timeline_result
         except Exception as e:
-            logger.error(f"❌ Timeline module FAILED: {e}")
+            logger.error(f"âŒ Timeline module FAILED: {e}")
             return {
                 'case_id': case_id,
                 'success': False,
@@ -15206,13 +15206,13 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 '_result': {
                     'overall_score': 0, 'overall_score_display': '0.0/100',
                     'is_fatal': True, 'fatal_defects_count': 0,
-                    'filing_status': 'ANALYSIS INCOMPLETE — see error',
+                    'filing_status': 'ANALYSIS INCOMPLETE â€” see error',
                     'processing_time': '1.2s', 'processing_time_seconds': 1.2,
                     'documentary_gaps': [], 'cross_exam_questions': [],
                     'next_actions': [{'action': 'Resubmit case data', 'urgency': 'URGENT', 'details': 'Analysis could not complete'}],
                     'presumption_stage': 'INSUFFICIENT DATA', 'burden_position': 'INSUFFICIENT DATA',
                     'court_name': 'Not specified', 'court_confidence': 'INSUFFICIENT DATA',
-                    'court_note': 'Judicial behaviour analysis unavailable — insufficient court data.', 'capped_at': 0,
+                    'court_note': 'Judicial behaviour analysis unavailable â€” insufficient court data.', 'capped_at': 0,
                     'capped_at_display': 'DATA NOT AVAILABLE', 'original_score': 0,
                     'fatal_override_note': 'Analysis did not complete',
                 },
@@ -15232,21 +15232,21 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             analysis_report['fatal_flag'] = True
             analysis_report['fatal_source'] = 'timeline_intelligence'
             analysis_report['fatal_type'] = 'LIMITATION_EXPIRED'
-            logger.warning(f"🔴 FATAL TIMELINE: {_tl_lim_risk} — premature/time-barred — continuing all modules")
+            logger.warning(f"ðŸ”´ FATAL TIMELINE: {_tl_lim_risk} â€” premature/time-barred â€” continuing all modules")
         elif _tl_is_same_day:
             analysis_report['same_day_filing'] = True
-            logger.info("⚠️ Same-day filing detected — HIGH risk, not fatal — continuing all modules")
+            logger.info("âš ï¸ Same-day filing detected â€” HIGH risk, not fatal â€” continuing all modules")
 
         doc_compliance = analyze_document_compliance(case_data)
         analysis_report['modules']['document_compliance'] = doc_compliance
 
 
-        logger.info("🔒 Analyzing Section 65B Compliance...")
-        section_65b = analyze_section_65b_compliance(case_data)
-        analysis_report['modules']['section_65b_compliance'] = section_65b
+        logger.info("ðŸ”’ Analyzing Section 63 Compliance...")
+        section_63 = analyze_section_63_compliance(case_data)
+        analysis_report['modules']['section_63_compliance'] = section_63
 
 
-        logger.info("  🏦 Module A: Dishonour Reason Deep Analysis...")
+        logger.info("  ðŸ¦ Module A: Dishonour Reason Deep Analysis...")
         try:
             dishonour_analysis = analyze_dishonour_reason(case_data)
         except Exception as _e:
@@ -15254,7 +15254,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             dishonour_analysis = {'risk_level': 'UNKNOWN', 'reason_category': 'Error', 'legal_impact': ''}
         analysis_report['modules']['dishonour_analysis'] = dishonour_analysis
 
-        logger.info("  ⚖️  Module B: Legally Enforceable Debt Analysis...")
+        logger.info("  âš–ï¸  Module B: Legally Enforceable Debt Analysis...")
         try:
             enforceable_debt = analyze_legally_enforceable_debt(case_data)
         except Exception as _e:
@@ -15266,7 +15266,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             analysis_report['fatal_flag'] = True
             analysis_report['fatal_source'] = str(analysis_report.get('fatal_source', '')) + ',enforceable_debt'
 
-        logger.info("  📅 Module C: Delay Condonation Analysis...")
+        logger.info("  ðŸ“… Module C: Delay Condonation Analysis...")
         try:
             delay_condonation = analyze_delay_condonation(case_data, timeline_result)
         except Exception as _e:
@@ -15274,7 +15274,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             delay_condonation = {'condonation_required': False, 'risk_level': 'LOW'}
         analysis_report['modules']['delay_condonation'] = delay_condonation
 
-        logger.info("  📋 Module D: Complaint Drafting Compliance...")
+        logger.info("  ðŸ“‹ Module D: Complaint Drafting Compliance...")
         try:
             drafting_compliance = analyze_complaint_drafting_compliance(case_data)
         except Exception as _e:
@@ -15282,7 +15282,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             drafting_compliance = {'compliance_score': 50, 'risk_level': 'MEDIUM', 'critical_gaps': []}
         analysis_report['modules']['drafting_compliance'] = drafting_compliance
 
-        logger.info("  📄 Module E: Document Validity & Admissibility...")
+        logger.info("  ðŸ“„ Module E: Document Validity & Admissibility...")
         try:
             doc_validity = analyze_document_validity(case_data)
         except Exception as _e:
@@ -15290,7 +15290,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             doc_validity = {'admissibility_score': 50, 'risk_level': 'MEDIUM', 'invalid_documents': []}
         analysis_report['modules']['document_validity'] = doc_validity
 
-        logger.info("  🚨 Module F: Fraud & False Case Signal Detection...")
+        logger.info("  ðŸš¨ Module F: Fraud & False Case Signal Detection...")
         try:
             fraud_signals = analyze_fraud_signals(case_data)
         except Exception as _e:
@@ -15299,33 +15299,33 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['modules']['fraud_signals'] = fraud_signals
 
 
-        logger.info("💰 Analyzing Income Tax 269SS Compliance...")
+        logger.info("ðŸ’° Analyzing Income Tax 269SS Compliance...")
         income_tax_269ss = analyze_income_tax_269ss_compliance(case_data)
         analysis_report['modules']['income_tax_269ss'] = income_tax_269ss
         analysis_report['modules']['income_tax_269ss_compliance'] = income_tax_269ss
 
 
-        logger.info("📬 Analyzing Notice Delivery Status...")
+        logger.info("ðŸ“¬ Analyzing Notice Delivery Status...")
         notice_delivery = analyze_notice_delivery_status(case_data)
         analysis_report['modules']['notice_delivery_status'] = notice_delivery
 
 
-        logger.info("💵 Analyzing Part Payment Defence...")
+        logger.info("ðŸ’µ Analyzing Part Payment Defence...")
         part_payment = analyze_part_payment_defence(case_data)
         analysis_report['modules']['part_payment_analysis'] = part_payment
 
 
-        logger.info("⚖️  Analyzing Territorial Jurisdiction...")
+        logger.info("âš–ï¸  Analyzing Territorial Jurisdiction...")
         jurisdiction = analyze_territorial_jurisdiction(case_data)
         analysis_report['modules']['territorial_jurisdiction'] = jurisdiction
 
 
-        logger.info("🤝 Analyzing Compounding Eligibility...")
+        logger.info("ðŸ¤ Analyzing Compounding Eligibility...")
         compounding = analyze_compounding_eligibility(case_data)
         analysis_report['modules']['compounding_analysis'] = compounding
 
 
-        logger.info("👔 Analyzing Director Role-Based Liability...")
+        logger.info("ðŸ‘” Analyzing Director Role-Based Liability...")
         director_role = analyze_director_role_liability(case_data)
         analysis_report['modules']['director_role_analysis'] = director_role
 
@@ -15341,11 +15341,11 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             })
 
 
-        if section_65b.get('risk_level') == 'FATAL':
+        if section_63.get('risk_level') == 'FATAL':
             fatal_conditions.append({
-                'source': 'section_65b_compliance',
+                'source': 'section_63_compliance',
                 'type': 'ELECTRONIC_EVIDENCE_INADMISSIBLE',
-                'details': 'Section 65B certificate missing for electronic evidence'
+                'details': 'Section 63 certificate missing for electronic evidence'
             })
 
 
@@ -15353,7 +15353,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             fatal_conditions.append({
                 'source': 'income_tax_269ss',
                 'type': 'ILLEGAL_CASH_TRANSACTION',
-                'details': 'Cash transaction above ₹20,000 violates Section 269SS'
+                'details': 'Cash transaction above â‚¹20,000 violates Section 269SS'
             })
 
 
@@ -15379,12 +15379,12 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             analysis_report['fatal_type'] = 'MULTIPLE_FATAL_CONDITIONS'
             analysis_report['fatal_conditions'] = fatal_conditions
             analysis_report['fatal_details'] = [f"{f['type']}: {f['details']}" for f in fatal_conditions]
-            logger.warning(f"🔴 FATAL CONDITIONS ({len(fatal_conditions)}) — recording but continuing all modules for complete report")
+            logger.warning(f"ðŸ”´ FATAL CONDITIONS ({len(fatal_conditions)}) â€” recording but continuing all modules for complete report")
 
-        logger.info("✅ PHASE 1 COMPLETE: No fatal conditions - Proceeding to full analysis")
+        logger.info("âœ… PHASE 1 COMPLETE: No fatal conditions - Proceeding to full analysis")
         analysis_report['audit_log']['phase_1_passed'] = True
 
-        logger.info("🔧 PHASE 2: Core Analysis Modules")
+        logger.info("ðŸ”§ PHASE 2: Core Analysis Modules")
         analysis_report['audit_log']['phases_executed'].append('PHASE_2_CORE_ANALYSIS')
         analysis_report['audit_log']['phase_2_started'] = datetime.now().isoformat()
 
@@ -15392,7 +15392,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         try:
             ingredient_result = analyze_ingredients(case_data, timeline_result)
         except Exception as _e:
-            logger.error(f'❌ Module failed: {_e}')
+            logger.error(f'âŒ Module failed: {_e}')
             ingredient_result = {'overall_compliance': 0, 'risk_level': 'Error', 'ingredient_details': [], 'fatal_defects': [], 'critical_count': 0}
         analysis_report['modules']['ingredient_compliance'] = ingredient_result
         analysis_report['architecture']['deterministic_modules'].append('Ingredient Compliance')
@@ -15401,7 +15401,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         try:
             doc_result = analyze_documentary_strength(case_data)
         except Exception as _e:
-            logger.error(f'❌ Module failed: {_e}')
+            logger.error(f'âŒ Module failed: {_e}')
             doc_result = {'overall_strength_score': 0, 'strength_label': 'Error', 'fatal_defects': []}
         analysis_report['modules']['documentary_strength'] = doc_result
         analysis_report['architecture']['deterministic_modules'].append('Documentary Strength')
@@ -15422,7 +15422,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         try:
             liability_result = analyze_accused_liability(case_data)
         except Exception as _e:
-            logger.error(f'❌ Module failed: {_e}')
+            logger.error(f'âŒ Module failed: {_e}')
             liability_result = {'liability_score': 0, 'parties_properly_impleaded': False}
         analysis_report['modules']['liability_analysis'] = liability_result
         analysis_report['architecture']['deterministic_modules'].append('Liability Expansion')
@@ -15437,15 +15437,15 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         if 'PREMATURE' in str(_tl_limit).upper() or 'SAME-DAY' in str(_tl_limit).upper():
             _is_premature = 'PREMATURE' in str(_tl_limit).upper()
             _defence_entry = {
-                'defence': ('Premature Complaint — Cause of Action Not Yet Arisen'
+                'defence': ('Premature Complaint â€” Cause of Action Not Yet Arisen'
                             if _is_premature else
-                            'Same-Day Filing — Borderline Premature Complaint'),
+                            'Same-Day Filing â€” Borderline Premature Complaint'),
                 'strength': 'FATAL' if _is_premature else 'HIGH',
-                'legal_basis': 'Section 138(b) NI Act — complaint maintainable only after 15-day payment period expires',
+                'legal_basis': 'Section 138(b) NI Act â€” complaint maintainable only after 15-day payment period expires',
                 'probability': 'CERTAIN' if _is_premature else 'HIGH',
-                'strategy': ('File discharge application under Section 245 CrPC at FIRST HEARING — complaint is not maintainable at threshold stage. Court must dismiss without trial.'
+                'strategy': ('File discharge application under Section 245 CrPC at FIRST HEARING â€” complaint is not maintainable at threshold stage. Court must dismiss without trial.'
                              if _is_premature else
-                             'Challenge maintainability at threshold stage — filing on same day as cause of action is legally risky under Section 138(b)'),
+                             'Challenge maintainability at threshold stage â€” filing on same day as cause of action is legally risky under Section 138(b)'),
                 'source': 'timeline_intelligence',
                 'refiling_note': 'Complainant CAN refile after cause of action arises, subject to limitation period.'
             }
@@ -15471,12 +15471,12 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 cf = _dt.strptime(case_data['complaint_filed_date'], '%Y-%m-%d')
                 if cf < nr + timedelta(days=15):
                     premature_defence = {
-                        'defence': 'Premature Complaint — Cause of Action Not Arisen',
+                        'defence': 'Premature Complaint â€” Cause of Action Not Arisen',
                         'strength': 'FATAL',
                         'legal_basis': 'Section 138(b): Complaint only maintainable after 15-day payment period expires',
                         'probability': 'CERTAIN',
-                        'strategy': 'File discharge application — complaint is not maintainable',
-                        'risk_impact': 'FATAL — Complaint must be dismissed'
+                        'strategy': 'File discharge application â€” complaint is not maintainable',
+                        'risk_impact': 'FATAL â€” Complaint must be dismissed'
                     }
                     if 'high_risk_defences' not in defence_result:
                         defence_result['high_risk_defences'] = []
@@ -15526,19 +15526,19 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
 
         fatal_count = len(defect_result.get('fatal_defects', []))
         if fatal_count >= 2:
-            defect_result['overall_risk']     = 'CRITICAL — Multiple Fatal Defects'
+            defect_result['overall_risk']     = 'CRITICAL â€” Multiple Fatal Defects'
             defect_result['risk_category']    = 'Clear Defect'
         elif fatal_count == 1:
-            defect_result['overall_risk']     = 'HIGH — One Fatal Defect Present'
+            defect_result['overall_risk']     = 'HIGH â€” One Fatal Defect Present'
             defect_result['risk_category']    = 'Clear Defect'
         elif any(d.get('severity') == 'HIGH' for d in defect_result.get('curable_defects', [])):
-            defect_result['overall_risk']     = 'MEDIUM — Borderline Procedural Risk'
+            defect_result['overall_risk']     = 'MEDIUM â€” Borderline Procedural Risk'
             defect_result['risk_category']    = 'Borderline Risk'
         elif defect_result.get('curable_defects'):
-            defect_result['overall_risk']     = 'MEDIUM — Curable Defects Present'
+            defect_result['overall_risk']     = 'MEDIUM â€” Curable Defects Present'
             defect_result['risk_category']    = 'Borderline Risk'
         else:
-            defect_result['overall_risk']     = 'LOW — No Procedural Defects Detected'
+            defect_result['overall_risk']     = 'LOW â€” No Procedural Defects Detected'
             defect_result['risk_category']    = 'No Defect'
 
         analysis_report['modules']['procedural_defects'] = defect_result
@@ -15549,7 +15549,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         if proc_fatal:
             analysis_report['fatal_flag'] = True
             analysis_report['fatal_source'] = analysis_report.get('fatal_source', '') + ',procedural_defects'
-            logger.warning(f"🔴 FATAL PROCEDURAL DEFECT: {proc_fatal[0].get('defect', 'Unknown')}")
+            logger.warning(f"ðŸ”´ FATAL PROCEDURAL DEFECT: {proc_fatal[0].get('defect', 'Unknown')}")
 
         logger.info("  Module 7: Risk Scoring...")
         risk_result = calculate_overall_risk_score(
@@ -15578,7 +15578,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                         and 'same day' not in str(d.get('defect','')).lower()]
         if _risk_fatals:
             analysis_report['fatal_flag'] = True
-            logger.warning(f"🔴 FATAL DEFECTS DETECTED ({len(_risk_fatals)}) - Score capped")
+            logger.warning(f"ðŸ”´ FATAL DEFECTS DETECTED ({len(_risk_fatals)}) - Score capped")
 
         logger.info("  Module 8: Settlement Analysis...")
         settlement_result = analyze_settlement_exposure(case_data, risk_result)
@@ -15595,7 +15595,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['modules']['edge_case_detection'] = edge_case_result
         analysis_report['architecture']['deterministic_modules'].append('Edge Case Handler')
 
-        logger.info("🔍 LAYER 2: RAG-Powered Pattern Analysis...")
+        logger.info("ðŸ” LAYER 2: RAG-Powered Pattern Analysis...")
 
         logger.info("  Module 10: Judicial Behavior Analysis...")
 
@@ -15620,20 +15620,20 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['modules']['cross_examination_risk'] = cross_exam_result
         analysis_report['architecture']['rag_modules'].append('Cross-Examination Risk')
 
-        logger.info("🤖 LAYER 3: Deterministic Insight Generation (LLM disabled on Render)...")
+        logger.info("ðŸ¤– LAYER 3: Deterministic Insight Generation (LLM disabled on Render)...")
         analysis_report['architecture']['llm_enhanced'] = False
-        logger.info("  ⏭️  LLM disabled on Render — using deterministic insights only")
+        logger.info("  â­ï¸  LLM disabled on Render â€” using deterministic insights only")
 
 
-        logger.info("🔧 PHASE 3: Verdict Integrity + Consistency Check")
+        logger.info("ðŸ”§ PHASE 3: Verdict Integrity + Consistency Check")
         analysis_report['audit_log']['phases_executed'].append('PHASE_3_CONSISTENCY')
         analysis_report['audit_log']['phase_3_started'] = datetime.now().isoformat()
 
-        logger.info("🎯 Enforcing Verdict Integrity (Pre-Summary)...")
+        logger.info("ðŸŽ¯ Enforcing Verdict Integrity (Pre-Summary)...")
         analysis_report = enforce_verdict_integrity(analysis_report)
 
 
-        logger.info("🔍 Running internal consistency check...")
+        logger.info("ðŸ” Running internal consistency check...")
         _consistency = run_consistency_check(analysis_report)
         if _consistency.get('corrections'):
             _corr = _consistency['corrections']
@@ -15642,24 +15642,24 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             if 'fatal_flag' in _corr and _corr['fatal_flag'] is False:
 
                 analysis_report['fatal_flag'] = False
-                logger.info("  ⚙️  Phase 3: Cleared stale fatal_flag (no real fatal defects)")
+                logger.info("  âš™ï¸  Phase 3: Cleared stale fatal_flag (no real fatal defects)")
             elif 'fatal_flag' in _corr and _corr['fatal_flag'] is True:
 
-                logger.info("  ℹ️  Phase 3: fatal_flag=True mismatch noted but not overridden (Phase 1 authority)")
+                logger.info("  â„¹ï¸  Phase 3: fatal_flag=True mismatch noted but not overridden (Phase 1 authority)")
             if 'filing_status_override' in _corr:
                 _es = analysis_report.get('executive_summary') or {}
                 if _es:
                     _es['filing_status'] = _corr['filing_status_override']
-                    logger.info(f"  ⚙️  Corrected filing_status → {_corr['filing_status_override']}")
+                    logger.info(f"  âš™ï¸  Corrected filing_status â†’ {_corr['filing_status_override']}")
         analysis_report['_consistency_check'] = _consistency
         if _consistency.get('blocked'):
-            logger.error(f"  🛑 Consistency check BLOCKED output: {_consistency.get('issues')}")
-        logger.info(f"  ✅ Consistency: {_consistency['message']}")
+            logger.error(f"  ðŸ›‘ Consistency check BLOCKED output: {_consistency.get('issues')}")
+        logger.info(f"  âœ… Consistency: {_consistency['message']}")
 
-        logger.info("🔧 PHASE 4: Decision Generation (Reports + Summaries)")
+        logger.info("ðŸ”§ PHASE 4: Decision Generation (Reports + Summaries)")
         analysis_report['audit_log']['phases_executed'].append('PHASE_4_DECISION_GENERATION')
         analysis_report['audit_log']['phase_4_started'] = datetime.now().isoformat()
-        logger.info("📊 Generating Executive Intelligence Report...")
+        logger.info("ðŸ“Š Generating Executive Intelligence Report...")
         try:
             analysis_report['executive_summary'] = generate_executive_summary(
                 case_data,
@@ -15678,10 +15678,10 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 edge_case_result
             )
         except Exception as _e:
-            logger.error(f'❌ executive_summary failed: {_e}')
+            logger.error(f'âŒ executive_summary failed: {_e}')
             import traceback as _tb3; logger.error(_tb3.format_exc())
             analysis_report['executive_summary'] = {
-                'case_overview': 'Summary generation failed — see full analysis',
+                'case_overview': 'Summary generation failed â€” see full analysis',
                 'filing_verdict': 'See analysis',
                 'overall_assessment': 'ERROR',
                 'strengths': [], 'weaknesses': [], 'critical_risks': [],
@@ -15689,9 +15689,9 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'edge_cases_alert': [], 'fatal_defects_count': 0
             }
 
-        logger.info("🚀 Adding Enterprise Features...")
+        logger.info("ðŸš€ Adding Enterprise Features...")
 
-        logger.info("  ⚖️ Section 139 Presumption Intelligence...")
+        logger.info("  âš–ï¸ Section 139 Presumption Intelligence...")
         presumption_intel = calculate_presumption_intelligence(
             {
                 'original_cheque_available': case_data.get('original_cheque_available', False),
@@ -15706,7 +15706,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         )
         analysis_report['presumption_intelligence'] = presumption_intel
 
-        logger.info("  🎯 Judicial Variance Simulation...")
+        logger.info("  ðŸŽ¯ Judicial Variance Simulation...")
 
 
         kb_provisions = len(kb_court_patterns) if kb_court_patterns else 0
@@ -15722,14 +15722,14 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             )
             analysis_report['judicial_variance_simulation'] = judicial_variance
         else:
-            logger.warning(f"  ⚠️  KB insufficient ({kb_provisions} provisions) - judicial variance disabled")
+            logger.warning(f"  âš ï¸  KB insufficient ({kb_provisions} provisions) - judicial variance disabled")
             analysis_report['judicial_variance_simulation'] = {
                 'disabled': True,
                 'reason': f'Insufficient KB data ({kb_provisions} provisions, minimum 10 required)',
                 'fallback_variance': 'Not simulated'
             }
 
-        logger.info("  🔄 Dynamic Weight Analysis...")
+        logger.info("  ðŸ”„ Dynamic Weight Analysis...")
         base_weights = CONFIG['SCORING_WEIGHTS']
         adjusted_weights, weight_explanations = adjust_weights_contextually(
             base_weights,
@@ -15742,17 +15742,17 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             'adjustments_made': weight_explanations
         }
 
-        logger.info("  🔍 Advanced Contradiction Detection (reusing Module 9 result)")
+        logger.info("  ðŸ” Advanced Contradiction Detection (reusing Module 9 result)")
 
         analysis_report['contradictions_detected'] = contradiction_result
 
-        logger.info("  🛡️ Fraud Risk Analysis...")
+        logger.info("  ðŸ›¡ï¸ Fraud Risk Analysis...")
         fraud_analysis = calculate_fraud_risk(case_data)
         analysis_report['fraud_risk_analysis'] = fraud_analysis
 
         analysis_report['version_info'] = get_version_info()
 
-        logger.info("📄 Module 14: Document Compliance (reusing Phase 1 result — no re-run)")
+        logger.info("ðŸ“„ Module 14: Document Compliance (reusing Phase 1 result â€” no re-run)")
 
 
         if len(doc_compliance.get('fatal_defects', [])) > 0:
@@ -15760,16 +15760,16 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             analysis_report['overall_status'] = 'FATAL - FILING BLOCKED'
             analysis_report['filing_blocked'] = True
 
-        logger.info("⚖️ Module 15: Defence Risk Analysis...")
+        logger.info("âš–ï¸ Module 15: Defence Risk Analysis...")
         defence_risks = analyze_defence_risks(case_data, doc_result)
         analysis_report['modules']['defence_risk_analysis'] = defence_risks
         analysis_report['architecture']['deterministic_modules'].append('Defence Risk Analysis')
 
-        logger.info("🔗 Module 15B: Defence Dependency Enforcement...")
+        logger.info("ðŸ”— Module 15B: Defence Dependency Enforcement...")
         dependency_check = enforce_defence_dependencies(case_data, defence_risks, doc_compliance)
         analysis_report['modules']['dependency_enforcement'] = dependency_check
 
-        logger.info("🔍 Module 15C: Defence-Document Cross-Validation...")
+        logger.info("ðŸ” Module 15C: Defence-Document Cross-Validation...")
         cross_validation = cross_validate_defence_documents(case_data, defence_risks, doc_compliance)
         analysis_report['modules']['cross_validation'] = cross_validation
 
@@ -15778,7 +15778,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             analysis_report['overall_status'] = 'FATAL - EVIDENCE GAP'
             analysis_report['fatal_type'] = analysis_report.get('fatal_type', 'EVIDENCE_GAP')
             analysis_report['filing_blocked'] = True
-            logger.warning("🔴 FATAL EVIDENCE GAP — continuing modules for complete report")
+            logger.warning("ðŸ”´ FATAL EVIDENCE GAP â€” continuing modules for complete report")
 
         if len(dependency_check.get('violations', [])) > 0:
             has_fatal_dependency = any(v['severity'] == 'FATAL' for v in dependency_check['violations'])
@@ -15786,15 +15786,15 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 analysis_report['fatal_flag'] = True
                 analysis_report['overall_status'] = 'FATAL - MANDATORY REQUIREMENTS NOT MET'
                 analysis_report['filing_blocked'] = True
-                logger.warning("🔴 MANDATORY DEPENDENCY VIOLATIONS — continuing modules for complete report")
+                logger.warning("ðŸ”´ MANDATORY DEPENDENCY VIOLATIONS â€” continuing modules for complete report")
 
         if len(defence_risks.get('fatal_defences', [])) > 0:
             analysis_report['fatal_flag'] = True
             analysis_report['overall_status'] = 'FATAL - CASE VIABILITY COMPROMISED'
             analysis_report['filing_blocked'] = False
-            logger.warning("🔴 FATAL DEFENCE RISKS — continuing modules for complete report")
+            logger.warning("ðŸ”´ FATAL DEFENCE RISKS â€” continuing modules for complete report")
 
-        logger.info("✓ Module 16: Filing Readiness Checklist...")
+        logger.info("âœ“ Module 16: Filing Readiness Checklist...")
         filing_readiness = generate_filing_readiness_checklist(
             doc_compliance,
             defence_risks,
@@ -15804,7 +15804,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['modules']['filing_readiness'] = filing_readiness
         analysis_report['architecture']['deterministic_modules'].append('Filing Readiness')
 
-        logger.info("✅ Advocate feedback modules complete")
+        logger.info("âœ… Advocate feedback modules complete")
 
 
         analysis_report['processing_flags'] = {
@@ -15830,9 +15830,9 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             'filing_readiness_checklist': True
         }
 
-        logger.info("✅ Enterprise features added")
+        logger.info("âœ… Enterprise features added")
 
-        logger.info("📊 Calculating Data Completeness...")
+        logger.info("ðŸ“Š Calculating Data Completeness...")
         analysis_report['data_completeness'] = calculate_data_completeness(case_data)
 
 
@@ -15857,9 +15857,9 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             'level':           'High' if completeness_pct >= 80 else ('Medium' if completeness_pct >= 60 else 'Low'),
             'missing_fields':  missing_fields[:6],
             'reliability_note': (
-                'Analysis is highly reliable — all key fields provided.'
+                'Analysis is highly reliable â€” all key fields provided.'
                 if completeness_pct >= 80 else
-                f'Analysis is partially reliable — {len(missing_fields)} field(s) missing: {", ".join(missing_fields[:3])}{"..." if len(missing_fields) > 3 else ""}.'
+                f'Analysis is partially reliable â€” {len(missing_fields)} field(s) missing: {", ".join(missing_fields[:3])}{"..." if len(missing_fields) > 3 else ""}.'
             )
         }
 
@@ -15873,10 +15873,10 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             'overall':      'HIGH'   if completeness_pct >= 80 else ('MEDIUM' if completeness_pct >= 60 else 'LOW'),
         }
 
-        logger.info(f"📊 Data completeness: {completeness_pct}%")
+        logger.info(f"ðŸ“Š Data completeness: {completeness_pct}%")
 
 
-        logger.info("🔍 Running execution validation...")
+        logger.info("ðŸ” Running execution validation...")
 
 
         _raw_v = risk_result.get('overall_risk_score') or 0
@@ -15890,26 +15890,26 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 if _recovered > 0:
                     risk_result['overall_risk_score'] = _recovered
                     analysis_report['modules']['risk_assessment'] = risk_result
-                    logger.warning(f"⚠️ Validation: recovered raw score {_recovered} from category scores")
+                    logger.warning(f"âš ï¸ Validation: recovered raw score {_recovered} from category scores")
 
 
         _es_v = analysis_report.get('executive_summary') or {}
         if not _es_v or _es_v.get('overall_assessment') == 'ERROR' or not _es_v.get('case_overview'):
-            logger.warning("⚠️ Validation: executive_summary failed — rebuilding minimal summary")
+            logger.warning("âš ï¸ Validation: executive_summary failed â€” rebuilding minimal summary")
             _vs = risk_result.get('overall_risk_score') or 0
             _vf = len(risk_result.get('fatal_defects') or []) > 0
             analysis_report['executive_summary'] = {
                 'case_overview': (
                     f"Section 138 NI Act | "
-                    f"Cheque: ₹{case_data.get('cheque_amount', 0):,} | "
+                    f"Cheque: â‚¹{case_data.get('cheque_amount', 0):,} | "
                     f"Score: {_vs}/100 | "
                     f"Fatal defects: {'Yes' if _vf else 'No'}"
                 ),
                 'filing_verdict': (
-                    'DO NOT FILE — FATAL DEFECTS PRESENT' if _vf else
-                    'READY TO FILE — STRONG CASE' if _vs >= 75 else
-                    'FILE WITH CAUTION — GAPS PRESENT' if _vs >= 55 else
-                    'HIGH RISK — REMEDIATION REQUIRED'
+                    'DO NOT FILE â€” FATAL DEFECTS PRESENT' if _vf else
+                    'READY TO FILE â€” STRONG CASE' if _vs >= 75 else
+                    'FILE WITH CAUTION â€” GAPS PRESENT' if _vs >= 55 else
+                    'HIGH RISK â€” REMEDIATION REQUIRED'
                 ),
                 'overall_assessment': (
                     'FATAL FAILURE' if _vf else
@@ -15928,9 +15928,9 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 ],
                 'weaknesses': [
                     w for w in [
-                        f"Documentary strength: {doc_result.get('overall_strength_score', 0):.1f}% — strengthen supporting records"
+                        f"Documentary strength: {doc_result.get('overall_strength_score', 0):.1f}% â€” strengthen supporting records"
                         if (doc_result.get('overall_strength_score') or 100) < 50 else None,
-                        "No written agreement — primary defence weakness"
+                        "No written agreement â€” primary defence weakness"
                         if not case_data.get('written_agreement_exists') else None,
                     ] if w
                 ],
@@ -15943,7 +15943,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'strategic_recommendations': [{
                     'priority': 'URGENT' if _vf else 'HIGH',
                     'action': 'Address all fatal defects before filing' if _vf else 'Strengthen evidence',
-                    'recommendation': 'Do not file current complaint — fatal defects will cause dismissal' if _vf else f'File with caution — score {_vs}/100',
+                    'recommendation': 'Do not file current complaint â€” fatal defects will cause dismissal' if _vf else f'File with caution â€” score {_vs}/100',
                     'rationale': f"{len(risk_result.get('fatal_defects') or [])} fatal defect(s) detected" if _vf else f"Risk score {_vs}/100",
                 }],
                 'next_actions': [],
@@ -15964,17 +15964,17 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         if not isinstance(risk_result, dict) or not risk_result.get('category_scores'):
             _critical_failures.append('Risk scoring module returned no category scores')
         if len(_critical_failures) >= 2:
-            logger.error(f'🛑 HARD FAIL-SAFE: {len(_critical_failures)} critical module failures — aborting report generation')
+            logger.error(f'ðŸ›‘ HARD FAIL-SAFE: {len(_critical_failures)} critical module failures â€” aborting report generation')
             analysis_report['hard_failure'] = True
             analysis_report['hard_failure_reasons'] = _critical_failures
-            analysis_report['overall_status'] = 'ANALYSIS FAILED — CRITICAL MODULES UNAVAILABLE'
+            analysis_report['overall_status'] = 'ANALYSIS FAILED â€” CRITICAL MODULES UNAVAILABLE'
             analysis_report['success'] = False
             analysis_report['error'] = 'Critical modules failed: ' + '; '.join(_critical_failures)
             return analysis_report
 
-        logger.info("✅ Execution validation complete")
+        logger.info("âœ… Execution validation complete")
 
-        logger.info("📋 Generating Audit Trail + Decision Trace...")
+        logger.info("ðŸ“‹ Generating Audit Trail + Decision Trace...")
         analysis_report['audit_trail'] = generate_audit_trail(
             case_data,
             timeline_result,
@@ -15989,11 +15989,11 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         _doc_score_narrative = float((analysis_report.get('modules', {}).get('risk_assessment', {}).get('category_scores') or {}).get('Documentary Strength', {}).get('score', 0) if isinstance((analysis_report.get('modules', {}).get('risk_assessment', {}).get('category_scores') or {}).get('Documentary Strength'), dict) else 0)
         _tl_score_narrative  = float((analysis_report.get('modules', {}).get('risk_assessment', {}).get('category_scores') or {}).get('Timeline Compliance', {}).get('score', 0) if isinstance((analysis_report.get('modules', {}).get('risk_assessment', {}).get('category_scores') or {}).get('Timeline Compliance'), dict) else 0)
         analysis_report['decision_narrative'] = [
-            f"Timeline compliance: {_tl_score_narrative:.0f}/100 — {'Strong ✅' if _tl_score_narrative >= 75 else 'Weak ❌'}",
-            f"Documentary strength: {_doc_score_narrative:.0f}/100 — {'Adequate ✅' if _doc_score_narrative >= 60 else 'Insufficient documentary evidence ❌'}",
-            f"Fatal defects: {'Yes — filing blocked' if _fatal_for_narrative else 'None detected ✅'}",
+            f"Timeline compliance: {_tl_score_narrative:.0f}/100 â€” {'Strong âœ…' if _tl_score_narrative >= 75 else 'Weak âŒ'}",
+            f"Documentary strength: {_doc_score_narrative:.0f}/100 â€” {'Adequate âœ…' if _doc_score_narrative >= 60 else 'Insufficient documentary evidence âŒ'}",
+            f"Fatal defects: {'Yes â€” filing blocked' if _fatal_for_narrative else 'None detected âœ…'}",
             f"Overall score: {_score_for_narrative:.1f}/100",
-            f"Decision basis: {'Fatal defect present — do not file' if _fatal_for_narrative else 'FILE WITH CAUTION — documentary weakness is primary gap' if _score_for_narrative < 70 else 'Case is strong — proceed to file'}",
+            f"Decision basis: {'Fatal defect present â€” do not file' if _fatal_for_narrative else 'FILE WITH CAUTION â€” documentary weakness is primary gap' if _score_for_narrative < 70 else 'Case is strong â€” proceed to file'}",
         ]
         analysis_report['single_truth'] = {
             'score':    round(_score_for_narrative, 1),
@@ -16002,7 +16002,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                          'READY TO FILE'),
             'primary_gap': ('Fatal procedural defect' if _fatal_for_narrative else
                             'Documentary evidence weakness' if _doc_score_narrative < 60 else
-                            'Minor gaps — proceed'),
+                            'Minor gaps â€” proceed'),
             'source': 'analysis_pipeline',
         }
 
@@ -16014,18 +16014,18 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         _lim_for_trace = str((_tl_for_trace.get('compliance_status') or {}).get('limitation', '') or '')
         analysis_report['decision_trace'] = [
             f"INPUT: {len([f for f in ['cheque_date','dishonour_date','notice_date','complaint_filed_date'] if case_data.get(f)])}/4 critical dates provided",
-            f"TIMELINE: {_lim_for_trace or 'Status checked'} — limitation risk: {_tl_for_trace.get('limitation_risk','UNKNOWN')}",
+            f"TIMELINE: {_lim_for_trace or 'Status checked'} â€” limitation risk: {_tl_for_trace.get('limitation_risk','UNKNOWN')}",
             f"SCORE: {_score_for_trace}/100 from weighted module combination",
-            f"FATAL FLAG: {'SET — filing blocked until resolved' if _fatal_for_trace else 'NOT SET — case is potentially maintainable'}",
+            f"FATAL FLAG: {'SET â€” filing blocked until resolved' if _fatal_for_trace else 'NOT SET â€” case is potentially maintainable'}",
             f"CONSISTENCY: {analysis_report.get('_consistency_check', {}).get('message', 'Not checked')}",
             f"FINAL DECISION: {analysis_report.get('executive_summary', {}).get('filing_verdict', 'See analysis')}",
         ]
-        logger.info("  ✅ Decision trace built (%d steps)", len(analysis_report['decision_trace']))
+        logger.info("  âœ… Decision trace built (%d steps)", len(analysis_report['decision_trace']))
 
-        logger.info("💡 Generating Score Explanation...")
+        logger.info("ðŸ’¡ Generating Score Explanation...")
         analysis_report['score_explanation'] = generate_score_explanation(risk_result)
 
-        logger.info("🎯 Classifying Case Outcome...")
+        logger.info("ðŸŽ¯ Classifying Case Outcome...")
 
         _os = (risk_result.get('overall_risk_score') or 0)
         _is_f = analysis_report.get('fatal_flag', False)
@@ -16051,8 +16051,8 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             'verdict_label': (
                 'Very High likelihood of dismissal'  if _is_f or _os < 30 else
                 'High dismissal risk'                if _os < 50 else
-                'Balanced — could go either way'     if _os < 70 else
-                'Strong case — conviction likely'
+                'Balanced â€” could go either way'     if _os < 70 else
+                'Strong case â€” conviction likely'
             ),
             'basis': 'Statistical estimate based on compliance score and fatal defect analysis'
         }
@@ -16074,7 +16074,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         })
 
 
-        logger.info("🔗 Integrating advanced module outputs into risk score...")
+        logger.info("ðŸ”— Integrating advanced module outputs into risk score...")
         _score_adj = 0
         _adv_fatals = []
         _adv_warnings = []
@@ -16084,7 +16084,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         if isinstance(_dh, dict):
             _score_adj += _dh.get('score_impact', 0)
             if _dh.get('risk_level') == 'HIGH':
-                _adv_warnings.append(f"Dishonour reason: {_dh.get('reason_category','Unknown')} — {_dh.get('legal_impact','')[:80]}")
+                _adv_warnings.append(f"Dishonour reason: {_dh.get('reason_category','Unknown')} â€” {_dh.get('legal_impact','')[:80]}")
 
 
         _ed = analysis_report.get('modules', {}).get('enforceable_debt', {})
@@ -16156,7 +16156,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             if _score_adj != 0:
                 risk_result['overall_risk_score'] = _adj_score
                 risk_result['advanced_module_adjustment'] = _score_adj
-                logger.info(f"📊 Advanced module adjustment: {_score_adj:+.0f} → score {_cur_score} → {_adj_score}")
+                logger.info(f"ðŸ“Š Advanced module adjustment: {_score_adj:+.0f} â†’ score {_cur_score} â†’ {_adj_score}")
             if _adv_fatals:
                 risk_result.setdefault('fatal_defects', []).extend(_adv_fatals)
                 analysis_report['fatal_flag'] = True
@@ -16164,7 +16164,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             analysis_report['advanced_module_warnings'] = _adv_warnings
 
 
-        logger.info("⚖️ Generating Professional Report Enhancements...")
+        logger.info("âš–ï¸ Generating Professional Report Enhancements...")
 
 
         if not isinstance(risk_result, dict): risk_result = {'overall_risk_score': 0, 'category_scores': {}, 'fatal_defects': []}
@@ -16236,7 +16236,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             uploaded_files=case_data.get('uploaded_files', [])
         )
 
-        logger.info("✅ Professional enhancements complete")
+        logger.info("âœ… Professional enhancements complete")
 
         analysis_report['legal_disclaimer'] = {
             'primary': "This report is a structured compliance assessment tool based on information provided and does not substitute independent legal judgment. All findings should be reviewed by qualified legal counsel before filing.",
@@ -16263,11 +16263,11 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         if isinstance(analysis_report.get('overall_score'), float):
             analysis_report['overall_score'] = round(analysis_report['overall_score'], 1)
 
-        logger.info(f"✅ Analysis complete in {analysis_report['processing_time_seconds']}s")
+        logger.info(f"âœ… Analysis complete in {analysis_report['processing_time_seconds']}s")
         logger.info(f"   Deterministic Modules: {len(analysis_report['architecture']['deterministic_modules'])}")
         logger.info(f"   LLM Enhanced: {analysis_report['architecture']['llm_enhanced']}")
 
-        logger.info("🎯 PHASE 3: Pure Deterministic Escalation")
+        logger.info("ðŸŽ¯ PHASE 3: Pure Deterministic Escalation")
         analysis_report['audit_log']['phases_executed'].append('PHASE_3_ESCALATION')
 
         defence_result = analysis_report['modules'].get('defence_risk_analysis', {})
@@ -16301,7 +16301,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 analysis_report['modules']['risk_assessment']['overall_risk_score'] = _post_esc
                 analysis_report['modules']['risk_assessment']['_escalation_applied'] = True
                 analysis_report['modules']['risk_assessment']['_pre_escalation_score'] = _pre_esc
-                logger.info(f"   Escalation feedback: {_pre_esc:.1f} → {_post_esc:.1f} (tier locked: {final_tier['tier']})")
+                logger.info(f"   Escalation feedback: {_pre_esc:.1f} â†’ {_post_esc:.1f} (tier locked: {final_tier['tier']})")
 
         analysis_report['audit_log']['escalation_flags'] = escalation_flags
         analysis_report['audit_log']['final_tier_assigned'] = final_tier['tier']
@@ -16310,7 +16310,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         logger.info(f"   Final Tier: {final_tier['tier']} (Locked: {final_tier.get('tier_locked', False)})")
         logger.info(f"   Production Engine v{ENGINE_VERSION}")
 
-        logger.info("📄 Generating clean professional report...")
+        logger.info("ðŸ“„ Generating clean professional report...")
 
         if "modules" in analysis_report:
             analysis_report["modules"] = sanitize_module_output(analysis_report["modules"])
@@ -16402,15 +16402,15 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             _doc_gaps = []
             for _field, _label, _sev, _imp in [
                 ('written_agreement_exists', 'No documentary proof of legally enforceable debt', 'Severe',
-                 'Accused can deny the existence of a legally enforceable debt — a fundamental Section 138 ingredient'),
+                 'Accused can deny the existence of a legally enforceable debt â€” a fundamental Section 138 ingredient'),
                 ('ledger_available',         'No financial records or ledger entries',           'High',
-                 'No independent paper trail of the alleged transaction — debt story is entirely oral and uncorroborated'),
+                 'No independent paper trail of the alleged transaction â€” debt story is entirely oral and uncorroborated'),
                 ('postal_proof_available',   'No postal proof of notice',              'Moderate',
-                 'Notice service unproven — accused can deny receiving the legal notice'),
+                 'Notice service unproven â€” accused can deny receiving the legal notice'),
                 ('original_cheque_available','Original cheque not secured',            'High',
-                 'Primary instrument unavailable — foundational evidence at risk'),
+                 'Primary instrument unavailable â€” foundational evidence at risk'),
                 ('return_memo_available',    'Bank dishonour memo missing',            'Severe',
-                 'Proof of dishonour not secured — essential statutory ingredient at risk'),
+                 'Proof of dishonour not secured â€” essential statutory ingredient at risk'),
             ]:
                 if not case_data.get(_field, True):
                     _doc_gaps.append({'gap_name': _label, 'severity': _sev,
@@ -16429,7 +16429,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                     _cx_questions.append("Do you have an Acknowledgment Due (AD) card proving the accused received your notice?")
                 if not case_data.get('ledger_available'):
                     _cx_questions.append("Can you produce any bank statement or ledger entry showing the transfer of this amount?")
-                _cx_questions.append("On what date exactly was the cheque amount given to the accused, and in what form — cash, cheque, or bank transfer?")
+                _cx_questions.append("On what date exactly was the cheque amount given to the accused, and in what form â€” cash, cheque, or bank transfer?")
                 _cx_questions.append("Who was present at the time the alleged loan was made?")
             if not _cx_questions:
                 _cx_questions = [
@@ -16465,20 +16465,20 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             else:
                 _ing_score_p = float(_ing.get('overall_compliance', 0) or 0)
                 if _ing_score_p >= 70:
-                    _pres_stage  = 'Stage 2: Presumption Activated — Burden on Accused (S.139)'
-                    _pres_burden = 'On Accused — Section 139 presumption unrebutted'
+                    _pres_stage  = 'Stage 2: Presumption Activated â€” Burden on Accused (S.139)'
+                    _pres_burden = 'On Accused â€” Section 139 presumption unrebutted'
                 elif _ing_score_p >= 40:
-                    _pres_stage  = 'Stage 1: Partial Compliance — Presumption Conditionally Available'
-                    _pres_burden = 'Shared — Complainant must establish all 7 ingredients first'
+                    _pres_stage  = 'Stage 1: Partial Compliance â€” Presumption Conditionally Available'
+                    _pres_burden = 'Shared â€” Complainant must establish all 7 ingredients first'
                 else:
-                    _pres_stage  = 'Stage 0: Ingredients Incomplete — Presumption Not Available'
-                    _pres_burden = 'On Complainant — basic ingredients not established'
+                    _pres_stage  = 'Stage 0: Ingredients Incomplete â€” Presumption Not Available'
+                    _pres_burden = 'On Complainant â€” basic ingredients not established'
 
 
             _jud_conf    = str(_jud.get('confidence', 'Insufficient data') or 'Insufficient data')
             _jud_court   = str(_jud.get('court_identified', case_data.get('court_location', 'Not specified')) or 'Not specified')
             _jud_note    = (
-                'Judicial behaviour analysis unavailable — insufficient court data in knowledge base.'
+                'Judicial behaviour analysis unavailable â€” insufficient court data in knowledge base.'
                 if _jud_conf in ('LOW', 'Insufficient data', 'Not available') else
                 f"Based on cases from {_jud_court}. Confidence: {_jud_conf}."
             )
@@ -16496,17 +16496,17 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             )
             if _same_day_filing and not _has_real_fatal:
                 _is_fatal = False
-                _filing_verdict = ('FILE WITH CAUTION — SAME-DAY PROCEDURAL RISK'
+                _filing_verdict = ('FILE WITH CAUTION â€” SAME-DAY PROCEDURAL RISK'
                                    if _orig_score >= 55 else
-                                   'HIGH RISK — SAME-DAY FILING + EVIDENCE GAPS')
+                                   'HIGH RISK â€” SAME-DAY FILING + EVIDENCE GAPS')
             elif _has_real_fatal or _is_fatal:
-                _filing_verdict = 'DO NOT FILE — FATAL DEFECTS PRESENT'
+                _filing_verdict = 'DO NOT FILE â€” FATAL DEFECTS PRESENT'
             elif _orig_score >= 75:
-                _filing_verdict = 'READY TO FILE — STRONG CASE'
+                _filing_verdict = 'READY TO FILE â€” STRONG CASE'
             elif _orig_score >= 55:
-                _filing_verdict = 'FILE WITH CAUTION — EVIDENCE GAPS PRESENT'
+                _filing_verdict = 'FILE WITH CAUTION â€” EVIDENCE GAPS PRESENT'
             else:
-                _filing_verdict = 'HIGH RISK — REMEDIATION REQUIRED BEFORE FILING'
+                _filing_verdict = 'HIGH RISK â€” REMEDIATION REQUIRED BEFORE FILING'
 
 
             _fatal_issues    = [d for d in _uniq_f if d.get('severity','') in ('CRITICAL','FATAL')]
@@ -16542,18 +16542,18 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 for _sd in _same_day_defects:
                     _sd['severity']  = 'HIGH'
                     _sd['is_fatal']  = False
-                    _sd['risk_note'] = ('Interpretation-dependent — some courts dismiss, others allow. '
+                    _sd['risk_note'] = ('Interpretation-dependent â€” some courts dismiss, others allow. '
                                        'Not an absolute bar unlike premature complaint.')
 
                 if not _uniq_f_real_fatal:
                     _is_fatal = False
 
                     if _orig_score >= 75:
-                        _filing_verdict = 'FILE WITH CAUTION — SAME-DAY FILING RISK'
+                        _filing_verdict = 'FILE WITH CAUTION â€” SAME-DAY FILING RISK'
                     elif _orig_score >= 55:
-                        _filing_verdict = 'FILE WITH CAUTION — PROCEDURAL RISK + EVIDENCE GAPS'
+                        _filing_verdict = 'FILE WITH CAUTION â€” PROCEDURAL RISK + EVIDENCE GAPS'
                     else:
-                        _filing_verdict = 'HIGH RISK — ADDRESS PROCEDURAL RISK BEFORE FILING'
+                        _filing_verdict = 'HIGH RISK â€” ADDRESS PROCEDURAL RISK BEFORE FILING'
                     _orig_score = max(_orig_score, _orig_before * 0.7)
 
 
@@ -16562,18 +16562,18 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
 
 
             if 'SAME-DAY' in _tl_limitation_status.upper():
-                _limitation_risk_display = 'LOW — Filed within limitation period'
+                _limitation_risk_display = 'LOW â€” Filed within limitation period'
 
             elif ('WITHIN' in _tl_limitation_status.upper() or 'COMPLIANT' in _tl_limitation_status.upper()):
-                _limitation_risk_display = 'LOW — Filed within limitation period'
+                _limitation_risk_display = 'LOW â€” Filed within limitation period'
             elif 'PREMATURE' in _tl_limitation_status.upper():
-                _limitation_risk_display = 'CRITICAL — Filed before cause of action arose'
+                _limitation_risk_display = 'CRITICAL â€” Filed before cause of action arose'
             elif 'BARRED' in _tl_limitation_status.upper() or 'EXPIRED' in _tl_limitation_status.upper():
-                _limitation_risk_display = 'CRITICAL — Complaint barred by limitation (Section 142)'
+                _limitation_risk_display = 'CRITICAL â€” Complaint barred by limitation (Section 142)'
             elif _tl_limitation_risk_raw in ('CRITICAL', 'HIGH'):
-                _limitation_risk_display = f'{_tl_limitation_risk_raw} — Limitation compliance issue'
+                _limitation_risk_display = f'{_tl_limitation_risk_raw} â€” Limitation compliance issue'
             else:
-                _limitation_risk_display = 'LOW — Filed within limitation period'
+                _limitation_risk_display = 'LOW â€” Filed within limitation period'
 
 
             if _orig_score == 0 and _orig_before > 0:
@@ -16630,7 +16630,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'score_note':            f"Score: {_orig_score:.1f}/100",
                 'fatal_override_applied': _is_fatal and bool(_fdo),
                 'fatal_override_note':   (
-                    f"Original: {_orig_before}/100 → Capped at {_cap_display} due to fatal defect"
+                    f"Original: {_orig_before}/100 â†’ Capped at {_cap_display} due to fatal defect"
                     if (_is_fatal and bool(_fdo)) else
                     "No fatal override applied"
                 ),
@@ -16703,7 +16703,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 if isinstance(_refiling, dict) else ''
                 ),
                 'urgency_note':           (
-                f"⚠️ Only {_refiling.get('days_remaining',0)} days left to refile — act immediately"
+                f"âš ï¸ Only {_refiling.get('days_remaining',0)} days left to refile â€” act immediately"
                 if isinstance(_refiling, dict) and 0 < _refiling.get('days_remaining',0) <= 7 else
                 f"File fresh complaint within {_refiling.get('days_remaining',0)} days"
                 if isinstance(_refiling, dict) and _refiling.get('days_remaining',0) > 7 else
@@ -16712,9 +16712,9 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
 
                 'analysis_confidence':    _analysis_confidence,
                 'confidence_note': (
-                'All core modules executed — high confidence in analysis'
+                'All core modules executed â€” high confidence in analysis'
                 if _analysis_confidence == 'HIGH' else
-                'Some modules incomplete — review with qualified counsel'
+                'Some modules incomplete â€” review with qualified counsel'
                 ),
 
                 'cheque_amount':         case_data.get('cheque_amount', 0),
@@ -16753,8 +16753,8 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'notice_delivery_status':   str((_mods.get('notice_delivery_status') or {}).get('delivery_status','Not assessed')),
                 'notice_risk_level':        str((_mods.get('notice_delivery_status') or {}).get('risk_level','LOW')),
                 'deemed_service':           bool((_mods.get('notice_delivery_status') or {}).get('deemed_service_applicable', False)),
-                'section_65b_required':     bool((_mods.get('section_65b_compliance') or {}).get('certificate_required', False)),
-                'section_65b_risk':         str((_mods.get('section_65b_compliance') or {}).get('risk_level','LOW')),
+                'section_63_required':     bool((_mods.get('section_63_compliance') or {}).get('certificate_required', False)),
+                'section_63_risk':         str((_mods.get('section_63_compliance') or {}).get('risk_level','LOW')),
                 'director_impleaded':       bool((_mods.get('director_role_analysis') or {}).get('properly_impleaded', True)),
                 'advanced_score_adj':       int(risk_result.get('advanced_module_adjustment', 0)),
                 'advanced_warnings':        list(analysis_report.get('advanced_module_warnings') or []),
@@ -16766,7 +16766,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'engine_version':        str(analysis_report.get('engine_version', 'v10.0')),
             }
         except Exception as _e:
-            logger.error(f'❌ _result building failed: {_e}')
+            logger.error(f'âŒ _result building failed: {_e}')
             import traceback as _tb2; logger.error(_tb2.format_exc())
 
             _fb_score = (
@@ -16787,7 +16787,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'presumption_stage':     'INSUFFICIENT DATA',
                 'burden_position':       'See analysis',
                 'conviction_probability': 'N/A',
-                'conviction_probability_display': 'Not calculable — fatal defect present' if bool(analysis_report.get('fatal_flag')) else 'See analysis',
+                'conviction_probability_display': 'Not calculable â€” fatal defect present' if bool(analysis_report.get('fatal_flag')) else 'See analysis',
             }
 
 
@@ -16810,7 +16810,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         try:
             analysis_report['professional_report'] = generate_clean_professional_report(analysis_report, case_data)
         except Exception as _e:
-            logger.error(f'❌ professional_report generation failed: {_e}')
+            logger.error(f'âŒ professional_report generation failed: {_e}')
             analysis_report['professional_report'] = {'error': str(_e), 'report_format': 'Error'}
 
 
@@ -16832,15 +16832,15 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         _doc_sc   = round(float((_doc_r.get('overall_strength_score') or 0)), 1)
         _proc_f   = len(_proc_r.get('fatal_defects', []) or [])
         _decision_chain = []
-        _decision_chain.append(f'Timeline: {'BARRED/PREMATURE — FATAL' if any(x in _tl_lim.upper() for x in ("BARRED","PREMATURE")) else 'SAME-DAY RISK' if 'SAME' in _tl_lim.upper() else 'COMPLIANT'}')
-        _decision_chain.append(f'Documentary strength: {_doc_sc}/100 — {'Adequate' if _doc_sc >= 60 else 'Insufficient — reduces score'}')
-        _decision_chain.append(f'Procedural defects: {_proc_f} fatal defect(s) — {'present — score capped' if _proc_f > 0 else 'none detected'}')
+        _decision_chain.append(f'Timeline: {'BARRED/PREMATURE â€” FATAL' if any(x in _tl_lim.upper() for x in ("BARRED","PREMATURE")) else 'SAME-DAY RISK' if 'SAME' in _tl_lim.upper() else 'COMPLIANT'}')
+        _decision_chain.append(f'Documentary strength: {_doc_sc}/100 â€” {'Adequate' if _doc_sc >= 60 else 'Insufficient â€” reduces score'}')
+        _decision_chain.append(f'Procedural defects: {_proc_f} fatal defect(s) â€” {'present â€” score capped' if _proc_f > 0 else 'none detected'}')
         _decision_chain.append(f'Composite score: {_final_sc}/100')
-        _decision_chain.append(f'Fatal flag: {"active — filing blocked" if analysis_report.get("fatal_flag") else "not set"}')
+        _decision_chain.append(f'Fatal flag: {"active â€” filing blocked" if analysis_report.get("fatal_flag") else "not set"}')
         _decision_chain.append(f'Final verdict: {_es_r.get("filing_verdict", analysis_report.get("_result", {}).get("filing_status", "Unknown"))}')
         if _consistency.get('corrections'):
             for _k, _v in _consistency['corrections'].items():
-                _decision_chain.append(f'Auto-corrected: {_k} → {_v}')
+                _decision_chain.append(f'Auto-corrected: {_k} â†’ {_v}')
         analysis_report['audit_trail'] = {
             'input_hash':      input_hash,
             'analysis_hash':   analysis_hash,
@@ -16849,15 +16849,15 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             'version':         'v11.2',
             'decision_chain':  _decision_chain,
             'phases_executed': analysis_report.get('audit_log', {}).get('phases_executed', []),
-            'note': 'Analysis locked — input/output hashes + decision chain recorded'
+            'note': 'Analysis locked â€” input/output hashes + decision chain recorded'
         }
 
-        logger.info(f"  🔒 Audit lock applied - Input hash: {input_hash[:16]}...")
+        logger.info(f"  ðŸ”’ Audit lock applied - Input hash: {input_hash[:16]}...")
 
 
         db_saved = save_analysis_to_db(analysis_report)
         if not db_saved:
-            logger.warning("⚠️ Analysis completed but failed to save to database")
+            logger.warning("âš ï¸ Analysis completed but failed to save to database")
             analysis_report['audit_trail']['database_saved'] = False
         else:
             analysis_report['audit_trail']['database_saved'] = True
@@ -16875,14 +16875,14 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             else:
                 return obj
         
-        logger.info("🧹 Applying final text sanitization pass...")
+        logger.info("ðŸ§¹ Applying final text sanitization pass...")
         analysis_report = sanitize_nested_dict(analysis_report)
-        logger.info("✅ Text sanitization complete")
+        logger.info("âœ… Text sanitization complete")
 
         return analysis_report
 
     except Exception as e:
-        logger.error(f"❌ Analysis failed: {e}")
+        logger.error(f"âŒ Analysis failed: {e}")
         import traceback
         traceback.print_exc()
 
@@ -16953,7 +16953,7 @@ async def root():
 async def test_endpoint():
 
     return {
-        "status": "✅ API is working!",
+        "status": "âœ… API is working!",
         "platform": "JUDIQ v5.0",
         "maturity": "90% Elite-Grade",
         "timestamp": time.time(),
@@ -16991,10 +16991,10 @@ async def reload_kb():
 
     Steps to update KB:
       1. Upload new cheque_bounce_kb.csv to Google Drive
-      2. Share: Anyone with the link → Viewer
+      2. Share: Anyone with the link â†’ Viewer
       3. Copy file ID from the shareable URL
       4. Set GDRIVE_FILE_ID=<file-id> in Render environment variables
-      5. Call POST /kb/reload — system downloads and reloads automatically
+      5. Call POST /kb/reload â€” system downloads and reloads automatically
     """
     file_id = CONFIG.get("GDRIVE_FILE_ID", "").strip()
     if not file_id:
@@ -17017,7 +17017,7 @@ async def reload_kb():
         "message": (
             f"KB reloaded: {len(kb_data)} rows from Google Drive"
             if success else
-            "KB reload failed — using minimal fallback. Check GDRIVE_FILE_ID and file sharing settings."
+            "KB reload failed â€” using minimal fallback. Check GDRIVE_FILE_ID and file sharing settings."
         ),
         "gdrive_file_id_preview": (file_id[:12] + "...") if len(file_id) > 12 else file_id
     }
@@ -17040,7 +17040,7 @@ async def kb_status():
         "local_cache_age_hours": round(age_hours, 1) if age_hours is not None else None,
         "instructions": {
             "step_1": "Upload cheque_bounce_kb.csv to Google Drive",
-            "step_2": "Share file: Anyone with the link → Viewer",
+            "step_2": "Share file: Anyone with the link â†’ Viewer",
             "step_3": "Copy file ID from the shareable URL (long alphanumeric string)",
             "step_4": "Set GDRIVE_FILE_ID=<file-id> in Render environment variables",
             "step_5": "Call POST /kb/reload to download and activate"
@@ -17058,7 +17058,7 @@ async def health():
     return {
         "status": "healthy",
         "version": ENGINE_VERSION,
-        "platform": "JUDIQ AI — Section 138 NI Act Legal Intelligence",
+        "platform": "JUDIQ AI â€” Section 138 NI Act Legal Intelligence",
         "kb_loaded": kb_loaded,
         "kb_provisions": len(kb_data) if kb_loaded else 0,
         "db_status": "ok" if db_ok else "unavailable",
@@ -17138,10 +17138,10 @@ async def validate_accuracy():
 
             if passed:
                 results['passed'] += 1
-                status = '✅ PASS'
+                status = 'âœ… PASS'
             else:
                 results['failed'] += 1
-                status = '❌ FAIL'
+                status = 'âŒ FAIL'
 
             results['test_details'].append({
                 'test_name': case['name'],
@@ -17155,7 +17155,7 @@ async def validate_accuracy():
             results['failed'] += 1
             results['test_details'].append({
                 'test_name': case['name'],
-                'status': '❌ ERROR',
+                'status': 'âŒ ERROR',
                 'passed': False,
                 'error': str(e)
             })
@@ -17216,7 +17216,7 @@ async def get_report_data(case_id: str):
     """
     Returns a FLAT, PDF-ready data object for a given case_id.
     Every field has a guaranteed non-null string value.
-    The frontend PDF renderer should read from this endpoint — not from /analyze-case.
+    The frontend PDF renderer should read from this endpoint â€” not from /analyze-case.
 
     All scores are real numbers. All text fields are meaningful strings.
     No None, no empty strings, no broken characters.
@@ -17242,7 +17242,7 @@ async def get_report_data(case_id: str):
 
 
 def _s(v, fb="Not available"):
-    """Safe string — never returns None or empty."""
+    """Safe string â€” never returns None or empty."""
     if v is None or (isinstance(v, str) and not v.strip()):
         return fb
     return str(v)
@@ -17305,7 +17305,7 @@ def _build_flat_report(a: dict) -> dict:
     cap_display  = f"{cap_val:.1f}/100"
     orig_display = f"{orig_score:.1f}/100"
     _ = R.get('fatal_override_note') or (
-        f"Original: {orig_display} → Capped at {cap_display} due to fatal defect"
+        f"Original: {orig_display} â†’ Capped at {cap_display} due to fatal defect"
         if (fatal and fdo) else "No fatal override applied"
     )
 
@@ -17322,15 +17322,15 @@ def _build_flat_report(a: dict) -> dict:
         meta = a.get('case_metadata') or {}
         for field, label, sev, imp in [
             ('written_agreement_exists', 'No documentary proof of legally enforceable debt', 'Severe',
-             'Accused can deny the existence of a legally enforceable debt — a fundamental Section 138 ingredient'),
+             'Accused can deny the existence of a legally enforceable debt â€” a fundamental Section 138 ingredient'),
             ('ledger_available', 'No financial records or ledger entries', 'High',
-             'No independent paper trail of the alleged transaction — debt story is entirely oral and uncorroborated'),
+             'No independent paper trail of the alleged transaction â€” debt story is entirely oral and uncorroborated'),
             ('postal_proof_available', 'No postal proof of notice', 'Moderate',
-             'Notice service unproven — accused can deny receipt'),
+             'Notice service unproven â€” accused can deny receipt'),
             ('original_cheque_available', 'Original cheque not secured', 'High',
-             'Primary instrument unavailable — foundational evidence at risk'),
+             'Primary instrument unavailable â€” foundational evidence at risk'),
             ('return_memo_available', 'Bank dishonour memo missing', 'Severe',
-             'Proof of dishonour not secured — essential statutory ingredient at risk'),
+             'Proof of dishonour not secured â€” essential statutory ingredient at risk'),
         ]:
             if not meta.get(field, True):
                 doc_gaps.append({'gap_name': label, 'document': label,
@@ -17351,7 +17351,7 @@ def _build_flat_report(a: dict) -> dict:
             cx_questions.append('Do you have an AD card or tracking proof confirming the accused received your notice?')
         if not meta.get('ledger_available'):
             cx_questions.append('Can you produce any bank statement showing transfer of the cheque amount?')
-        cx_questions.append('On what date and in what form — cash, cheque, or bank transfer — was the amount given?')
+        cx_questions.append('On what date and in what form â€” cash, cheque, or bank transfer â€” was the amount given?')
         cx_questions.append('Who was present when the alleged transaction took place?')
 
 
@@ -17374,17 +17374,17 @@ def _build_flat_report(a: dict) -> dict:
     jud_conf  = _s(R.get('court_confidence') or jb.get('confidence'), 'Insufficient data')
     jud_court = _s(R.get('court_name') or jb.get('court_identified'), 'Not specified')
     jud_note  = R.get('court_note') or (
-        'Judicial behaviour analysis unavailable — insufficient court data.'
+        'Judicial behaviour analysis unavailable â€” insufficient court data.'
         if jud_conf in ('LOW', 'Insufficient data', 'Not available') else
         f"Based on cases from {jud_court}. Confidence: {jud_conf}."
     )
 
 
-    adv_65b = mods.get('section_65b_compliance') or {}
+    adv_63 = mods.get('section_63_compliance') or {}
     adv_jur = mods.get('territorial_jurisdiction') or {}
     adv_ntc = mods.get('notice_delivery_status') or {}
     jur_exp = _s(adv_jur.get('explanation') or adv_jur.get('finding'),
-        "Jurisdiction risk detected — verify cause of action arose within court's territorial limits "
+        "Jurisdiction risk detected â€” verify cause of action arose within court's territorial limits "
         "(place of dishonour, notice service, or accused's residence/business)")
 
     chart = sorted(
@@ -17474,7 +17474,7 @@ def _build_flat_report(a: dict) -> dict:
         'court_name':             jud_court if jud_conf in ('HIGH', 'MEDIUM') else 'Not specified',
         'court_confidence':       jud_conf,
         'court_data_available':   jud_conf in ('HIGH', 'MEDIUM'),
-        'court_note':             jud_note if jud_conf in ('HIGH', 'MEDIUM') else 'Judicial outcome unavailable — insufficient court data',
+        'court_note':             jud_note if jud_conf in ('HIGH', 'MEDIUM') else 'Judicial outcome unavailable â€” insufficient court data',
         'court_indices':          {k: str(v) for k, v in (jb.get('behavioral_indices') or {}).items()},
         'presumption_stage':      pres_stage,
         'burden_position':        pres_burden,
@@ -17483,17 +17483,17 @@ def _build_flat_report(a: dict) -> dict:
         'cross_exam_questions':   [_s(q) for q in cx_questions[:8]],
         'cross_exam_zones':       [{'zone': _s(z.get('zone', z.get('area'))), 'risk': _s(z.get('risk_level', z.get('severity')), 'MEDIUM')}
                                     for z in (cx.get('vulnerability_zones') or [])[:4]],
-        'section_65b_status':     _s(adv_65b.get('status')) if adv_65b.get('applicable') else 'NOT_APPLICABLE',
-        'section_65b_applicable': bool(adv_65b.get('applicable', False)),
-        'notice_delivery_status': _s(adv_ntc.get('status')) if adv_ntc.get('status') not in (None,'','??','—','Not assessed') else 'DATA NOT AVAILABLE',
-        'notice_delivery_risk':   _s(adv_ntc.get('risk_level')) if adv_ntc.get('risk_level') not in (None,'','??','—','Not assessed') else 'DATA NOT AVAILABLE',
-        'jurisdiction_risk':      _s(adv_jur.get('risk_level') or adv_jur.get('status')) if adv_jur.get('risk_level') not in (None,'','??','—','Not assessed','INSUFFICIENT_DATA') else 'DATA NOT AVAILABLE',
-        'jurisdiction_explanation': jur_exp if jur_exp not in (None,'','??','—','Not assessed') else 'DATA NOT AVAILABLE',
+        'section_63_status':     _s(adv_63.get('status')) if adv_63.get('applicable') else 'NOT_APPLICABLE',
+        'section_63_applicable': bool(adv_63.get('applicable', False)),
+        'notice_delivery_status': _s(adv_ntc.get('status')) if adv_ntc.get('status') not in (None,'','??','â€”','Not assessed') else 'DATA NOT AVAILABLE',
+        'notice_delivery_risk':   _s(adv_ntc.get('risk_level')) if adv_ntc.get('risk_level') not in (None,'','??','â€”','Not assessed') else 'DATA NOT AVAILABLE',
+        'jurisdiction_risk':      _s(adv_jur.get('risk_level') or adv_jur.get('status')) if adv_jur.get('risk_level') not in (None,'','??','â€”','Not assessed','INSUFFICIENT_DATA') else 'DATA NOT AVAILABLE',
+        'jurisdiction_explanation': jur_exp if jur_exp not in (None,'','??','â€”','Not assessed') else 'DATA NOT AVAILABLE',
         'jurisdiction_valid':     bool(adv_jur.get('jurisdiction_valid', True)),
         'platform_name':          'JUDIQ Legal Intelligence Platform',
         'platform_email':         'hello@judiq.ai',
         'platform_website':       'www.judiq.ai',
-        'platform_address':       'JUDIQ AI — Section 138 Intelligence Platform',
+        'platform_address':       'JUDIQ AI â€” Section 138 Intelligence Platform',
         
         # ============================================================================
         # ENHANCED FEATURES - Integrated seamlessly with existing analysis
@@ -17569,16 +17569,16 @@ async def generate_cross_examination(request: CrossExaminationRequest):
     This endpoint does NOT re-run or affect the main case analysis engine.
 
     The response includes:
-    - **questions** — AI-generated, witness-specific cross-examination questions
-    - **summary** — plain-language explanation of the attack strategy and themes
-    - **fallback** — if Phi-2 unavailable, rule-based questions are returned automatically
+    - **questions** â€” AI-generated, witness-specific cross-examination questions
+    - **summary** â€” plain-language explanation of the attack strategy and themes
+    - **fallback** â€” if Phi-2 unavailable, rule-based questions are returned automatically
 
     Witness types:
-    - `complainant` — person who filed the case (defence lawyer's cross)
-    - `accused` — person who issued the cheque (prosecution's cross)
-    - `bank_official` — bank witness on dishonour memo
-    - `drawer` — alias for accused
-    - `witness` — third-party transaction witness
+    - `complainant` â€” person who filed the case (defence lawyer's cross)
+    - `accused` â€” person who issued the cheque (prosecution's cross)
+    - `bank_official` â€” bank witness on dishonour memo
+    - `drawer` â€” alias for accused
+    - `witness` â€” third-party transaction witness
     """
     valid_types = ['complainant', 'accused', 'drawer', 'bank_official', 'witness']
     if request.witness_type not in valid_types:
@@ -17588,7 +17588,7 @@ async def generate_cross_examination(request: CrossExaminationRequest):
         )
 
     try:
-        logger.info(f"🤖 Generating {request.num_questions} cross-exam questions for {request.witness_type}...")
+        logger.info(f"ðŸ¤– Generating {request.num_questions} cross-exam questions for {request.witness_type}...")
 
         result = generate_cross_examination_questions(
             case_data=request.case_data,
@@ -17608,7 +17608,7 @@ async def generate_cross_examination(request: CrossExaminationRequest):
                     "summary": summary,
                     "question_count": len(fallback_qs),
                     "model": "rule-based fallback (Phi-2 unavailable)",
-                    "purpose": "CROSS-EXAMINATION ONLY — does not affect main analysis",
+                    "purpose": "CROSS-EXAMINATION ONLY â€” does not affect main analysis",
                     "disclaimer": "Rule-based questions derived from case facts. Review with legal counsel before use in court.",
                     "phi2_note": result.get('reason', result.get('error', 'Phi-2 not available'))
                 }
@@ -17624,7 +17624,7 @@ async def generate_cross_examination(request: CrossExaminationRequest):
             "summary": result.get('summary', {}),
             "question_count": result.get('question_count', len(result.get('questions', []))),
             "model": result.get('model', 'microsoft/phi-2 (local)'),
-            "purpose": "CROSS-EXAMINATION ONLY — does not affect main analysis",
+            "purpose": "CROSS-EXAMINATION ONLY â€” does not affect main analysis",
             "disclaimer": result.get('disclaimer', 'AI-generated questions for reference only. Review with legal counsel before use in court.')
         }
 
@@ -17673,7 +17673,7 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
             e for e in _sanity.get('errors', []) if e.get('check') in _SOFT_CHECKS
         ]
         if _hard_errors:
-            logger.warning(f"⚠️ INPUT SANITY HARD STOP: {len(_hard_errors)} impossible input(s)")
+            logger.warning(f"âš ï¸ INPUT SANITY HARD STOP: {len(_hard_errors)} impossible input(s)")
             return {
                 "success": False,
                 "error": "Input sanity check failed",
@@ -17687,7 +17687,7 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
             }
 
         if _soft_warnings:
-            logger.info(f"ℹ️ Input sanity: {len(_soft_warnings)} soft warning(s) — proceeding")
+            logger.info(f"â„¹ï¸ Input sanity: {len(_soft_warnings)} soft warning(s) â€” proceeding")
 
         case_data['_sanity_check'] = _sanity
 
@@ -17699,7 +17699,7 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
 
 
         if not is_valid:
-            logger.warning(f"⚠️ VALIDATION FAILED: {validation_errors}")
+            logger.warning(f"âš ï¸ VALIDATION FAILED: {validation_errors}")
             return {
                 "success": False,
                 "error": "Input validation failed",
@@ -17711,7 +17711,7 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
 
         input_warnings = sanitized_data.pop('_warnings', [])
         if input_warnings:
-            logger.info(f"ℹ️ Proceeding with {len(input_warnings)} input warning(s)")
+            logger.info(f"â„¹ï¸ Proceeding with {len(input_warnings)} input warning(s)")
 
         case_data = sanitized_data
 
@@ -17722,7 +17722,7 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
 
         if analysis.get('error'):
             error_msg = analysis.get('error_message') or analysis.get('error') or 'Unknown error'
-            logger.error(f"❌ Analysis failed: {error_msg}")
+            logger.error(f"âŒ Analysis failed: {error_msg}")
             if analysis.get('error_traceback'):
                 logger.error(f"Traceback: {analysis.get('error_traceback')}")
             return {
@@ -17811,7 +17811,7 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
         analysis.setdefault('fraud_signals',      _am.get('fraud_signals', {}))
         analysis.setdefault('notice_delivery',    _am.get('notice_delivery_status', {}))
         analysis.setdefault('jurisdiction',       _am.get('territorial_jurisdiction', {}))
-        analysis.setdefault('section_65b',        _am.get('section_65b_compliance', {}))
+        analysis.setdefault('section_63',        _am.get('section_63_compliance', {}))
         analysis.setdefault('director_liability', _am.get('director_role_analysis', {}))
         analysis.setdefault('overall_score',
             _am.get('risk_assessment', {}).get('final_score', 0) or
@@ -17962,7 +17962,7 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
         }
 
     except Exception as e:
-        logger.error(f"❌ CRITICAL ERROR: {e}")
+        logger.error(f"âŒ CRITICAL ERROR: {e}")
         import traceback
         traceback.print_exc()
 
@@ -17975,7 +17975,7 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
             "partial_result": {
                 "overall_score": 0,
                 "fatal_flag": True,
-                "filing_status": "ANALYSIS ERROR — retry or check inputs",
+                "filing_status": "ANALYSIS ERROR â€” retry or check inputs",
             },
             "audit_trail": audit.get_trail() if 'audit' in locals() else {},
         }
@@ -18315,7 +18315,7 @@ def _ensure_pyngrok():
 
 
 def setup_ngrok() -> Optional[str]:
-    """Ngrok not needed on Render — Render provides public URL automatically."""
+    """Ngrok not needed on Render â€” Render provides public URL automatically."""
     return None
 
 
@@ -18366,7 +18366,7 @@ def _load_db_admins():
                 }
         conn.close()
         loaded = len(ADMIN_CREDENTIALS)
-        logger.info(f"✅ Loaded {loaded} admin account(s) into memory")
+        logger.info(f"âœ… Loaded {loaded} admin account(s) into memory")
     except Exception as e:
         logger.warning(f"Could not load DB admins: {e}")
 
@@ -18434,7 +18434,7 @@ def init_admin_tables():
         # ENSURE default super-admin exists in database
         cursor.execute("SELECT email FROM admin_accounts WHERE email = ?", ("admin@judiq.com",))
         if not cursor.fetchone():
-            logger.info("🔧 Creating default super-admin in database...")
+            logger.info("ðŸ”§ Creating default super-admin in database...")
             cursor.execute("""
                 INSERT INTO admin_accounts (email, name, role, password_hash, created_by)
                 VALUES (?, ?, ?, ?, ?)
@@ -18445,15 +18445,15 @@ def init_admin_tables():
                 "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",  # password = "password"
                 "SYSTEM"
             ))
-            logger.info("✅ Default super-admin created: admin@judiq.com / password")
+            logger.info("âœ… Default super-admin created: admin@judiq.com / password")
 
         conn.commit()
         conn.close()
-        logger.info("✅ Admin tables initialized")
+        logger.info("âœ… Admin tables initialized")
         _load_db_admins()
         return True
     except Exception as e:
-        logger.error(f"❌ Error initializing admin tables: {e}")
+        logger.error(f"âŒ Error initializing admin tables: {e}")
         return False
 
 
@@ -18530,12 +18530,12 @@ def check_daily_limit(user_email: str) -> Tuple[bool, int]:
         count = cursor.fetchone()[0]
         conn.close()
 
-        logger.info(f"📊 Daily limit check for {user_email}: {count}/{DAILY_LIMIT} used today")
+        logger.info(f"ðŸ“Š Daily limit check for {user_email}: {count}/{DAILY_LIMIT} used today")
 
         return count < DAILY_LIMIT, count
 
     except Exception as e:
-        logger.error(f"❌ Error checking daily limit: {e}")
+        logger.error(f"âŒ Error checking daily limit: {e}")
         return True, 0
 
 
@@ -18566,11 +18566,11 @@ def check_draft_limit(user_email: str) -> Tuple[bool, int]:
         count = cursor.fetchone()[0]
         conn.close()
 
-        logger.info(f"📋 Draft limit check for {user_email}: {count}/{DRAFT_LIMIT} used today")
+        logger.info(f"ðŸ“‹ Draft limit check for {user_email}: {count}/{DRAFT_LIMIT} used today")
         return count < DRAFT_LIMIT, count
 
     except Exception as e:
-        logger.error(f"❌ Error checking draft limit: {e}")
+        logger.error(f"âŒ Error checking draft limit: {e}")
         return True, 0
 
 
@@ -18594,11 +18594,11 @@ def log_draft_usage(user_email: str, case_id: str = None, draft_type: str = 'com
 
         conn.commit()
         conn.close()
-        logger.info(f"✅ Draft usage logged for {user_email} (type={draft_type})")
+        logger.info(f"âœ… Draft usage logged for {user_email} (type={draft_type})")
         return True
 
     except Exception as e:
-        logger.error(f"❌ Error logging draft usage: {e}")
+        logger.error(f"âŒ Error logging draft usage: {e}")
         return False
 
 
@@ -18714,14 +18714,14 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
     if not case_data.get("written_agreement_exists") and case_type == "complainant":
         suggestions["high"].append({
             "id": "SG-H01",
-            "title": "No Written Agreement — High Acquittal Risk",
+            "title": "No Written Agreement â€” High Acquittal Risk",
             "detail": (
                 "Absence of a written loan/transaction agreement allows the accused to challenge "
                 "the very existence of the legally enforceable debt. Courts regularly acquit "
                 "when complainants cannot prove the underlying liability."
             ),
             "action": "Gather any WhatsApp messages, emails, ledger entries, bank transfer records, or witness testimony that establishes the debt.",
-            "section": "Section 138 NI Act — legally enforceable debt requirement"
+            "section": "Section 138 NI Act â€” legally enforceable debt requirement"
         })
 
     doc_score = float(doc.get("documentary_strength_score") or doc.get("compliance_score") or 0)
@@ -18761,7 +18761,7 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
                 "When the accused is a company, Section 141 requires specific averments against "
                 "each director/officer who was responsible for the conduct of the company. "
                 "Without these averments the directors cannot be convicted and only the company "
-                "entity faces liability — making execution of any order practically impossible."
+                "entity faces liability â€” making execution of any order practically impossible."
             ),
             "action": "Implead all responsible directors with specific averments about their role at the time of cheque issuance.",
             "section": "Section 141 NI Act"
@@ -18770,9 +18770,9 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
     if case_data.get("debt_nature") == "cash" and float(case_data.get("cheque_amount", 0)) > 200000:
         suggestions["high"].append({
             "id": "SG-H05",
-            "title": "Cash Transaction Over ₹2 Lakh — Section 269SS Risk",
+            "title": "Cash Transaction Over â‚¹2 Lakh â€” Section 269SS Risk",
             "detail": (
-                "Loans or deposits of ₹20,000 or more in cash are prohibited under Section 269SS "
+                "Loans or deposits of â‚¹20,000 or more in cash are prohibited under Section 269SS "
                 "of the Income Tax Act. Defence will argue the transaction was illegal and therefore "
                 "the cheque cannot be towards a legally enforceable debt."
             ),
@@ -18790,7 +18790,7 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
                 "Without it, the complainant cannot prove the foundational ingredient of the offence."
             ),
             "action": "Obtain a certified copy of the dishonour memo / return memo from the presenting bank.",
-            "section": "Section 138 NI Act — dishonour requirement"
+            "section": "Section 138 NI Act â€” dishonour requirement"
         })
 
     ingred_score = float(ingred.get("overall_score") or ingred.get("compliance_score") or 0)
@@ -18816,7 +18816,7 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
                 "The complaint must be filed within one calendar month of the cause of action. "
                 "The current limitation risk is HIGH. Any delay may make the case time-barred."
             ),
-            "action": "File the complaint immediately. Do not wait for further evidence — file and supplement.",
+            "action": "File the complaint immediately. Do not wait for further evidence â€” file and supplement.",
             "section": "Section 142 NI Act"
         })
 
@@ -18830,7 +18830,7 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
                 "Prepare counter-evidence for each."
             ),
             "action": "Prepare affidavit-in-evidence and documentary rebuttal for each identified defence ground.",
-            "section": "Section 139 NI Act — presumption as rebuttal tool"
+            "section": "Section 139 NI Act â€” presumption as rebuttal tool"
         })
 
     for gap in draft_c.get("critical_gaps", []):
@@ -18848,11 +18848,11 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
             "id": "SG-L01",
             "title": "ITR Availability Unconfirmed for Large Amount",
             "detail": (
-                "For amounts above ₹5 lakh, courts commonly probe the complainant's financial capacity "
+                "For amounts above â‚¹5 lakh, courts commonly probe the complainant's financial capacity "
                 "to have advanced the loan. Defence may question the source of funds."
             ),
             "action": "Keep ITR copies for the relevant years readily available for examination.",
-            "section": "Evidence Act — financial capacity"
+            "section": "Evidence Act â€” financial capacity"
         })
 
     if not case_data.get("case_summary") or len(str(case_data.get("case_summary", ""))) < 50:
@@ -18885,9 +18885,9 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
         "auto_draft_eligible": auto_draft_eligible,
         "score": score,
         "overall_recommendation": (
-            "DO NOT FILE — Fatal defects present. Address critical items first." if is_fatal else
-            "READY TO FILE — No critical issues detected." if filing_ready else
-            f"NEEDS ATTENTION — {critical_count} critical and {len(suggestions['high'])} high-priority items require action before filing."
+            "DO NOT FILE â€” Fatal defects present. Address critical items first." if is_fatal else
+            "READY TO FILE â€” No critical issues detected." if filing_ready else
+            f"NEEDS ATTENTION â€” {critical_count} critical and {len(suggestions['high'])} high-priority items require action before filing."
         )
     }
 
@@ -18959,7 +18959,7 @@ async def suggest(request: Request):
 async def auto_draft(request: Request):
     """
     Analyse case data, generate smart suggestions, and immediately produce
-    a tailored Section 138 complaint draft — all in one call.
+    a tailored Section 138 complaint draft â€” all in one call.
 
     Daily limit: 3 drafts per user (shared with /generate-draft).
 
@@ -18967,8 +18967,8 @@ async def auto_draft(request: Request):
       {
         "user_email":  "lawyer@example.com",
         "case_data":   { <full CaseAnalysisRequest fields> },
-        "case_id":     "<optional — links to existing analysis>",
-        "analysis":    <optional — pre-computed analysis result>
+        "case_id":     "<optional â€” links to existing analysis>",
+        "analysis":    <optional â€” pre-computed analysis result>
       }
 
     Returns:
@@ -19368,7 +19368,7 @@ async def generate_draft(request: Request):
 
     Body fields:
       - user_email: str  (required for limit tracking)
-      - case_id:    str  (optional — links draft to an existing analysis)
+      - case_id:    str  (optional â€” links draft to an existing analysis)
       - case_data:  dict (case facts used to populate the draft)
       - draft_type: str  (default: 'complaint')
 
@@ -19570,7 +19570,7 @@ async def create_admin_account(request: Request):
         role       = data.get('role', 'admin')
 
         if not verify_admin(auth_email, auth_pw):
-            return {'success': False, 'error': 'Unauthorized — invalid authorizer credentials'}
+            return {'success': False, 'error': 'Unauthorized â€” invalid authorizer credentials'}
 
         if ADMIN_CREDENTIALS.get(auth_email, {}).get('role') != 'super_admin':
             return {'success': False, 'error': 'Only super_admin can create new admin accounts'}
@@ -19680,7 +19680,7 @@ async def admin_create_account(request: Request):
                 }
         else:
             # Firebase verified - allow registration
-            logger.info(f"✅ Firebase-verified registration request from {auth_email}")
+            logger.info(f"âœ… Firebase-verified registration request from {auth_email}")
         
         # New admin details (matching frontend field names)
         new_email = data.get('new_email', '').strip().lower()
@@ -19728,7 +19728,7 @@ async def admin_create_account_open(request: Request):
     try:
         data = await request.json()
         
-        logger.info("⚠️ Open admin registration attempt")
+        logger.info("âš ï¸ Open admin registration attempt")
         
         # New admin details
         new_email = data.get('new_email', '').strip().lower()
@@ -19791,7 +19791,7 @@ async def admin_create_account_open(request: Request):
         # Log the action
         log_admin_action(auth_email, "REGISTER_ADMIN", new_email, f"Registered new {new_role}: {new_name}")
         
-        logger.info(f"✅ New admin registered: {new_email} ({new_role}) by {auth_email}")
+        logger.info(f"âœ… New admin registered: {new_email} ({new_role}) by {auth_email}")
         
         return {
             'success': True,
@@ -19817,7 +19817,7 @@ async def admin_create_account_open(request: Request):
     try:
         data = await request.json()
         
-        logger.warning("⚠️ OPEN admin registration attempt - this endpoint should be disabled after setup!")
+        logger.warning("âš ï¸ OPEN admin registration attempt - this endpoint should be disabled after setup!")
         
         # New admin details
         new_email = data.get('new_email', '').strip().lower()
@@ -19880,8 +19880,8 @@ async def admin_create_account_open(request: Request):
         # Log the action
         log_admin_action('SYSTEM', "OPEN_REGISTRATION", new_email, f"Registered via open endpoint: {new_name} ({new_role})")
         
-        logger.info(f"✅ Admin registered via OPEN endpoint: {new_email} ({new_role})")
-        logger.warning("🚨 Remember to disable /admin/create-account-open endpoint after setup!")
+        logger.info(f"âœ… Admin registered via OPEN endpoint: {new_email} ({new_role})")
+        logger.warning("ðŸš¨ Remember to disable /admin/create-account-open endpoint after setup!")
         
         return {
             'success': True,
@@ -21240,7 +21240,7 @@ def predict_case_outcome(case_strength: Dict, defence_analysis: Dict, case_data:
     best_case = {
         'scenario': 'Complete Victory',
         'probability': min(success_probability + 10, 95),
-        'outcome': f'Full recovery of ₹{indian_number_format(amount)}',
+        'outcome': f'Full recovery of â‚¹{indian_number_format(amount)}',
         'additional_benefits': [
             'Conviction of accused under Section 138',
             'Compensation @ 2x cheque amount',
@@ -21256,7 +21256,7 @@ def predict_case_outcome(case_strength: Dict, defence_analysis: Dict, case_data:
         'probability': failure_prob,
         'outcome': 'No recovery, accused acquitted',
         'consequences': [
-            'Legal costs wasted (₹50,000 - ₹2,00,000)',
+            'Legal costs wasted (â‚¹50,000 - â‚¹2,00,000)',
             'Time and effort lost',
             'Possible costs awarded against complainant',
             'Reputational impact'
@@ -21269,7 +21269,7 @@ def predict_case_outcome(case_strength: Dict, defence_analysis: Dict, case_data:
         most_likely = {
             'scenario': 'Conviction with Recovery',
             'probability': success_probability,
-            'outcome': f'Recovery of ₹{indian_number_format(amount * 0.8)} to ₹{indian_number_format(amount)}',
+            'outcome': f'Recovery of â‚¹{indian_number_format(amount * 0.8)} to â‚¹{indian_number_format(amount)}',
             'details': 'Conviction likely, full or substantial recovery expected',
             'timeline': '18-30 months'
         }
@@ -21277,7 +21277,7 @@ def predict_case_outcome(case_strength: Dict, defence_analysis: Dict, case_data:
         most_likely = {
             'scenario': 'Settlement During Trial',
             'probability': 60,
-            'outcome': f'Settlement for ₹{indian_number_format(amount * 0.5)} to ₹{indian_number_format(amount * 0.7)}',
+            'outcome': f'Settlement for â‚¹{indian_number_format(amount * 0.5)} to â‚¹{indian_number_format(amount * 0.7)}',
             'details': 'Case proceeds to trial, defendant settles to avoid conviction',
             'timeline': '12-18 months'
         }
@@ -21395,17 +21395,17 @@ def analyze_time_and_cost(case_data: Dict, case_strength: Dict) -> Dict:
         },
         'stage_wise_timeline': stages,
         'legal_costs': {
-            'lawyer_fees_range': f'₹{indian_number_format(lawyer_fees[0])} - ₹{indian_number_format(lawyer_fees[1])}',
-            'court_fees': f'₹{indian_number_format(court_fees)}',
-            'miscellaneous': f'₹{indian_number_format(misc_costs)}',
-            'total_estimated_min': f'₹{indian_number_format(total_cost_min)}',
-            'total_estimated_max': f'₹{indian_number_format(total_cost_max)}'
+            'lawyer_fees_range': f'â‚¹{indian_number_format(lawyer_fees[0])} - â‚¹{indian_number_format(lawyer_fees[1])}',
+            'court_fees': f'â‚¹{indian_number_format(court_fees)}',
+            'miscellaneous': f'â‚¹{indian_number_format(misc_costs)}',
+            'total_estimated_min': f'â‚¹{indian_number_format(total_cost_min)}',
+            'total_estimated_max': f'â‚¹{indian_number_format(total_cost_max)}'
         },
         'cost_vs_recovery': {
-            'claim_amount': f'₹{indian_number_format(amount)}',
-            'estimated_costs': f'₹{indian_number_format(total_cost_max)}',
+            'claim_amount': f'â‚¹{indian_number_format(amount)}',
+            'estimated_costs': f'â‚¹{indian_number_format(total_cost_max)}',
             'cost_percentage': f'{cost_benefit_ratio:.1f}%',
-            'net_recovery_min': f'₹{indian_number_format(max(0, amount - total_cost_max))}',
+            'net_recovery_min': f'â‚¹{indian_number_format(max(0, amount - total_cost_max))}',
             'viability': viability,
             'recommendation': recommendation
         }
@@ -21507,7 +21507,7 @@ def analyze_recovery_intelligence(case_data: Dict, case_strength: Dict, outcome_
         'recovery_probability': recovery_score,
         'recovery_level': recovery_level,
         'recovery_confidence': recovery_confidence,
-        'expected_recovery_amount': f'₹{indian_number_format(expected_recovery)}',
+        'expected_recovery_amount': f'â‚¹{indian_number_format(expected_recovery)}',
         'expected_recovery_percentage': f'{expected_recovery_pct * 100:.0f}%',
         'worth_filing': worth_filing,
         'filing_decision': decision_reason,
@@ -21651,7 +21651,7 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
     case_info_data = [
         ['Case ID:', analysis.get('case_id', 'N/A')],
         ['Analysis Date:', datetime.now().strftime('%d %B %Y')],
-        ['Cheque Amount:', f"₹{indian_number_format(case_data.get('cheque_amount', 0))}"],
+        ['Cheque Amount:', f"â‚¹{indian_number_format(case_data.get('cheque_amount', 0))}"],
         ['Cheque Date:', case_data.get('cheque_date', 'N/A')],
         ['Dishonour Date:', case_data.get('dishonour_date', 'N/A')]
     ]
@@ -21700,7 +21700,7 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
     # ===== ACTIONABLE SUGGESTIONS SECTION (NEW) =====
     suggestions = analysis.get('actionable_suggestions', {})
     if suggestions:
-        story.append(Paragraph("📋 NEXT ACTIONS - WHAT YOU SHOULD DO NOW", styles['Heading1']))
+        story.append(Paragraph("ðŸ“‹ NEXT ACTIONS - WHAT YOU SHOULD DO NOW", styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Overall Recommendation
@@ -21720,7 +21720,7 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
         # HIGH PRIORITY
         high_priority = suggestions.get('high_priority', [])
         if high_priority:
-            story.append(Paragraph("<b>🔴 HIGH PRIORITY (Do Within 2-3 Days)</b>", styles['Heading2']))
+            story.append(Paragraph("<b>ðŸ”´ HIGH PRIORITY (Do Within 2-3 Days)</b>", styles['Heading2']))
             
             for idx, item in enumerate(high_priority, 1):
                 # Item title
@@ -21748,7 +21748,7 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
         # MEDIUM PRIORITY
         medium_priority = suggestions.get('medium_priority', [])
         if medium_priority:
-            story.append(Paragraph("<b>🟠 MEDIUM PRIORITY (Within 5-7 Days)</b>", styles['Heading2']))
+            story.append(Paragraph("<b>ðŸŸ  MEDIUM PRIORITY (Within 5-7 Days)</b>", styles['Heading2']))
             
             for idx, item in enumerate(medium_priority, 1):
                 item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
@@ -21773,7 +21773,7 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
         # LOW PRIORITY
         low_priority = suggestions.get('low_priority', [])
         if low_priority:
-            story.append(Paragraph("<b>🟡 LOW PRIORITY / OPTIONAL</b>", styles['Heading2']))
+            story.append(Paragraph("<b>ðŸŸ¡ LOW PRIORITY / OPTIONAL</b>", styles['Heading2']))
             
             for idx, item in enumerate(low_priority, 1):
                 item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
@@ -21797,7 +21797,7 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
         # Timeline
         timeline = suggestions.get('next_steps_timeline', '')
         if timeline:
-            story.append(Paragraph("<b>⏰ RECOMMENDED TIMELINE</b>", styles['Heading2']))
+            story.append(Paragraph("<b>â° RECOMMENDED TIMELINE</b>", styles['Heading2']))
             story.append(Paragraph(timeline.replace('\n', '<br/>'), styles['BodyText']))
             story.append(Spacer(1, 20))
     
@@ -21911,7 +21911,7 @@ def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
     
     # Overall Recommendation
     report_text += "=" * 80 + "\n"
-    report_text += "📋 NEXT ACTIONS - WHAT YOU SHOULD DO NOW\n"
+    report_text += "ðŸ“‹ NEXT ACTIONS - WHAT YOU SHOULD DO NOW\n"
     report_text += "=" * 80 + "\n\n"
     
     report_text += "OVERALL RECOMMENDATION\n"
@@ -21923,7 +21923,7 @@ def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
     report_text += suggestions.get('risk_summary', 'Risk level: Unknown') + "\n\n"
     
     # High Priority
-    report_text += "🔴 HIGH PRIORITY (Do Within 2-3 Days)\n"
+    report_text += "ðŸ”´ HIGH PRIORITY (Do Within 2-3 Days)\n"
     report_text += "-" * 40 + "\n"
     for i, item in enumerate(suggestions.get('high_priority', []), 1):
         report_text += f"\n{i}. {item.get('title', 'Action')}\n"
@@ -21935,7 +21935,7 @@ def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
         report_text += f"   Deadline: {item.get('deadline', '')}\n"
     
     # Medium Priority
-    report_text += "\n\n🟠 MEDIUM PRIORITY (Within 5-7 Days)\n"
+    report_text += "\n\nðŸŸ  MEDIUM PRIORITY (Within 5-7 Days)\n"
     report_text += "-" * 40 + "\n"
     for i, item in enumerate(suggestions.get('medium_priority', []), 1):
         report_text += f"\n{i}. {item.get('title', 'Action')}\n"
@@ -21947,7 +21947,7 @@ def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
         report_text += f"   Deadline: {item.get('deadline', '')}\n"
     
     # Low Priority
-    report_text += "\n\n🟡 LOW PRIORITY / OPTIONAL\n"
+    report_text += "\n\nðŸŸ¡ LOW PRIORITY / OPTIONAL\n"
     report_text += "-" * 40 + "\n"
     for i, item in enumerate(suggestions.get('low_priority', []), 1):
         report_text += f"\n{i}. {item.get('title', 'Action')}\n"
@@ -21958,7 +21958,7 @@ def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
         report_text += f"   Timeline: {item.get('deadline', '')}\n"
     
     # Timeline
-    report_text += "\n\n⏰ RECOMMENDED TIMELINE\n"
+    report_text += "\n\nâ° RECOMMENDED TIMELINE\n"
     report_text += "-" * 40 + "\n"
     report_text += suggestions.get('next_steps_timeline', 'No timeline available') + "\n"
     report_text += "\n" + "=" * 80 + "\n"
@@ -21990,7 +21990,7 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
     # ============ OVERALL RECOMMENDATION LOGIC ============
     if fatal_defects and len(fatal_defects) > 0:
         suggestions['overall_recommendation'] = (
-            f"⛔ CRITICAL FATAL DEFECTS - DISMISSAL RISK 100%\n"
+            f"â›” CRITICAL FATAL DEFECTS - DISMISSAL RISK 100%\n"
             f"Current score: {score:.1f}/100 (NON-MAINTAINABLE)\n"
             f"The case contains fatal statutory defects that will lead to an immediate dismissal.\n"
             f"Senior Counsel Advice: Do NOT file in current state. Address fatal defects first."
@@ -21998,7 +21998,7 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
         suggestions['risk_summary'] = "TERMINAL - Case is legally non-maintainable in its current form"
     elif score < 40:
         suggestions['overall_recommendation'] = (
-            f"❌ HIGH RISK - STRATEGIC VULNERABILITY DETECTED\n"
+            f"âŒ HIGH RISK - STRATEGIC VULNERABILITY DETECTED\n"
             f"Current score: {score:.1f}/100 (WEAK COMPLIANCE)\n"
             f"The evidentiary foundation is insufficient to survive a targeted defense rebuttal.\n"
             f"Senior Counsel Advice: Pivot to settlement or cure documentary gaps before litigation."
@@ -22006,7 +22006,7 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
         suggestions['risk_summary'] = "CRITICAL - High probability of defense-led dismissal or acquittal"
     elif score < 70:
         suggestions['overall_recommendation'] = (
-            f"⚠️ MODERATE MERIT - EVIDENTIARY REFINEMENT REQUIRED\n"
+            f"âš ï¸ MODERATE MERIT - EVIDENTIARY REFINEMENT REQUIRED\n"
             f"Current score: {score:.1f}/100 ({strength_rating})\n"
             f"The case has statutory standing but lacks a 'knockout' evidentiary trail.\n"
             f"Senior Counsel Advice: Strengthen liability documentation to prevent rebuttal of S.139 presumption."
@@ -22014,7 +22014,7 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
         suggestions['risk_summary'] = "EVIDENTIARY - Outcome depends on successful cross-examination and document curation"
     else:
         suggestions['overall_recommendation'] = (
-            f"✅ STRONG STATUTORY MERIT - READY FOR FILING\n"
+            f"âœ… STRONG STATUTORY MERIT - READY FOR FILING\n"
             f"Current score: {score:.1f}/100 ({strength_rating})\n"
             f"Comprehensive compliance detected across all 13 intelligence modules.\n"
             f"Senior Counsel Advice: Proceed with filing; apply for S.143A interim compensation immediately."
@@ -22125,7 +22125,7 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
             "title": "Evaluate Negotiated Settlement (S.147)",
             "action": "Initiate pre-litigation compounding discussions",
             "steps": [
-                f"Propose resolution at 80-90% of principal amount (₹{analysis.get('case_data', {}).get('cheque_amount', 0):,.2f})",
+                f"Propose resolution at 80-90% of principal amount (â‚¹{analysis.get('case_data', {}).get('cheque_amount', 0):,.2f})",
                 "Structure payment schedule with enforceable post-dated cheques",
                 "Issue a 'Without Prejudice' offer to protect litigation standing",
                 "Document any refusal to settle for use in 'Judicial Discretion' arguments"
@@ -22156,7 +22156,7 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
             "title": "Narrative Harmonization",
             "action": "Audit complaint draft for consistency",
             "steps": [
-                "Verify chronological flow: Debt → Issuance → Presentation → Dishonour → Notice",
+                "Verify chronological flow: Debt â†’ Issuance â†’ Presentation â†’ Dishonour â†’ Notice",
                 "Ensure zero variance between 'Legal Notice' and 'Complaint' facts",
                 "Cross-check all date entries against physical documentary evidence",
                 "Draft specific 'Prayer' for double-cheque amount as compensation/fine"
@@ -22206,12 +22206,13 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
     
     suggestions['next_steps_timeline'] = timeline
     
-    logger.info("✅ Actionable suggestions generated successfully")
+    logger.info("âœ… Actionable suggestions generated successfully")
     return suggestions
 
 
 def generate_simple_suggestions(analysis: Dict) -> list:
-    """Premium 3-4 line senior-advocate style suggestions"""
+    """PREMIUM 4-LINE SENIOR ADVOCATE STRATEGIC ROADMAP"""
+    
     # Get score - try multiple keys for compatibility
     res = analysis.get('_result', {})
     score = analysis.get('final_score') or res.get('overall_score') or analysis.get('case_strength_score', {}).get('overall_score', 60)
@@ -22235,7 +22236,8 @@ def generate_simple_suggestions(analysis: Dict) -> list:
         suggestions.append("🔍 STRENGTHEN EVIDENCE: Merit is moderate. Secure a 'Written Acknowledgment of Debt' before filing to prevent the accused from rebutting the presumption.")
 
     # Line 2: Documentary Focus (Authoritative)
-    if any("agreement" in str(w).lower() for w in weaknesses) or not analysis.get('case_data', {}).get('written_agreement_exists'):
+    has_agreement_issue = any("agreement" in str(w).lower() for w in weaknesses) or not analysis.get('case_data', {}).get('written_agreement_exists')
+    if has_agreement_issue:
         suggestions.append("📜 CRITICAL GAP: Missing written agreement. Bridge this by mapping bank fund-flows and securing witness affidavits before the trial begins.")
     else:
         suggestions.append("📱 DIGITAL PROOF: Ensure all WhatsApp/Email trails are certified under Section 63 of Bharatiya Sakshya Adhiniyam (BSA) to ensure admissibility.")
@@ -22250,7 +22252,6 @@ def generate_simple_suggestions(analysis: Dict) -> list:
     suggestions.append("🕒 STATUTORY OVERWATCH: Continuously monitor the 30-day filing window. A single day's delay can be fatal unless a strong Condonation of Delay is drafted.")
     
     return suggestions[:4]
-
 
 def run_enhanced_analysis(case_data: Dict) -> Dict:
     """
@@ -22359,51 +22360,23 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
         'recovery_intelligence': RECOVERY_INTELLIGENCE
     }
     
-    # === FINAL WRAPPER & SAFETY CHECKS ===
-    
-    # Calculate Final Score properly for simple suggestions
-    final_score = enhanced_analysis.get('case_strength_score', {}).get('overall_score', 60)
-    enhanced_analysis['final_score'] = final_score
-    
-    # Detect Fatal Defects for status contradiction fix
-    fatal_defects = enhanced_analysis.get('case_strength_score', {}).get('fatal_defects', [])
-    if not fatal_defects:
-        fatal_defects = enhanced_analysis.get('modules', {}).get('procedural_defects', {}).get('fatal_defects', [])
-    
-    # Set explicit flags for frontend (FIX for status box contradiction)
-    is_fatal = len(fatal_defects) > 0
-    enhanced_analysis['is_fatal'] = is_fatal
-    enhanced_analysis['fatal_flag'] = is_fatal
-    enhanced_analysis['fatal_defects_count'] = len(fatal_defects)
-    
-    # Inject into Result child too
-    if '_result' not in enhanced_analysis:
-        enhanced_analysis['_result'] = {}
-    enhanced_analysis['_result']['is_fatal'] = is_fatal
-    enhanced_analysis['_result']['fatal_defects_count'] = len(fatal_defects)
-    enhanced_analysis['_result']['overall_score'] = final_score
+    # === FATAL OVERRIDE (NON-NEGOTIABLE) ===
+    if enhanced_analysis.get('fatal_defects') or enhanced_analysis.get('is_fatal'):
+        enhanced_analysis['final_score'] = min(enhanced_analysis.get('final_score', 63), 25)
+        enhanced_analysis['overall_status'] = "DO NOT FILE"
+        if isinstance(enhanced_analysis.get('executive_summary'), dict):
+            enhanced_analysis['executive_summary']['filing_recommendation'] = "DO NOT FILE — Fatal defect present"
 
-    # Generate Executive Summary
-    enhanced_analysis['executive_summary'] = generate_executive_summary(enhanced_analysis)
-    
-    # Generate Actionable Suggestions (NEW)
-    logger.info("Generating actionable next steps...")
-    enhanced_analysis['actionable_suggestions'] = generate_actionable_suggestions(enhanced_analysis)
-    enhanced_analysis['case_data'] = case_data  # Include case data for suggestions context
-    
-    # Generate Simple Suggestions (PREMIUM - Senior Advocate Style)
-    logger.info("Generating premium simple suggestions...")
-    
-    # === PREMIUM 3-4 LINE NEXT STEPS (Faculty requested Polish) ===
+    # === PREMIUM 3-4 LINE NEXT STEPS (Faculty requested) ===
     premium_steps = generate_simple_suggestions(enhanced_analysis)
     enhanced_analysis['next_steps'] = premium_steps
     enhanced_analysis['simple_suggestions'] = premium_steps
     
-    # Add to Executive Summary too (top of report)
+    # Mirror to Executive Summary
     if isinstance(enhanced_analysis.get('executive_summary'), dict):
         enhanced_analysis['executive_summary']['next_steps'] = premium_steps
-    
-    # Nuclear final clean (removes legacy next steps automatically)
+
+    # Nuclear final clean (last step — no exceptions)
     enhanced_analysis = final_clean(enhanced_analysis)
     
     logger.info("Enhanced analysis completed successfully")
@@ -22436,7 +22409,7 @@ def generate_executive_summary(analysis: Dict) -> str:
     outcome = analysis.get('outcome_prediction', {})
     success_prob = outcome.get('success_probability', 0)
     
-    summary_lines.append(f"🎯 SUCCESS PROBABILITY: {success_prob}%")
+    summary_lines.append(f"ðŸŽ¯ SUCCESS PROBABILITY: {success_prob}%")
     
     most_likely = outcome.get('most_likely', {})
     summary_lines.append(f"   Most Likely Outcome: {most_likely.get('scenario', 'Unknown')}")
@@ -22447,7 +22420,7 @@ def generate_executive_summary(analysis: Dict) -> str:
     recovery = analysis.get('recovery_intelligence', {})
     recovery_prob = recovery.get('recovery_probability', 0)
     
-    summary_lines.append(f"💰 RECOVERY PROSPECTS: {recovery_prob:.0f}/100 - {recovery.get('recovery_level', 'Unknown')}")
+    summary_lines.append(f"ðŸ’° RECOVERY PROSPECTS: {recovery_prob:.0f}/100 - {recovery.get('recovery_level', 'Unknown')}")
     summary_lines.append(f"   Expected Recovery: {recovery.get('expected_recovery_amount', 'N/A')}")
     summary_lines.append(f"   Worth Filing: {'YES' if recovery.get('worth_filing', False) else 'NO'}")
     summary_lines.append("")
@@ -22456,7 +22429,7 @@ def generate_executive_summary(analysis: Dict) -> str:
     time_cost = analysis.get('time_cost_analysis', {})
     duration = time_cost.get('estimated_duration', {})
     
-    summary_lines.append(f"⏱️  ESTIMATED DURATION: {duration.get('total_months', 'Unknown')} months")
+    summary_lines.append(f"â±ï¸  ESTIMATED DURATION: {duration.get('total_months', 'Unknown')} months")
     
     costs = time_cost.get('legal_costs', {})
     summary_lines.append(f"   Estimated Costs: {costs.get('total_estimated_min', 'N/A')} to {costs.get('total_estimated_max', 'N/A')}")
@@ -22464,7 +22437,7 @@ def generate_executive_summary(analysis: Dict) -> str:
     
     # Strategy
     strategy = analysis.get('filing_strategy', {})
-    summary_lines.append(f"📋 RECOMMENDED STRATEGY: {strategy.get('recommended_approach', 'Unknown')}")
+    summary_lines.append(f"ðŸ“‹ RECOMMENDED STRATEGY: {strategy.get('recommended_approach', 'Unknown')}")
     summary_lines.append(f"   Filing Decision: {strategy.get('filing_decision', 'N/A')}")
     
     settlement = strategy.get('settlement_recommendation', {})
@@ -22479,9 +22452,9 @@ def generate_executive_summary(analysis: Dict) -> str:
     high_risk_defences = defence.get('high_risk_defences', [])
     
     if high_risk_defences:
-        summary_lines.append(f"⚠️  CRITICAL RISKS:")
+        summary_lines.append(f"âš ï¸  CRITICAL RISKS:")
         for defence_type in high_risk_defences:
-            summary_lines.append(f"   • {defence_type}")
+            summary_lines.append(f"   â€¢ {defence_type}")
         summary_lines.append("")
     
     # Document Gaps
@@ -22489,9 +22462,9 @@ def generate_executive_summary(analysis: Dict) -> str:
     critical_gaps = doc_intel.get('critical_gaps', [])
     
     if critical_gaps:
-        summary_lines.append(f"📄 CRITICAL DOCUMENT GAPS:")
+        summary_lines.append(f"ðŸ“„ CRITICAL DOCUMENT GAPS:")
         for gap in critical_gaps:
-            summary_lines.append(f"   • {gap.title()} missing")
+            summary_lines.append(f"   â€¢ {gap.title()} missing")
         summary_lines.append("")
     
     # Final Verdict
@@ -22502,16 +22475,16 @@ def generate_executive_summary(analysis: Dict) -> str:
     is_fatal_case = analysis.get('is_fatal') or analysis.get('fatal_flag') or len(analysis.get('case_strength_score', {}).get('fatal_defects', [])) > 0
     
     if is_fatal_case:
-        verdict = "❌ FATAL DEFECTS - DO NOT FILE"
+        verdict = "âŒ FATAL DEFECTS - DO NOT FILE"
         details = "The case contains terminal statutory defects. Litigation will result in immediate dismissal."
     elif overall_score >= 70 and success_prob >= 60:
-        verdict = "✅ STRONG CASE - PROCEED WITH FILING"
+        verdict = "âœ… STRONG CASE - PROCEED WITH FILING"
         details = "High probability of success. Case is ready for litigation."
     elif overall_score >= 50 and success_prob >= 40:
-        verdict = "⚠️  MODERATE CASE - ATTEMPT SETTLEMENT FIRST"
+        verdict = "âš ï¸  MODERATE CASE - ATTEMPT SETTLEMENT FIRST"
         details = "Reasonable chance of success. Settlement may be prudent."
     else:
-        verdict = "❌ WEAK CASE - HIGH RISK OF FAILURE"
+        verdict = "âŒ WEAK CASE - HIGH RISK OF FAILURE"
         details = "Low probability of success. Avoid litigation or strengthen case significantly."
     
     summary_lines.append(verdict)
@@ -22541,11 +22514,11 @@ def get_usage_analytics() -> Dict:
 
 def format_concise_output(analysis: Dict) -> str:
     lines = []
-    lines.append("═" * 50)
+    lines.append("â•" * 50)
 
     if analysis.get('fatal_flag'):
-        lines.append("🔴 FILING BLOCKED")
-        lines.append("═" * 50)
+        lines.append("ðŸ”´ FILING BLOCKED")
+        lines.append("â•" * 50)
         lines.append(f"Status: {analysis.get('overall_status', 'FATAL')}")
         lines.append(f"Score: {analysis.get('risk_score', 0)}/100")
         lines.append(f"Verdict: {analysis.get('decisive_verdict', 'DO NOT FILE')}")
@@ -22553,38 +22526,38 @@ def format_concise_output(analysis: Dict) -> str:
         lines.append("Fatal Issues:")
 
         if 'LIMITATION' in analysis.get('overall_status', ''):
-            lines.append("• Case time-barred")
+            lines.append("â€¢ Case time-barred")
         if 'DOCUMENT' in analysis.get('overall_status', ''):
-            lines.append("• Critical documents missing")
+            lines.append("â€¢ Critical documents missing")
         if 'DEFENCE' in analysis.get('overall_status', ''):
-            lines.append("• Fatal defence exposure")
+            lines.append("â€¢ Fatal defence exposure")
     else:
         score = analysis.get('modules', {}).get('risk_assessment', {}).get('overall_risk_score', 0)
         lines.append(f"Risk Score: {score}/100")
-        lines.append("═" * 50)
+        lines.append("â•" * 50)
 
         if score >= 75:
-            lines.append("Status: ✅ READY TO FILE")
+            lines.append("Status: âœ… READY TO FILE")
         elif score >= 60:
-            lines.append("Status: ⚠️ GAPS PRESENT")
+            lines.append("Status: âš ï¸ GAPS PRESENT")
         else:
-            lines.append("Status: 🔴 HIGH RISK")
+            lines.append("Status: ðŸ”´ HIGH RISK")
 
         issues = []
         doc_comp = analysis.get('modules', {}).get('document_compliance', {})
         if doc_comp.get('compliance_score', 100) < 80:
-            issues.append("• Document gaps")
+            issues.append("â€¢ Document gaps")
 
         defence = analysis.get('modules', {}).get('defence_risk_analysis', {})
         if len(defence.get('high_risk_defences', [])) > 0:
-            issues.append(f"• {len(defence['high_risk_defences'])} defence risks")
+            issues.append(f"â€¢ {len(defence['high_risk_defences'])} defence risks")
 
         if issues:
             lines.append("")
             lines.append("Key Issues:")
             lines.extend(issues)
 
-    lines.append("═" * 50)
+    lines.append("â•" * 50)
     
     # ===== ADD ACTIONABLE SUGGESTIONS TO TEXT OUTPUT =====
     suggestions = analysis.get('actionable_suggestions', {})
@@ -22592,7 +22565,7 @@ def format_concise_output(analysis: Dict) -> str:
         lines.append("")
         lines.append("")
         lines.append("=" * 80)
-        lines.append("📋 NEXT ACTIONS - WHAT YOU SHOULD DO NOW")
+        lines.append("ðŸ“‹ NEXT ACTIONS - WHAT YOU SHOULD DO NOW")
         lines.append("=" * 80)
         lines.append("")
         
@@ -22615,7 +22588,7 @@ def format_concise_output(analysis: Dict) -> str:
         # HIGH PRIORITY
         high_priority = suggestions.get('high_priority', [])
         if high_priority:
-            lines.append("🔴 HIGH PRIORITY (Do Within 2-3 Days)")
+            lines.append("ðŸ”´ HIGH PRIORITY (Do Within 2-3 Days)")
             lines.append("-" * 40)
             lines.append("")
             
@@ -22636,7 +22609,7 @@ def format_concise_output(analysis: Dict) -> str:
         medium_priority = suggestions.get('medium_priority', [])
         if medium_priority:
             lines.append("")
-            lines.append("🟠 MEDIUM PRIORITY (Within 5-7 Days)")
+            lines.append("ðŸŸ  MEDIUM PRIORITY (Within 5-7 Days)")
             lines.append("-" * 40)
             lines.append("")
             
@@ -22657,7 +22630,7 @@ def format_concise_output(analysis: Dict) -> str:
         low_priority = suggestions.get('low_priority', [])
         if low_priority:
             lines.append("")
-            lines.append("🟡 LOW PRIORITY / OPTIONAL")
+            lines.append("ðŸŸ¡ LOW PRIORITY / OPTIONAL")
             lines.append("-" * 40)
             lines.append("")
             
@@ -22677,7 +22650,7 @@ def format_concise_output(analysis: Dict) -> str:
         timeline = suggestions.get('next_steps_timeline', '')
         if timeline:
             lines.append("")
-            lines.append("⏰ RECOMMENDED TIMELINE")
+            lines.append("â° RECOMMENDED TIMELINE")
             lines.append("-" * 40)
             lines.append(timeline)
             lines.append("")
