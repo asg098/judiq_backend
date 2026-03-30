@@ -10818,6 +10818,9 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             'Reassess viability after remediation'
         ]
 
+    # Generate ChatGPT-style actionable suggestions
+    actionable_suggestions = generate_actionable_suggestions(analysis, case_data)
+    
     report = {
         'report_type': 'Professional Compliance Analysis',
         'report_format': 'Structured 5-Page Brief',
@@ -10826,6 +10829,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
         'page_3_risk_framework': page_3,
         'page_4_strategic_intelligence': page_4,
         'page_5_conclusions': page_5,
+        'actionable_suggestions': actionable_suggestions,
         'metadata': {
             'engine': 'JUDIQ Intelligence Engine',
             'analysis_id': analysis.get('case_id'),
@@ -10833,39 +10837,10 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
         }
     }
     
-    # NEW: Premium Senior-Advocate style actionable suggestions
-    report["actionable_suggestions"] = generate_simple_suggestions(analysis)
-    
     # Apply final clean to entire report
     report = final_clean(report)
     
     return report
-
-def generate_simple_suggestions(analysis: Dict) -> list:
-    """Premium, real, senior-advocate style 3-4 line suggestions"""
-    score = analysis.get('final_score', 63)
-    weaknesses = analysis.get('report', {}).get('executive_summary', {}).get('weaknesses', [])
-    
-    suggestions = []
-    
-    # Line 1 - Always documentary focus (most common weakness)
-    suggestions.append("Immediately collect written agreement and ledger entries to strengthen the legally enforceable debt.")
-    
-    # Line 2 - Section 63
-    suggestions.append("Prepare and file Section 63 certificate for all electronic evidence before proceeding.")
-    
-    # Line 3 - Settlement or Filing decision
-    if score < 70:
-        suggestions.append("Initiate settlement talks with the accused at 75-85% of the cheque amount to avoid long litigation.")
-    else:
-        suggestions.append("File the complaint only after completing all supporting documents.")
-    
-    # Line 4 - Risk reduction (only if needed)
-    if any("written agreement" in str(w).lower() or "document" in str(w).lower() for w in weaknesses):
-        suggestions.append("Fix all documentary gaps before filing to significantly reduce defence risk.")
-    
-    # Maximum 4 lines
-    return suggestions[:4]
 
 
 def generate_executive_report(analysis_data: Dict) -> Dict:
@@ -21702,6 +21677,111 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
     strategy_text = f"Approach: {strategy.get('recommended_approach', 'N/A')}<br/>"
     strategy_text += f"Decision: {strategy.get('filing_decision', 'N/A')}"
     story.append(Paragraph(strategy_text, styles['BodyText']))
+    story.append(Spacer(1, 20))
+    
+    # ===== ACTIONABLE SUGGESTIONS SECTION (NEW) =====
+    suggestions = analysis.get('actionable_suggestions', {})
+    if suggestions:
+        story.append(Paragraph("📋 NEXT ACTIONS - WHAT YOU SHOULD DO NOW", styles['Heading1']))
+        story.append(Spacer(1, 12))
+        
+        # Overall Recommendation
+        overall = suggestions.get('overall_recommendation', '')
+        if overall:
+            story.append(Paragraph("<b>OVERALL RECOMMENDATION</b>", styles['Heading2']))
+            story.append(Paragraph(overall.replace('\n', '<br/>'), styles['BodyText']))
+            story.append(Spacer(1, 12))
+        
+        # Risk Summary
+        risk = suggestions.get('risk_summary', '')
+        if risk:
+            story.append(Paragraph("<b>RISK ASSESSMENT</b>", styles['Heading2']))
+            story.append(Paragraph(risk.replace('\n', '<br/>'), styles['BodyText']))
+            story.append(Spacer(1, 12))
+        
+        # HIGH PRIORITY
+        high_priority = suggestions.get('high_priority', [])
+        if high_priority:
+            story.append(Paragraph("<b>🔴 HIGH PRIORITY (Do Within 2-3 Days)</b>", styles['Heading2']))
+            
+            for idx, item in enumerate(high_priority, 1):
+                # Item title
+                item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
+                story.append(Paragraph(item_title, styles['Heading3']))
+                
+                # Item details
+                item_detail = f"<b>Action:</b> {item.get('action', '')}<br/>"
+                item_detail += f"<b>Deadline:</b> {item.get('deadline', '')}<br/>"
+                item_detail += f"<b>Impact:</b> {item.get('impact', '')}"
+                story.append(Paragraph(item_detail, styles['BodyText']))
+                
+                # Steps
+                steps = item.get('steps', [])
+                if steps:
+                    story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
+                    steps_list = []
+                    for step_idx, step in enumerate(steps, 1):
+                        steps_list.append(f"{step_idx}) {step}")
+                    steps_text = '<br/>'.join(steps_list)
+                    story.append(Paragraph(steps_text, styles['BodyText']))
+                
+                story.append(Spacer(1, 10))
+        
+        # MEDIUM PRIORITY
+        medium_priority = suggestions.get('medium_priority', [])
+        if medium_priority:
+            story.append(Paragraph("<b>🟠 MEDIUM PRIORITY (Within 5-7 Days)</b>", styles['Heading2']))
+            
+            for idx, item in enumerate(medium_priority, 1):
+                item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
+                story.append(Paragraph(item_title, styles['Heading3']))
+                
+                item_detail = f"<b>Action:</b> {item.get('action', '')}<br/>"
+                item_detail += f"<b>Deadline:</b> {item.get('deadline', '')}<br/>"
+                item_detail += f"<b>Impact:</b> {item.get('impact', '')}"
+                story.append(Paragraph(item_detail, styles['BodyText']))
+                
+                steps = item.get('steps', [])
+                if steps:
+                    story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
+                    steps_list = []
+                    for step_idx, step in enumerate(steps, 1):
+                        steps_list.append(f"{step_idx}) {step}")
+                    steps_text = '<br/>'.join(steps_list)
+                    story.append(Paragraph(steps_text, styles['BodyText']))
+                
+                story.append(Spacer(1, 10))
+        
+        # LOW PRIORITY
+        low_priority = suggestions.get('low_priority', [])
+        if low_priority:
+            story.append(Paragraph("<b>🟡 LOW PRIORITY / OPTIONAL</b>", styles['Heading2']))
+            
+            for idx, item in enumerate(low_priority, 1):
+                item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
+                story.append(Paragraph(item_title, styles['Heading3']))
+                
+                item_detail = f"<b>Action:</b> {item.get('action', '')}<br/>"
+                item_detail += f"<b>Timeline:</b> {item.get('deadline', '')}"
+                story.append(Paragraph(item_detail, styles['BodyText']))
+                
+                steps = item.get('steps', [])
+                if steps:
+                    story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
+                    steps_list = []
+                    for step_idx, step in enumerate(steps, 1):
+                        steps_list.append(f"{step_idx}) {step}")
+                    steps_text = '<br/>'.join(steps_list)
+                    story.append(Paragraph(steps_text, styles['BodyText']))
+                
+                story.append(Spacer(1, 10))
+        
+        # Timeline
+        timeline = suggestions.get('next_steps_timeline', '')
+        if timeline:
+            story.append(Paragraph("<b>⏰ RECOMMENDED TIMELINE</b>", styles['Heading2']))
+            story.append(Paragraph(timeline.replace('\n', '<br/>'), styles['BodyText']))
+            story.append(Spacer(1, 20))
     
     # Build PDF
     doc.build(story)
@@ -21804,6 +21884,315 @@ FEEDBACK_SYSTEM = FeedbackSystem()
 # ============================================================================
 # ENHANCED MAIN ANALYSIS FUNCTION
 # ============================================================================
+
+def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
+    """
+    Format actionable suggestions as professional report section
+    """
+    report_text = ""
+    
+    # Overall Recommendation
+    report_text += "=" * 80 + "\n"
+    report_text += "📋 NEXT ACTIONS - WHAT YOU SHOULD DO NOW\n"
+    report_text += "=" * 80 + "\n\n"
+    
+    report_text += "OVERALL RECOMMENDATION\n"
+    report_text += "-" * 40 + "\n"
+    report_text += suggestions.get('overall_recommendation', 'No recommendation') + "\n\n"
+    
+    report_text += "RISK ASSESSMENT\n"
+    report_text += "-" * 40 + "\n"
+    report_text += suggestions.get('risk_summary', 'Risk level: Unknown') + "\n\n"
+    
+    # High Priority
+    report_text += "🔴 HIGH PRIORITY (Do Within 2-3 Days)\n"
+    report_text += "-" * 40 + "\n"
+    for i, item in enumerate(suggestions.get('high_priority', []), 1):
+        report_text += f"\n{i}. {item.get('title', 'Action')}\n"
+        report_text += f"   Action: {item.get('action', '')}\n"
+        report_text += f"   Impact: {item.get('impact', '')}\n"
+        report_text += f"   Steps:\n"
+        for j, step in enumerate(item.get('steps', []), 1):
+            report_text += f"      {j.1}) {step}\n"
+        report_text += f"   Deadline: {item.get('deadline', '')}\n"
+    
+    # Medium Priority
+    report_text += "\n\n🟠 MEDIUM PRIORITY (Within 5-7 Days)\n"
+    report_text += "-" * 40 + "\n"
+    for i, item in enumerate(suggestions.get('medium_priority', []), 1):
+        report_text += f"\n{i}. {item.get('title', 'Action')}\n"
+        report_text += f"   Action: {item.get('action', '')}\n"
+        report_text += f"   Impact: {item.get('impact', '')}\n"
+        report_text += f"   Steps:\n"
+        for j, step in enumerate(item.get('steps', []), 1):
+            report_text += f"      {j}) {step}\n"
+        report_text += f"   Deadline: {item.get('deadline', '')}\n"
+    
+    # Low Priority
+    report_text += "\n\n🟡 LOW PRIORITY / OPTIONAL\n"
+    report_text += "-" * 40 + "\n"
+    for i, item in enumerate(suggestions.get('low_priority', []), 1):
+        report_text += f"\n{i}. {item.get('title', 'Action')}\n"
+        report_text += f"   Action: {item.get('action', '')}\n"
+        report_text += f"   Steps:\n"
+        for j, step in enumerate(item.get('steps', []), 1):
+            report_text += f"      {j}) {step}\n"
+        report_text += f"   Timeline: {item.get('deadline', '')}\n"
+    
+    # Timeline
+    report_text += "\n\n⏰ RECOMMENDED TIMELINE\n"
+    report_text += "-" * 40 + "\n"
+    report_text += suggestions.get('next_steps_timeline', 'No timeline available') + "\n"
+    report_text += "\n" + "=" * 80 + "\n"
+    
+    return report_text
+
+
+def generate_actionable_suggestions(analysis: Dict) -> Dict:
+    """
+    ChatGPT-style clear, numbered, actionable suggestions for lawyer/user.
+    Provides concrete next steps organized by priority.
+    """
+    logger.info("Generating actionable suggestions...")
+    
+    score = analysis.get('case_strength_score', {}).get('overall_score', 63)
+    strength_rating = analysis.get('case_strength_score', {}).get('strength_rating', 'MODERATE')
+    fatal_defects = analysis.get('case_strength_score', {}).get('fatal_defects', [])
+    weaknesses = safe_get(analysis, 'case_strength_score', 'critical_weaknesses', default=[])
+    doc_issues = safe_get(analysis, 'document_intelligence', 'missing_documents', default=[])
+    defence_risks = safe_get(analysis, 'defence_analysis', 'likely_defences', default=[])
+    
+    suggestions = {
+        'overall_recommendation': '',
+        'high_priority': [],
+        'medium_priority': [],
+        'low_priority': [],
+        'risk_summary': '',
+        'next_steps_timeline': ''
+    }
+    
+    # ============ OVERALL RECOMMENDATION LOGIC ============
+    if fatal_defects and len(fatal_defects) > 0:
+        suggestions['overall_recommendation'] = (
+            f"⚠️ DO NOT FILE YET - Critical defects must be fixed first\n"
+            f"Current score: {score:.1f}/100 (CRITICAL)\n"
+            f"Fatal defects: {', '.join(fatal_defects[:3])}\n"
+            f"Action: Fix defects before filing to avoid dismissal"
+        )
+        suggestions['risk_summary'] = "EXTREME - Filing now will likely result in immediate dismissal"
+    elif score < 40:
+        suggestions['overall_recommendation'] = (
+            f"❌ HIGH RISK - Only proceed with extreme caution\n"
+            f"Current score: {score:.1f}/100 (WEAK)\n"
+            f"Filing is possible but success probability is very low\n"
+            f"Recommendation: Fix major weaknesses first or settle"
+        )
+        suggestions['risk_summary'] = "VERY HIGH - Likely dismissal or unfavorable judgment"
+    elif score < 60:
+        suggestions['overall_recommendation'] = (
+            f"⚠️ MODERATE RISK - Proceed with caution\n"
+            f"Current score: {score:.1f}/100 ({strength_rating})\n"
+            f"Strengthen evidence before filing when possible\n"
+            f"Consider settlement options with accused"
+        )
+        suggestions['risk_summary'] = "HIGH - Outcome uncertain; requires good litigation strategy"
+    else:
+        suggestions['overall_recommendation'] = (
+            f"✅ REASONABLE STRENGTH - Ready to proceed\n"
+            f"Current score: {score:.1f}/100 ({strength_rating})\n"
+            f"Documentary evidence is adequate\n"
+            f"File with comprehensive supporting documents"
+        )
+        suggestions['risk_summary'] = "MODERATE - Good chance of favorable judgment if facts are proven"
+    
+    # ============ HIGH PRIORITY ACTIONS ============
+    if fatal_defects and len(fatal_defects) > 0:
+        high_priority_items = [
+            {
+                "priority": 1,
+                "title": "Fix Fatal Defects Immediately",
+                "action": f"Address: {fatal_defects[0]}",
+                "steps": [
+                    "Identify exactly what is wrong (missing document, expired limit, etc.)",
+                    "Take corrective action (collect docs, issue new notice, etc.)",
+                    "Re-evaluate case strength before filing"
+                ],
+                "deadline": "Before filing (within 3-7 days)",
+                "impact": "CRITICAL"
+            }
+        ]
+    else:
+        high_priority_items = [
+            {
+                "priority": 1,
+                "title": "Collect Strongest Documentary Evidence",
+                "action": "Obtain written proof of debt and payment",
+                "steps": [
+                    "Written loan agreement OR acknowledgment of debt",
+                    "Bank statement showing cheque issuance date",
+                    "Dishonour memo from bank (critical)",
+                    "All transaction records and ledger entries"
+                ],
+                "deadline": "Within 2-3 days",
+                "impact": "HIGH"
+            }
+        ]
+        
+        if doc_issues:
+            if any("agreement" in str(d).lower() for d in doc_issues):
+                high_priority_items.append({
+                    "priority": 2,
+                    "title": "Fix Missing Written Agreement",
+                    "action": "Establish debt through alternative evidence",
+                    "steps": [
+                        "Send email/message to accused requesting acknowledgment",
+                        "Collect all WhatsApp/email evidence showing debt discussion",
+                        "Get witness affidavit from person who saw transaction",
+                        "Gather bank statements showing transfer of funds"
+                    ],
+                    "deadline": "Within 3-4 days",
+                    "impact": "HIGH"
+                })
+            
+            if any("notice" in str(d).lower() for d in doc_issues):
+                high_priority_items.append({
+                    "priority": 2,
+                    "title": "Secure Proof of Notice Delivery",
+                    "action": "Get official evidence that notice was delivered",
+                    "steps": [
+                        "Obtain postal AD card or courier tracking receipt",
+                        "Get affidavit of service from process server",
+                        "Collect acknowledgment signature from accused if available",
+                        "Ensure notice date is properly documented"
+                    ],
+                    "deadline": "Within 2 days",
+                    "impact": "HIGH"
+                })
+    
+    suggestions['high_priority'] = high_priority_items
+    
+    # ============ MEDIUM PRIORITY ACTIONS ============
+    medium_priority_items = [
+        {
+            "priority": 1,
+            "title": "Prepare Witness Affidavits",
+            "action": "Get sworn statements from people who know facts",
+            "steps": [
+                "Contact anyone who saw the loan transaction",
+                "Contact anyone aware of the cheque issuance",
+                "Get their written statement (sworn affidavit format)",
+                "Include statement that they saw cheque/payment made"
+            ],
+            "deadline": "Within 5-7 days",
+            "impact": "MEDIUM-HIGH"
+        },
+        {
+            "priority": 2,
+            "title": "File Section 65-B Certificate (if electronic evidence)",
+            "action": "Authenticate digital evidence formally",
+            "steps": [
+                "Identify all electronic evidence (emails, WhatsApp, bank records)",
+                "Apply to bank for Section 65-B certificate",
+                "Get IT admin certificate for digital records",
+                "Attach to complaint as authentic electronic evidence"
+            ],
+            "deadline": "Within 7-10 days",
+            "impact": "MEDIUM"
+        }
+    ]
+    
+    # Add settlement approach if score is moderate
+    if 40 <= score < 65:
+        medium_priority_items.insert(0, {
+            "priority": 0,
+            "title": "Attempt Out-of-Court Settlement",
+            "action": "Contact accused for negotiated resolution",
+            "steps": [
+                f"Send legal notice demanding 80-90% of cheque amount (₹{analysis.get('case_data', {}).get('cheque_amount', 0)})",
+                "Offer 2-3 month instalment plan with post-dated cheques",
+                "Indicate willingness to drop case if settled",
+                "Keep communication formal and documented"
+            ],
+            "deadline": "Within 3-5 days",
+            "impact": "HIGH"
+        })
+    
+    suggestions['medium_priority'] = medium_priority_items
+    
+    # ============ LOW PRIORITY / OPTIONAL ACTIONS ============
+    low_priority_items = [
+        {
+            "priority": 1,
+            "title": "Apply for Interim Compensation (Section 143-A)",
+            "action": "Request early recovery of partial amount",
+            "steps": [
+                "File application under Section 143-A of Negotiable Instruments Act",
+                "Request interim compensation order",
+                "Show proof of genuine loss",
+                "Explain hardship if needed"
+            ],
+            "deadline": "After filing complaint",
+            "impact": "LOW (Optional)"
+        },
+        {
+            "priority": 2,
+            "title": "Prepare Draft Complaint Statement",
+            "action": "Organize narrative for filing",
+            "steps": [
+                "Chronological order: loan details → cheque issuance → presentation → dishonour",
+                "Include all document references",
+                "Clear facts section with dates and amounts",
+                "Prayer for relief with specific amounts"
+            ],
+            "deadline": "Within 5-7 days",
+            "impact": "LOW (Standard)"
+        },
+        {
+            "priority": 3,
+            "title": "Verify Limitation Period",
+            "action": "Confirm you're within filing deadline",
+            "steps": [
+                f"Cheque presentation deadline: within 6 months of cheque date",
+                f"Notice must be before filing complaint",
+                f"Check if limitation is about to expire (file immediately if < 30 days left)",
+                "Prepare expedited filing if needed"
+            ],
+            "deadline": "Ongoing (critical check)",
+            "impact": "LOW (Safety measure)"
+        }
+    ]
+    
+    suggestions['low_priority'] = low_priority_items
+    
+    # ============ TIMELINE SUMMARY ============
+    if fatal_defects and len(fatal_defects) > 0:
+        timeline = (
+            "TODAY/TOMORROW: Fix critical defects\n"
+            "Next 3-4 days: Collect missing documents\n"
+            "Within 7 days: Re-evaluate, then proceed with filing\n"
+            "⚠️ Check limitation period - file within 1 month of 15-day notice period"
+        )
+    elif score < 40:
+        timeline = (
+            "WITHIN 2-3 DAYS: Collect strongest evidence OR attempt settlement\n"
+            "Days 4-7: Prepare witness affidavits\n"
+            "Day 8: Make decision to file or settle\n"
+            "Within 30 days: File if proceeding (after 15-day notice period)"
+        )
+    else:
+        timeline = (
+            "DAYS 1-2: Compile all documentary evidence\n"
+            "DAYS 3-4: Prepare witness statements\n"
+            "DAYS 5-7: File Section 65-B certificates if needed\n"
+            "DAYS 8-14: File notice if not already done\n"
+            "DAYS 29-30: File complaint 15 days after notice"
+        )
+    
+    suggestions['next_steps_timeline'] = timeline
+    
+    logger.info("✅ Actionable suggestions generated successfully")
+    return suggestions
+
 
 def run_enhanced_analysis(case_data: Dict) -> Dict:
     """
@@ -21914,6 +22303,11 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
     
     # Generate Executive Summary
     enhanced_analysis['executive_summary'] = generate_executive_summary(enhanced_analysis)
+    
+    # Generate Actionable Suggestions (NEW)
+    logger.info("Generating actionable next steps...")
+    enhanced_analysis['actionable_suggestions'] = generate_actionable_suggestions(enhanced_analysis)
+    enhanced_analysis['case_data'] = case_data  # Include case data for suggestions context
     
     logger.info("Enhanced analysis completed successfully")
     
@@ -22105,6 +22499,105 @@ def format_concise_output(analysis: Dict) -> str:
             lines.extend(issues)
 
     lines.append("═" * 50)
+    
+    # ===== ADD ACTIONABLE SUGGESTIONS TO TEXT OUTPUT =====
+    suggestions = analysis.get('actionable_suggestions', {})
+    if suggestions:
+        lines.append("")
+        lines.append("")
+        lines.append("=" * 80)
+        lines.append("📋 NEXT ACTIONS - WHAT YOU SHOULD DO NOW")
+        lines.append("=" * 80)
+        lines.append("")
+        
+        # Overall Recommendation
+        overall = suggestions.get('overall_recommendation', '')
+        if overall:
+            lines.append("OVERALL RECOMMENDATION")
+            lines.append("-" * 40)
+            lines.append(overall)
+            lines.append("")
+        
+        # Risk Summary
+        risk = suggestions.get('risk_summary', '')
+        if risk:
+            lines.append("RISK ASSESSMENT")
+            lines.append("-" * 40)
+            lines.append(risk)
+            lines.append("")
+        
+        # HIGH PRIORITY
+        high_priority = suggestions.get('high_priority', [])
+        if high_priority:
+            lines.append("🔴 HIGH PRIORITY (Do Within 2-3 Days)")
+            lines.append("-" * 40)
+            lines.append("")
+            
+            for idx, item in enumerate(high_priority, 1):
+                lines.append(f"{idx}. {item.get('title', 'Action')}")
+                lines.append(f"   What: {item.get('action', '')}")
+                lines.append(f"   Deadline: {item.get('deadline', '')}")
+                lines.append(f"   Impact: {item.get('impact', '')}")
+                
+                steps = item.get('steps', [])
+                if steps:
+                    lines.append(f"   Steps:")
+                    for step_idx, step in enumerate(steps, 1):
+                        lines.append(f"      {step_idx}) {step}")
+                lines.append("")
+        
+        # MEDIUM PRIORITY
+        medium_priority = suggestions.get('medium_priority', [])
+        if medium_priority:
+            lines.append("")
+            lines.append("🟠 MEDIUM PRIORITY (Within 5-7 Days)")
+            lines.append("-" * 40)
+            lines.append("")
+            
+            for idx, item in enumerate(medium_priority, 1):
+                lines.append(f"{idx}. {item.get('title', 'Action')}")
+                lines.append(f"   What: {item.get('action', '')}")
+                lines.append(f"   Deadline: {item.get('deadline', '')}")
+                lines.append(f"   Impact: {item.get('impact', '')}")
+                
+                steps = item.get('steps', [])
+                if steps:
+                    lines.append(f"   Steps:")
+                    for step_idx, step in enumerate(steps, 1):
+                        lines.append(f"      {step_idx}) {step}")
+                lines.append("")
+        
+        # LOW PRIORITY
+        low_priority = suggestions.get('low_priority', [])
+        if low_priority:
+            lines.append("")
+            lines.append("🟡 LOW PRIORITY / OPTIONAL")
+            lines.append("-" * 40)
+            lines.append("")
+            
+            for idx, item in enumerate(low_priority, 1):
+                lines.append(f"{idx}. {item.get('title', 'Action')}")
+                lines.append(f"   What: {item.get('action', '')}")
+                lines.append(f"   Timeline: {item.get('deadline', '')}")
+                
+                steps = item.get('steps', [])
+                if steps:
+                    lines.append(f"   Steps:")
+                    for step_idx, step in enumerate(steps, 1):
+                        lines.append(f"      {step_idx}) {step}")
+                lines.append("")
+        
+        # Timeline
+        timeline = suggestions.get('next_steps_timeline', '')
+        if timeline:
+            lines.append("")
+            lines.append("⏰ RECOMMENDED TIMELINE")
+            lines.append("-" * 40)
+            lines.append(timeline)
+            lines.append("")
+        
+        lines.append("=" * 80)
+    
     return "\n".join(lines)
 
 
