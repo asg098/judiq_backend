@@ -384,19 +384,20 @@ def final_clean(report):
     if not isinstance(report, dict):
         return report
     
-    def deep_clean(v):
+    def deep_clean(v, skip_artifacts=False):
         if isinstance(v, str):
-            v = remove_formatting_artifacts(v)
+            if not skip_artifacts:
+                v = remove_formatting_artifacts(v)
             v = sanitize_text(v)
             v = final_clean_text(v)
             v = format_legal_text(v)
             return v.strip() if v else ""
         elif isinstance(v, list):
-            cleaned = [deep_clean(x) for x in v]
+            cleaned = [deep_clean(x, skip_artifacts) for x in v]
             cleaned = [x for x in cleaned if x]
             return deduplicate_list(cleaned)
         elif isinstance(v, dict):
-            return {k: deep_clean(val) for k, val in v.items() if deep_clean(val)}
+            return {k: deep_clean(val, (skip_artifacts or k in ['next_steps', 'simple_suggestions'])) for k, val in v.items() if deep_clean(val, (skip_artifacts or k in ['next_steps', 'simple_suggestions']))}
         return v
     
     return deep_clean(report)
@@ -15945,7 +15946,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                     'recommendation': 'Do not file current complaint — fatal defects will cause dismissal' if _vf else f'File with caution — score {_vs}/100',
                     'rationale': f"{len(risk_result.get('fatal_defects') or [])} fatal defect(s) detected" if _vf else f"Risk score {_vs}/100",
                 }],
-                'next_actions': [{'action': 'Review full analysis below', 'urgency': 'HIGH', 'details': 'All module outputs available in the detailed report'}],
+                'next_actions': [],
                 'edge_cases_alert': [],
                 'fatal_defects_count': len(risk_result.get('fatal_defects') or []),
             }
@@ -22213,36 +22214,39 @@ def generate_simple_suggestions(analysis: Dict) -> list:
     """Premium 3-4 line senior-advocate style suggestions"""
     # Get score - try multiple keys for compatibility
     res = analysis.get('_result', {})
-    score = analysis.get('final_score') or res.get('overall_score') or 63
+    score = analysis.get('final_score') or res.get('overall_score') or analysis.get('case_strength_score', {}).get('overall_score', 60)
     
-    # Get weaknesses
-    weaknesses = analysis.get('report', {}).get('executive_summary', {}).get('weaknesses', [])
+    # Get weaknesses/missing items
+    weaknesses = analysis.get('modules', {}).get('procedural_defects', {}).get('fatal_defects', [])
     if not weaknesses:
-        weaknesses = analysis.get('modules', {}).get('ingredient_compliance', {}).get('missing_ingredients', [])
-    
+        weaknesses = analysis.get('report', {}).get('executive_summary', {}).get('weaknesses', [])
+
     suggestions = []
     
-    # Line 1: Strategic Priority
-    if score >= 75:
+    # Check for fatal defects first
+    is_fatal_case = (len(weaknesses) > 0 or analysis.get('is_fatal') or analysis.get('fatal_flag'))
+    
+    # Line 1: Strategic Priority (Senior Counsel Tone)
+    if is_fatal_case:
+        suggestions.append("⚠️ ABANDON/SETTLE: Case has terminal defects (Fatal). Do not file in current form; pivot to an out-of-court settlement at 30-50% to salvage recovery.")
+    elif score >= 75:
         suggestions.append("⚡ PROCEED IMMEDIATELY: Case has strong merit. Apply for 20% interim compensation (S.143A) on the first hearing to pressure the accused.")
-    elif score < 35 or res.get('is_fatal'):
-        suggestions.append("⚠️ ABANDON/SETTLE: Case has terminal defects. Do not file in current form; pivot to an out-of-court settlement at 30-50% to salvage recovery.")
     else:
         suggestions.append("🔍 STRENGTHEN EVIDENCE: Merit is moderate. Secure a 'Written Acknowledgment of Debt' before filing to prevent the accused from rebutting the presumption.")
 
-    # Line 2: Documentary Focus
-    if any("agreement" in str(w).lower() for w in weaknesses):
+    # Line 2: Documentary Focus (Authoritative)
+    if any("agreement" in str(w).lower() for w in weaknesses) or not analysis.get('case_data', {}).get('written_agreement_exists'):
         suggestions.append("📜 CRITICAL GAP: Missing written agreement. Bridge this by mapping bank fund-flows and securing witness affidavits before the trial begins.")
     else:
-        suggestions.append("📱 DIGITAL PROOF: Ensure all WhatsApp/Email trails are certified under Section 63 of Bharatiya Sakshya Adhiniyam to ensure admissibility.")
+        suggestions.append("📱 DIGITAL PROOF: Ensure all WhatsApp/Email trails are certified under Section 63 of Bharatiya Sakshya Adhiniyam (BSA) to ensure admissibility.")
 
-    # Line 3: Settlement Leverage
-    if 40 <= score < 75:
-        suggestions.append("🤝 SETTLEMENT WINDOW: Open negotiations at 85% of cheque amount. Use the 'Threat of Criminal Conviction' as leverage while evidence is being cured.")
+    # Line 3: Settlement Leverage (Strategic)
+    if score < 50:
+        suggestions.append("🤝 SETTLEMENT WINDOW: Open negotiations at 60-70% of cheque amount. Use the 'Threat of Criminal Conviction' as leverage while evidence is being cured.")
     else:
         suggestions.append("⚖️ TRIAL STRATEGY: Focus on 'Presumption of Debt' (S.139). Force the accused to provide 'Cogent Evidence' to rebut; don't volunteer unnecessary facts.")
 
-    # Line 4: Statutory Safety
+    # Line 4: Statutory Safety (Always included)
     suggestions.append("🕒 STATUTORY OVERWATCH: Continuously monitor the 30-day filing window. A single day's delay can be fatal unless a strong Condonation of Delay is drafted.")
     
     return suggestions[:4]
@@ -22355,6 +22359,30 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
         'recovery_intelligence': RECOVERY_INTELLIGENCE
     }
     
+    # === FINAL WRAPPER & SAFETY CHECKS ===
+    
+    # Calculate Final Score properly for simple suggestions
+    final_score = enhanced_analysis.get('case_strength_score', {}).get('overall_score', 60)
+    enhanced_analysis['final_score'] = final_score
+    
+    # Detect Fatal Defects for status contradiction fix
+    fatal_defects = enhanced_analysis.get('case_strength_score', {}).get('fatal_defects', [])
+    if not fatal_defects:
+        fatal_defects = enhanced_analysis.get('modules', {}).get('procedural_defects', {}).get('fatal_defects', [])
+    
+    # Set explicit flags for frontend (FIX for status box contradiction)
+    is_fatal = len(fatal_defects) > 0
+    enhanced_analysis['is_fatal'] = is_fatal
+    enhanced_analysis['fatal_flag'] = is_fatal
+    enhanced_analysis['fatal_defects_count'] = len(fatal_defects)
+    
+    # Inject into Result child too
+    if '_result' not in enhanced_analysis:
+        enhanced_analysis['_result'] = {}
+    enhanced_analysis['_result']['is_fatal'] = is_fatal
+    enhanced_analysis['_result']['fatal_defects_count'] = len(fatal_defects)
+    enhanced_analysis['_result']['overall_score'] = final_score
+
     # Generate Executive Summary
     enhanced_analysis['executive_summary'] = generate_executive_summary(enhanced_analysis)
     
@@ -22365,32 +22393,20 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
     
     # Generate Simple Suggestions (PREMIUM - Senior Advocate Style)
     logger.info("Generating premium simple suggestions...")
-    enhanced_analysis['simple_suggestions'] = generate_simple_suggestions(enhanced_analysis)
     
-    # === PREMIUM 3-4 LINE NEXT STEPS (as per faculty feedback) ===
-    enhanced_analysis['next_steps'] = generate_simple_suggestions(enhanced_analysis)
+    # === PREMIUM 3-4 LINE NEXT STEPS (Faculty requested Polish) ===
+    premium_steps = generate_simple_suggestions(enhanced_analysis)
+    enhanced_analysis['next_steps'] = premium_steps
+    enhanced_analysis['simple_suggestions'] = premium_steps
     
     # Add to Executive Summary too (top of report)
     if isinstance(enhanced_analysis.get('executive_summary'), dict):
-        enhanced_analysis['executive_summary']['next_steps'] = enhanced_analysis['next_steps']
+        enhanced_analysis['executive_summary']['next_steps'] = premium_steps
     
-    logger.info("Enhanced analysis completed successfully")
-    
-    # Nuclear final clean
+    # Nuclear final clean (removes legacy next steps automatically)
     enhanced_analysis = final_clean(enhanced_analysis)
     
-    # Extra safety for critical sections
-    if isinstance(enhanced_analysis.get("executive_summary"), dict):
-        for key in list(enhanced_analysis["executive_summary"].keys()):
-            val = enhanced_analysis["executive_summary"][key]
-            if isinstance(val, str):
-                enhanced_analysis["executive_summary"][key] = format_legal_text(sanitize_text(val))
-    
-    if isinstance(enhanced_analysis.get("defence_analysis"), dict):
-        enhanced_analysis["defence_analysis"] = final_clean(enhanced_analysis["defence_analysis"])
-    
-    logger.info("✅ Nuclear final clean applied")
-    
+    logger.info("Enhanced analysis completed successfully")
     return enhanced_analysis
 
 
@@ -22483,7 +22499,12 @@ def generate_executive_summary(analysis: Dict) -> str:
     summary_lines.append("FINAL VERDICT:")
     summary_lines.append("=" * 70)
     
-    if overall_score >= 70 and success_prob >= 60:
+    is_fatal_case = analysis.get('is_fatal') or analysis.get('fatal_flag') or len(analysis.get('case_strength_score', {}).get('fatal_defects', [])) > 0
+    
+    if is_fatal_case:
+        verdict = "❌ FATAL DEFECTS - DO NOT FILE"
+        details = "The case contains terminal statutory defects. Litigation will result in immediate dismissal."
+    elif overall_score >= 70 and success_prob >= 60:
         verdict = "✅ STRONG CASE - PROCEED WITH FILING"
         details = "High probability of success. Case is ready for litigation."
     elif overall_score >= 50 and success_prob >= 40:
