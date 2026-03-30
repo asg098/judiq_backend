@@ -21913,7 +21913,7 @@ def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
         report_text += f"   Impact: {item.get('impact', '')}\n"
         report_text += f"   Steps:\n"
         for j, step in enumerate(item.get('steps', []), 1):
-            report_text += f"      {j.1}) {step}\n"
+            report_text += f"      {j}) {step}\n"
         report_text += f"   Deadline: {item.get('deadline', '')}\n"
     
     # Medium Priority
