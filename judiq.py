@@ -10080,6 +10080,9 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
     if real_fatal_defects:
         filing_status = "DO NOT FILE"
         filing_colour = "RED"
+        # If there's a fatal defect, force score to reflect this
+        if score >= 40:
+            score = 25  # Fatal defects = very low score
         one_liner = (
             f"This {case_type.lower()} case has {len(real_fatal_defects)} fatal defect(s) that render it non-maintainable. "
             f"Filing is legally impermissible until these defects are remedied. Risk score: {score}/100."
@@ -10821,6 +10824,9 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
     # Generate ChatGPT-style actionable suggestions
     actionable_suggestions = generate_actionable_suggestions(analysis, case_data)
     
+    # Generate premium 3-4 line simple suggestions (NEW!)
+    simple_suggestions = generate_simple_suggestions(analysis)
+    
     report = {
         'report_type': 'Professional Compliance Analysis',
         'report_format': 'Structured 5-Page Brief',
@@ -10830,6 +10836,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
         'page_4_strategic_intelligence': page_4,
         'page_5_conclusions': page_5,
         'actionable_suggestions': actionable_suggestions,
+        'next_steps': simple_suggestions,  # Premium simple suggestions (NEW!)
         'metadata': {
             'engine': 'JUDIQ Intelligence Engine',
             'analysis_id': analysis.get('case_id'),
@@ -22225,6 +22232,47 @@ def generate_simple_suggestions(analysis: Dict) -> list:
             suggestions.append("Ensure all witness statements are sworn and notarized before filing.")
     
     # Return max 4 suggestions
+    return suggestions[:4]
+
+
+def generate_simple_suggestions(analysis: Dict) -> list:
+    """Premium 3-4 line senior-advocate style suggestions"""
+    # Get score - try multiple keys for compatibility
+    score = analysis.get('final_score')
+    if score is None:
+        score = analysis.get('_result', {}).get('final_score')
+    if score is None:
+        risk_module = analysis.get('modules', {}).get('risk_assessment', {})
+        score = risk_module.get('final_score', 63)
+    
+    # Get weaknesses
+    weaknesses = analysis.get('report', {}).get('executive_summary', {}).get('weaknesses', [])
+    if not weaknesses:
+        weaknesses = analysis.get('modules', {}).get('ingredient_compliance', {}).get('missing_ingredients', [])
+    
+    suggestions = []
+    
+    # Line 1: Always - Documentary evidence
+    suggestions.append("Immediately collect written agreement and ledger entries to prove legally enforceable debt.")
+    
+    # Line 2: Always - Electronic evidence (Section 63 not 65-B)
+    suggestions.append("Prepare and file Section 63 certificate for all electronic evidence.")
+    
+    # Line 3: Score-based strategy
+    if score < 70:
+        suggestions.append("Initiate settlement with the accused at 75-85% of cheque amount to avoid long litigation.")
+    else:
+        suggestions.append("File the complaint only after completing all supporting documents.")
+    
+    # Line 4: Weakness-specific or general
+    if any("written agreement" in str(w).lower() for w in weaknesses):
+        suggestions.append("Fix documentary proof first — this is the main defence risk.")
+    else:
+        if score >= 75:
+            suggestions.append("Ensure all witness statements are sworn and notarized before filing.")
+        else:
+            suggestions.append("Build strongest case possible before deciding between filing and settlement.")
+    
     return suggestions[:4]
 
 
