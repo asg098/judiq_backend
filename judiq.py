@@ -22194,6 +22194,40 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
     return suggestions
 
 
+def generate_simple_suggestions(analysis: Dict) -> list:
+    """
+    Premium, real, senior-advocate style 3-4 line suggestions.
+    Concise, actionable, professional - like talking to an experienced lawyer.
+    """
+    score = analysis.get('final_score', analysis.get('case_strength_score', {}).get('overall_score', 63))
+    weaknesses = safe_get(analysis, 'case_strength_score', 'critical_weaknesses', default=[])
+    
+    suggestions = []
+    
+    # Line 1: Always prioritize documentary evidence
+    suggestions.append("Immediately collect written agreement and ledger entries to prove legally enforceable debt.")
+    
+    # Line 2: Electronic evidence
+    suggestions.append("Prepare and file Section 65-B certificate for all electronic evidence.")
+    
+    # Line 3: Strategic recommendation based on score
+    if score < 70:
+        suggestions.append("Initiate settlement with the accused at 75-85% of cheque amount to avoid long litigation.")
+    else:
+        suggestions.append("File the complaint only after completing all supporting documents.")
+    
+    # Line 4: Address specific weakness if present
+    if any("written agreement" in str(w).lower() for w in weaknesses):
+        suggestions.append("Fix documentary proof first — this is the main defence risk.")
+    else:
+        # Default 4th line for strong cases
+        if score >= 75:
+            suggestions.append("Ensure all witness statements are sworn and notarized before filing.")
+    
+    # Return max 4 suggestions
+    return suggestions[:4]
+
+
 def run_enhanced_analysis(case_data: Dict) -> Dict:
     """
     Run complete enhanced analysis with all new features
@@ -22308,6 +22342,10 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
     logger.info("Generating actionable next steps...")
     enhanced_analysis['actionable_suggestions'] = generate_actionable_suggestions(enhanced_analysis)
     enhanced_analysis['case_data'] = case_data  # Include case data for suggestions context
+    
+    # Generate Simple Suggestions (PREMIUM - Senior Advocate Style)
+    logger.info("Generating premium simple suggestions...")
+    enhanced_analysis['simple_suggestions'] = generate_simple_suggestions(enhanced_analysis)
     
     logger.info("Enhanced analysis completed successfully")
     
