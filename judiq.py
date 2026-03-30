@@ -22211,45 +22211,37 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
 
 
 def generate_simple_suggestions(analysis: Dict) -> list:
-    """PREMIUM 4-LINE SENIOR ADVOCATE STRATEGIC ROADMAP"""
+    """PREMIUM 4-LINE SENIOR ADVOCATE STRATEGIC ROADMAP - PDF SAFE"""
     
-    # Get score - try multiple keys for compatibility
     res = analysis.get('_result', {})
     score = analysis.get('final_score') or res.get('overall_score') or analysis.get('case_strength_score', {}).get('overall_score', 60)
     
-    # Get weaknesses/missing items
     weaknesses = analysis.get('modules', {}).get('procedural_defects', {}).get('fatal_defects', [])
     if not weaknesses:
         weaknesses = analysis.get('report', {}).get('executive_summary', {}).get('weaknesses', [])
 
     suggestions = []
-    
-    # Check for fatal defects first
     is_fatal_case = (len(weaknesses) > 0 or analysis.get('is_fatal') or analysis.get('fatal_flag'))
     
-    # Line 1: Strategic Priority (Senior Counsel Tone)
     if is_fatal_case:
-        suggestions.append("⚠️ ABANDON/SETTLE: Case has terminal defects (Fatal). Do not file in current form; pivot to an out-of-court settlement at 30-50% to salvage recovery.")
+        suggestions.append("ABANDON/SETTLE: Case has terminal defects (Fatal). Do not file in current form; pivot to an out-of-court settlement at 30-50% to salvage recovery.")
     elif score >= 75:
-        suggestions.append("⚡ PROCEED IMMEDIATELY: Case has strong merit. Apply for 20% interim compensation (S.143A) on the first hearing to pressure the accused.")
+        suggestions.append("PROCEED IMMEDIATELY: Case has strong merit. Apply for 20% interim compensation (S.143A) on the first hearing.")
     else:
-        suggestions.append("🔍 STRENGTHEN EVIDENCE: Merit is moderate. Secure a 'Written Acknowledgment of Debt' before filing to prevent the accused from rebutting the presumption.")
+        suggestions.append("STRENGTHEN EVIDENCE: Merit is moderate. Secure a Written Acknowledgment of Debt before filing.")
 
-    # Line 2: Documentary Focus (Authoritative)
     has_agreement_issue = any("agreement" in str(w).lower() for w in weaknesses) or not analysis.get('case_data', {}).get('written_agreement_exists')
     if has_agreement_issue:
-        suggestions.append("📜 CRITICAL GAP: Missing written agreement. Bridge this by mapping bank fund-flows and securing witness affidavits before the trial begins.")
+        suggestions.append("CRITICAL GAP: Missing written agreement. Bridge this by mapping bank fund-flows and securing witness affidavits.")
     else:
-        suggestions.append("📱 DIGITAL PROOF: Ensure all WhatsApp/Email trails are certified under Section 63 of Bharatiya Sakshya Adhiniyam (BSA) to ensure admissibility.")
+        suggestions.append("DIGITAL PROOF: Ensure all WhatsApp/Email trails are certified under Section 63 of Bharatiya Sakshya Adhiniyam.")
 
-    # Line 3: Settlement Leverage (Strategic)
     if score < 50:
-        suggestions.append("🤝 SETTLEMENT WINDOW: Open negotiations at 60-70% of cheque amount. Use the 'Threat of Criminal Conviction' as leverage while evidence is being cured.")
+        suggestions.append("SETTLEMENT WINDOW: Open negotiations at 60-70% of cheque amount. Use the threat of criminal conviction as leverage.")
     else:
-        suggestions.append("⚖️ TRIAL STRATEGY: Focus on 'Presumption of Debt' (S.139). Force the accused to provide 'Cogent Evidence' to rebut; don't volunteer unnecessary facts.")
+        suggestions.append("TRIAL STRATEGY: Focus on Presumption of Debt (S.139). Force the accused to provide Cogent Evidence to rebut.")
 
-    # Line 4: Statutory Safety (Always included)
-    suggestions.append("🕒 STATUTORY OVERWATCH: Continuously monitor the 30-day filing window. A single day's delay can be fatal unless a strong Condonation of Delay is drafted.")
+    suggestions.append("STATUTORY OVERWATCH: Continuously monitor the 30-day filing window. A single day's delay can be fatal unless a strong Condonation of Delay is drafted.")
     
     return suggestions[:4]
 
