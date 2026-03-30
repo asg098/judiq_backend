@@ -21975,9 +21975,7 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
     score = analysis.get('case_strength_score', {}).get('overall_score', 63)
     strength_rating = analysis.get('case_strength_score', {}).get('strength_rating', 'MODERATE')
     fatal_defects = analysis.get('case_strength_score', {}).get('fatal_defects', [])
-    weaknesses = safe_get(analysis, 'case_strength_score', 'critical_weaknesses', default=[])
     doc_issues = safe_get(analysis, 'document_intelligence', 'missing_documents', default=[])
-    defence_risks = safe_get(analysis, 'defence_analysis', 'likely_defences', default=[])
     
     suggestions = {
         'overall_recommendation': '',
@@ -21991,67 +21989,68 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
     # ============ OVERALL RECOMMENDATION LOGIC ============
     if fatal_defects and len(fatal_defects) > 0:
         suggestions['overall_recommendation'] = (
-            f"⚠️ DO NOT FILE YET - Critical defects must be fixed first\n"
-            f"Current score: {score:.1f}/100 (CRITICAL)\n"
-            f"Fatal defects: {', '.join(fatal_defects[:3])}\n"
-            f"Action: Fix defects before filing to avoid dismissal"
+            f"⛔ CRITICAL FATAL DEFECTS - DISMISSAL RISK 100%\n"
+            f"Current score: {score:.1f}/100 (NON-MAINTAINABLE)\n"
+            f"The case contains fatal statutory defects that will lead to an immediate dismissal.\n"
+            f"Senior Counsel Advice: Do NOT file in current state. Address fatal defects first."
         )
-        suggestions['risk_summary'] = "EXTREME - Filing now will likely result in immediate dismissal"
+        suggestions['risk_summary'] = "TERMINAL - Case is legally non-maintainable in its current form"
     elif score < 40:
         suggestions['overall_recommendation'] = (
-            f"❌ HIGH RISK - Only proceed with extreme caution\n"
-            f"Current score: {score:.1f}/100 (WEAK)\n"
-            f"Filing is possible but success probability is very low\n"
-            f"Recommendation: Fix major weaknesses first or settle"
+            f"❌ HIGH RISK - STRATEGIC VULNERABILITY DETECTED\n"
+            f"Current score: {score:.1f}/100 (WEAK COMPLIANCE)\n"
+            f"The evidentiary foundation is insufficient to survive a targeted defense rebuttal.\n"
+            f"Senior Counsel Advice: Pivot to settlement or cure documentary gaps before litigation."
         )
-        suggestions['risk_summary'] = "VERY HIGH - Likely dismissal or unfavorable judgment"
-    elif score < 60:
+        suggestions['risk_summary'] = "CRITICAL - High probability of defense-led dismissal or acquittal"
+    elif score < 70:
         suggestions['overall_recommendation'] = (
-            f"⚠️ MODERATE RISK - Proceed with caution\n"
+            f"⚠️ MODERATE MERIT - EVIDENTIARY REFINEMENT REQUIRED\n"
             f"Current score: {score:.1f}/100 ({strength_rating})\n"
-            f"Strengthen evidence before filing when possible\n"
-            f"Consider settlement options with accused"
+            f"The case has statutory standing but lacks a 'knockout' evidentiary trail.\n"
+            f"Senior Counsel Advice: Strengthen liability documentation to prevent rebuttal of S.139 presumption."
         )
-        suggestions['risk_summary'] = "HIGH - Outcome uncertain; requires good litigation strategy"
+        suggestions['risk_summary'] = "EVIDENTIARY - Outcome depends on successful cross-examination and document curation"
     else:
         suggestions['overall_recommendation'] = (
-            f"✅ REASONABLE STRENGTH - Ready to proceed\n"
+            f"✅ STRONG STATUTORY MERIT - READY FOR FILING\n"
             f"Current score: {score:.1f}/100 ({strength_rating})\n"
-            f"Documentary evidence is adequate\n"
-            f"File with comprehensive supporting documents"
+            f"Comprehensive compliance detected across all 13 intelligence modules.\n"
+            f"Senior Counsel Advice: Proceed with filing; apply for S.143A interim compensation immediately."
         )
-        suggestions['risk_summary'] = "MODERATE - Good chance of favorable judgment if facts are proven"
+        suggestions['risk_summary'] = "LOW - Strong foundation for conviction if trial is managed professionally"
     
     # ============ HIGH PRIORITY ACTIONS ============
     if fatal_defects and len(fatal_defects) > 0:
         high_priority_items = [
             {
                 "priority": 1,
-                "title": "Fix Fatal Defects Immediately",
-                "action": f"Address: {fatal_defects[0]}",
+                "title": "Cure Fatal Statutory Defects",
+                "action": f"Remediate: {fatal_defects[0]}",
                 "steps": [
-                    "Identify exactly what is wrong (missing document, expired limit, etc.)",
-                    "Take corrective action (collect docs, issue new notice, etc.)",
-                    "Re-evaluate case strength before filing"
+                    "Isolate the specific statutory violation (e.g., limitation expiry or premature notice)",
+                    "Consult precedent on curability (e.g., 'delay condonation' vs 'fresh notice')",
+                    "If non-curable, do not file to avoid costs and adverse judicial remarks",
+                    "If curable, execute remediation steps before moving to verification phase"
                 ],
-                "deadline": "Before filing (within 3-7 days)",
-                "impact": "CRITICAL"
+                "deadline": "IMMEDIATE (Priority 1)",
+                "impact": "TERMINAL"
             }
         ]
     else:
         high_priority_items = [
             {
                 "priority": 1,
-                "title": "Collect Strongest Documentary Evidence",
-                "action": "Obtain written proof of debt and payment",
+                "title": "Fortify Evidentiary Trail of Debt",
+                "action": "Obtain primary documentary proof of liability",
                 "steps": [
-                    "Written loan agreement OR acknowledgment of debt",
-                    "Bank statement showing cheque issuance date",
-                    "Dishonour memo from bank (critical)",
-                    "All transaction records and ledger entries"
+                    "Execute search for 'Written Loan Agreement' or 'Acknowledgment of Debt'",
+                    "Secure certified Bank Statement showing fund transfer to accused",
+                    "Ensure original Dishonour Memo with bank seal is in custody (S.146 presumption)",
+                    "Audit ledger entries for compliance with standard accounting practices"
                 ],
-                "deadline": "Within 2-3 days",
-                "impact": "HIGH"
+                "deadline": "Within 48 hours",
+                "impact": "HIGH (Fundamental)"
             }
         ]
         
@@ -22059,31 +22058,31 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
             if any("agreement" in str(d).lower() for d in doc_issues):
                 high_priority_items.append({
                     "priority": 2,
-                    "title": "Fix Missing Written Agreement",
-                    "action": "Establish debt through alternative evidence",
+                    "title": "Bridge Agreement Gap",
+                    "action": "Establish liability via secondary evidentiary trail",
                     "steps": [
-                        "Send email/message to accused requesting acknowledgment",
-                        "Collect all WhatsApp/email evidence showing debt discussion",
-                        "Get witness affidavit from person who saw transaction",
-                        "Gather bank statements showing transfer of funds"
+                        "Initiate 'Acknowledge of Liability' via written communication (Email/WhatsApp)",
+                        "Compile digital trail (S.63 BSA) showing debt admission by accused",
+                        "Secure Witness Affidavits from third parties present during transaction",
+                        "Map fund flow via bank records to establish 'consideration' for cheque"
                     ],
-                    "deadline": "Within 3-4 days",
-                    "impact": "HIGH"
+                    "deadline": "Within 3 days",
+                    "impact": "HIGH (Strategic)"
                 })
             
             if any("notice" in str(d).lower() for d in doc_issues):
                 high_priority_items.append({
                     "priority": 2,
-                    "title": "Secure Proof of Notice Delivery",
-                    "action": "Get official evidence that notice was delivered",
+                    "title": "Verify Notice Service Status",
+                    "action": "Obtain conclusive 'Proof of Service' for S.138(b) compliance",
                     "steps": [
-                        "Obtain postal AD card or courier tracking receipt",
-                        "Get affidavit of service from process server",
-                        "Collect acknowledgment signature from accused if available",
-                        "Ensure notice date is properly documented"
+                        "Secure Postal AD Card or certified 'Track Report' showing 'Delivered' status",
+                        "Verify if 'Unclaimed/Refused' status applies for 'Deemed Service' benefit",
+                        "Ensure the notice address matches the accused's known residence/office",
+                        "Audit notice dispatch date to ensure it is within 30 days of dishonour"
                     ],
-                    "deadline": "Within 2 days",
-                    "impact": "HIGH"
+                    "deadline": "Within 24 hours",
+                    "impact": "HIGH (Statutory)"
                 })
     
     suggestions['high_priority'] = high_priority_items
@@ -22092,46 +22091,46 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
     medium_priority_items = [
         {
             "priority": 1,
-            "title": "Prepare Witness Affidavits",
-            "action": "Get sworn statements from people who know facts",
+            "title": "Curate Witness Statements",
+            "action": "Prepare sworn affidavits for the 'Proof of Evidence' phase",
             "steps": [
-                "Contact anyone who saw the loan transaction",
-                "Contact anyone aware of the cheque issuance",
-                "Get their written statement (sworn affidavit format)",
-                "Include statement that they saw cheque/payment made"
+                "Identify fact-witnesses present during the original transaction/loan",
+                "Draft concise affidavits focusing on 'debt existence' and 'cheque issuance'",
+                "Ensure statements align perfectly with the complaint narrative",
+                "Finalize notarization of all witness statements before the filing date"
             ],
-            "deadline": "Within 5-7 days",
+            "deadline": "Prior to Complaint Filing",
             "impact": "MEDIUM-HIGH"
         },
         {
             "priority": 2,
-            "title": "File Section 65-B Certificate (if electronic evidence)",
-            "action": "Authenticate digital evidence formally",
+            "title": "Section 63 BSA Certification (Electronic Evidence)",
+            "action": "Authenticate all digital footprints formally",
             "steps": [
-                "Identify all electronic evidence (emails, WhatsApp, bank records)",
-                "Apply to bank for Section 65-B certificate",
-                "Get IT admin certificate for digital records",
-                "Attach to complaint as authentic electronic evidence"
+                "Map all electronic evidence (WhatsApp chats, Emails, Digital Records)",
+                "Draft Certificate under Section 63 of Bharatiya Sakshya Adhiniyam",
+                "Ensure person in control of device signs the certificate",
+                "Verify digital timestamps correlate with the case timeline"
             ],
-            "deadline": "Within 7-10 days",
-            "impact": "MEDIUM"
+            "deadline": "Concurrent with filing",
+            "impact": "MEDIUM (Technical)"
         }
     ]
     
     # Add settlement approach if score is moderate
-    if 40 <= score < 65:
+    if 40 <= score < 75:
         medium_priority_items.insert(0, {
             "priority": 0,
-            "title": "Attempt Out-of-Court Settlement",
-            "action": "Contact accused for negotiated resolution",
+            "title": "Evaluate Negotiated Settlement (S.147)",
+            "action": "Initiate pre-litigation compounding discussions",
             "steps": [
-                f"Send legal notice demanding 80-90% of cheque amount (₹{analysis.get('case_data', {}).get('cheque_amount', 0)})",
-                "Offer 2-3 month instalment plan with post-dated cheques",
-                "Indicate willingness to drop case if settled",
-                "Keep communication formal and documented"
+                f"Propose resolution at 80-90% of principal amount (₹{analysis.get('case_data', {}).get('cheque_amount', 0):,.2f})",
+                "Structure payment schedule with enforceable post-dated cheques",
+                "Issue a 'Without Prejudice' offer to protect litigation standing",
+                "Document any refusal to settle for use in 'Judicial Discretion' arguments"
             ],
-            "deadline": "Within 3-5 days",
-            "impact": "HIGH"
+            "deadline": "Pre-filing window",
+            "impact": "HIGH (Commercial)"
         })
     
     suggestions['medium_priority'] = medium_priority_items
@@ -22140,42 +22139,42 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
     low_priority_items = [
         {
             "priority": 1,
-            "title": "Apply for Interim Compensation (Section 143-A)",
-            "action": "Request early recovery of partial amount",
+            "title": "Interim Compensation Strategy (Section 143-A)",
+            "action": "Leverage recent N.I. Act amendments for early recovery",
             "steps": [
-                "File application under Section 143-A of Negotiable Instruments Act",
-                "Request interim compensation order",
-                "Show proof of genuine loss",
-                "Explain hardship if needed"
+                "Draft application for 20% interim compensation on first appearance",
+                "Prepare arguments on 'prima facie' case strength to secure order",
+                "Ensure service of application on accused at the summon stage",
+                "Utilize recovered amount to offset ongoing litigation costs"
             ],
-            "deadline": "After filing complaint",
-            "impact": "LOW (Optional)"
+            "deadline": "Post-Summon Appearance",
+            "impact": "STRATEGIC (Cash Flow)"
         },
         {
             "priority": 2,
-            "title": "Prepare Draft Complaint Statement",
-            "action": "Organize narrative for filing",
+            "title": "Narrative Harmonization",
+            "action": "Audit complaint draft for consistency",
             "steps": [
-                "Chronological order: loan details → cheque issuance → presentation → dishonour",
-                "Include all document references",
-                "Clear facts section with dates and amounts",
-                "Prayer for relief with specific amounts"
+                "Verify chronological flow: Debt → Issuance → Presentation → Dishonour → Notice",
+                "Ensure zero variance between 'Legal Notice' and 'Complaint' facts",
+                "Cross-check all date entries against physical documentary evidence",
+                "Draft specific 'Prayer' for double-cheque amount as compensation/fine"
             ],
-            "deadline": "Within 5-7 days",
-            "impact": "LOW (Standard)"
+            "deadline": "Final Review",
+            "impact": "LOW (Quality Control)"
         },
         {
             "priority": 3,
-            "title": "Verify Limitation Period",
-            "action": "Confirm you're within filing deadline",
+            "title": "Limitation Guardrail Verification",
+            "action": "Final statutory audit of filing deadlines",
             "steps": [
-                f"Cheque presentation deadline: within 6 months of cheque date",
-                f"Notice must be before filing complaint",
-                f"Check if limitation is about to expire (file immediately if < 30 days left)",
-                "Prepare expedited filing if needed"
+                "Confirm 'Notice Receipt Date' to accurately map the 15-day payment period",
+                "Verify 'Cause of Action' arose only after the 15th day from notice receipt",
+                "Ensure complaint is filed within 30 days of the Cause of Action arising",
+                "Prepare 'Delay Condonation' application if any timeline was breached"
             ],
-            "deadline": "Ongoing (critical check)",
-            "impact": "LOW (Safety measure)"
+            "deadline": "Pre-filing (Final)",
+            "impact": "CRITICAL (Safety)"
         }
     ]
     
@@ -22184,25 +22183,24 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
     # ============ TIMELINE SUMMARY ============
     if fatal_defects and len(fatal_defects) > 0:
         timeline = (
-            "TODAY/TOMORROW: Fix critical defects\n"
-            "Next 3-4 days: Collect missing documents\n"
-            "Within 7 days: Re-evaluate, then proceed with filing\n"
-            "⚠️ Check limitation period - file within 1 month of 15-day notice period"
+            "URGENT: Remediate statutory fatal defects immediately.\n"
+            "PHASE 1: Collect missing documentation within 72 hours.\n"
+            "PHASE 2: Audit legal standing before proceeding to court.\n"
+            "CAUTION: Monitor limitation periods during remediation."
         )
     elif score < 40:
         timeline = (
-            "WITHIN 2-3 DAYS: Collect strongest evidence OR attempt settlement\n"
-            "Days 4-7: Prepare witness affidavits\n"
-            "Day 8: Make decision to file or settle\n"
-            "Within 30 days: File if proceeding (after 15-day notice period)"
+            "WEEK 1: Aggressive evidentiary curation or Pre-litigation settlement.\n"
+            "WEEK 2: Witness statement finalization and narrative audit.\n"
+            "WEEK 3: Final decision on litigation vs. alternative resolution.\n"
+            "WINDOW: Filing must occur within 30 days of 15-day notice expiry."
         )
     else:
         timeline = (
-            "DAYS 1-2: Compile all documentary evidence\n"
-            "DAYS 3-4: Prepare witness statements\n"
-            "DAYS 5-7: File Section 65-B certificates if needed\n"
-            "DAYS 8-14: File notice if not already done\n"
-            "DAYS 29-30: File complaint 15 days after notice"
+            "DAYS 1-2: Finalize physical evidence folder and certified copies.\n"
+            "DAYS 3-4: Draft Complaint and S.143A application.\n"
+            "DAYS 5-7: Execute S.63 BSA Certification for all digital evidence.\n"
+            "GO-LIVE: File complaint on first available court date."
         )
     
     suggestions['next_steps_timeline'] = timeline
@@ -22214,12 +22212,8 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
 def generate_simple_suggestions(analysis: Dict) -> list:
     """Premium 3-4 line senior-advocate style suggestions"""
     # Get score - try multiple keys for compatibility
-    score = analysis.get('final_score')
-    if score is None:
-        score = analysis.get('_result', {}).get('final_score')
-    if score is None:
-        risk_module = analysis.get('modules', {}).get('risk_assessment', {})
-        score = risk_module.get('final_score', 63)
+    res = analysis.get('_result', {})
+    score = analysis.get('final_score') or res.get('overall_score') or 63
     
     # Get weaknesses
     weaknesses = analysis.get('report', {}).get('executive_summary', {}).get('weaknesses', [])
@@ -22228,26 +22222,28 @@ def generate_simple_suggestions(analysis: Dict) -> list:
     
     suggestions = []
     
-    # Line 1: Always - Documentary evidence
-    suggestions.append("Immediately collect written agreement and ledger entries to prove legally enforceable debt.")
-    
-    # Line 2: Always - Electronic evidence (Section 63 not 65-B)
-    suggestions.append("Prepare and file Section 63 certificate for all electronic evidence.")
-    
-    # Line 3: Score-based strategy
-    if score < 70:
-        suggestions.append("Initiate settlement with the accused at 75-85% of cheque amount to avoid long litigation.")
+    # Line 1: Strategic Priority
+    if score >= 75:
+        suggestions.append("⚡ PROCEED IMMEDIATELY: Case has strong merit. Apply for 20% interim compensation (S.143A) on the first hearing to pressure the accused.")
+    elif score < 35 or res.get('is_fatal'):
+        suggestions.append("⚠️ ABANDON/SETTLE: Case has terminal defects. Do not file in current form; pivot to an out-of-court settlement at 30-50% to salvage recovery.")
     else:
-        suggestions.append("File the complaint only after completing all supporting documents.")
-    
-    # Line 4: Weakness-specific or general
-    if any("written agreement" in str(w).lower() for w in weaknesses):
-        suggestions.append("Fix documentary proof first — this is the main defence risk.")
+        suggestions.append("🔍 STRENGTHEN EVIDENCE: Merit is moderate. Secure a 'Written Acknowledgment of Debt' before filing to prevent the accused from rebutting the presumption.")
+
+    # Line 2: Documentary Focus
+    if any("agreement" in str(w).lower() for w in weaknesses):
+        suggestions.append("📜 CRITICAL GAP: Missing written agreement. Bridge this by mapping bank fund-flows and securing witness affidavits before the trial begins.")
     else:
-        if score >= 75:
-            suggestions.append("Ensure all witness statements are sworn and notarized before filing.")
-        else:
-            suggestions.append("Build strongest case possible before deciding between filing and settlement.")
+        suggestions.append("📱 DIGITAL PROOF: Ensure all WhatsApp/Email trails are certified under Section 63 of Bharatiya Sakshya Adhiniyam to ensure admissibility.")
+
+    # Line 3: Settlement Leverage
+    if 40 <= score < 75:
+        suggestions.append("🤝 SETTLEMENT WINDOW: Open negotiations at 85% of cheque amount. Use the 'Threat of Criminal Conviction' as leverage while evidence is being cured.")
+    else:
+        suggestions.append("⚖️ TRIAL STRATEGY: Focus on 'Presumption of Debt' (S.139). Force the accused to provide 'Cogent Evidence' to rebut; don't volunteer unnecessary facts.")
+
+    # Line 4: Statutory Safety
+    suggestions.append("🕒 STATUTORY OVERWATCH: Continuously monitor the 30-day filing window. A single day's delay can be fatal unless a strong Condonation of Delay is drafted.")
     
     return suggestions[:4]
 
