@@ -402,6 +402,268 @@ def final_clean(report):
     return deep_clean(report)
 
 
+def generate_actionable_suggestions(analysis: Dict, case_data: Dict) -> Dict:
+    """
+    ChatGPT-style clear, numbered, actionable suggestions for lawyer/user
+    Returns structured recommendations with priority levels and specific action steps
+    """
+    
+    # Extract key data
+    score = analysis.get('_result', {}).get('final_score', 0) or analysis.get('modules', {}).get('risk_assessment', {}).get('final_score', 0) or 0
+    score = _safe_score(score)
+    
+    risk_module = analysis.get('modules', {}).get('risk_assessment', {}) or {}
+    documentary = analysis.get('modules', {}).get('documentary_strength', {}) or {}
+    timeline = analysis.get('modules', {}).get('timeline_intelligence', {}) or {}
+    defects_m = analysis.get('modules', {}).get('procedural_defects', {}) or {}
+    
+    fatal_defects = []
+    fatal_defects.extend(risk_module.get('fatal_defects', []))
+    fatal_defects.extend(defects_m.get('fatal_defects', []))
+    
+    # Filter real fatal defects
+    real_fatal_defects = [d for d in fatal_defects
+        if d.get('severity') in ('FATAL', 'CRITICAL')
+        and d.get('is_absolute', True) is not False
+        and 'same-day' not in str(d.get('defect', '')).lower()]
+    
+    weaknesses = []
+    cat_scores = risk_module.get('category_scores', {}) or {}
+    for cat, data in cat_scores.items():
+        s = _safe_score(data.get('score') if isinstance(data, dict) else data)
+        if s < 60:
+            reason = data.get('reason', '') if isinstance(data, dict) else ''
+            weaknesses.append({'category': cat, 'score': s, 'reason': reason})
+    
+    # Document gaps
+    no_written_agreement = not case_data.get('written_agreement_exists')
+    no_ledger = not case_data.get('ledger_available')
+    no_postal_proof = not case_data.get('postal_proof_available')
+    no_original_cheque = not case_data.get('original_cheque_available')
+    no_return_memo = not case_data.get('return_memo_available')
+    no_witness = not case_data.get('witness_available')
+    
+    doc_score = _safe_score(documentary.get('overall_strength_score', 0))
+    
+    cheque_amount = case_data.get('cheque_amount', 0) or 0
+    
+    # Build suggestions structure
+    suggestions = {
+        'title': 'ACTIONABLE RECOMMENDATIONS - WHAT TO DO NOW',
+        'overall_recommendation': '',
+        'high_priority': {
+            'title': 'High Priority (Do Today)',
+            'urgency': 'IMMEDIATE',
+            'actions': []
+        },
+        'medium_priority': {
+            'title': 'Medium Priority (This Week)',
+            'urgency': 'WITHIN 7 DAYS',
+            'actions': []
+        },
+        'low_priority': {
+            'title': 'Low Priority / Optional',
+            'urgency': 'AS NEEDED',
+            'actions': []
+        },
+        'avoid': {
+            'title': 'What to Avoid',
+            'actions': []
+        }
+    }
+    
+    # HIGH PRIORITY ACTIONS
+    if real_fatal_defects:
+        suggestions['overall_recommendation'] = f"DO NOT FILE - Fix all fatal defects immediately. Current risk score: {score}/100. Case is not maintainable in current state."
+        
+        for defect in real_fatal_defects[:3]:
+            defect_text = defect.get('defect', 'Critical statutory violation')
+            remedy = defect.get('remedy') or defect.get('cure') or 'Consult litigation counsel urgently'
+            suggestions['high_priority']['actions'].append({
+                'step': f"Fix Fatal Defect: {defect_text}",
+                'details': remedy
+            })
+        
+        suggestions['high_priority']['actions'].append({
+            'step': 'Consult experienced Section 138 litigation counsel immediately',
+            'details': 'Fatal defects require expert legal intervention before any filing can be considered'
+        })
+        
+    elif score < 40:
+        suggestions['overall_recommendation'] = f"HIGH RISK - Extensive remediation required before filing. Current risk score: {score}/100. Case has critical weaknesses that need immediate attention."
+        
+        if no_written_agreement or no_ledger:
+            suggestions['high_priority']['actions'].append({
+                'step': 'Collect documentary proof of debt immediately',
+                'details': 'Obtain: (1) Written loan agreement or acknowledgment of debt, (2) Ledger entries showing transaction, (3) Bank transfer records/statements, (4) Any emails/WhatsApp messages acknowledging the debt'
+            })
+        
+        if no_return_memo:
+            suggestions['high_priority']['actions'].append({
+                'step': 'Obtain dishonour memo from bank urgently',
+                'details': 'Visit the bank and collect the original cheque return memo. This is PRIMARY evidence under Section 138 and absolutely essential.'
+            })
+        
+        if no_original_cheque:
+            suggestions['high_priority']['actions'].append({
+                'step': 'Secure original cheque from bank',
+                'details': 'Collect the original dishonoured cheque from your bank. Photocopies are insufficient for trial.'
+            })
+        
+        if timeline.get('limitation_risk') in ['HIGH', 'CRITICAL']:
+            suggestions['high_priority']['actions'].append({
+                'step': 'Verify limitation period compliance immediately',
+                'details': 'Check if you are still within 1 month from cause of action date. If deadline is approaching, file urgently even with gaps to preserve your legal right.'
+            })
+            
+    elif score < 60:
+        suggestions['overall_recommendation'] = f"FILE WITH CAUTION - Strengthen evidence before filing. Current risk score: {score}/100. Case is maintainable but has significant weaknesses."
+        
+        if no_written_agreement:
+            suggestions['high_priority']['actions'].append({
+                'step': 'Obtain written acknowledgment of debt',
+                'details': 'Get accused to sign a written statement acknowledging the debt, or collect: (1) Previous correspondence/emails, (2) WhatsApp/SMS messages, (3) Any prior agreements or invoices'
+            })
+        
+        if no_ledger and doc_score < 60:
+            suggestions['high_priority']['actions'].append({
+                'step': 'Prepare complete financial documentation',
+                'details': 'Compile: (1) Your account ledger showing the transaction, (2) Bank statements for the period, (3) Payment receipts if any partial payments made'
+            })
+        
+        if no_postal_proof:
+            suggestions['high_priority']['actions'].append({
+                'step': 'Obtain postal proof of notice delivery',
+                'details': 'Get: (1) AD card/postal receipt showing delivery, (2) Speed Post tracking report, (3) If notice was returned, get the postal envelope with remarks'
+            })
+    
+    else:  # score >= 60
+        suggestions['overall_recommendation'] = f"READY TO FILE - Address minor gaps for stronger position. Current risk score: {score}/100. Case is legally maintainable."
+        
+        if no_written_agreement:
+            suggestions['high_priority']['actions'].append({
+                'step': 'Strengthen documentary evidence of debt',
+                'details': 'Even though case is ready, obtain written agreement/acknowledgment to strengthen your position and reduce cross-examination risk'
+            })
+        
+        if case_data.get('electronic_evidence_available') and not case_data.get('section_65b_certificate'):
+            suggestions['high_priority']['actions'].append({
+                'step': 'File Section 65B certificate for electronic evidence',
+                'details': 'Prepare and file Section 65B certificate for: (1) Email printouts, (2) WhatsApp screenshots, (3) Digital bank statements, (4) Any other electronic records'
+            })
+    
+    # Add remaining high priority if less than 3
+    if len(suggestions['high_priority']['actions']) < 3:
+        if case_data.get('electronic_evidence_available') and not case_data.get('section_65b_certificate'):
+            suggestions['high_priority']['actions'].append({
+                'step': 'Prepare Section 65B certificate for all electronic evidence',
+                'details': 'Required for: emails, WhatsApp messages, digital statements, online banking records'
+            })
+    
+    # MEDIUM PRIORITY ACTIONS
+    # Settlement attempt
+    if cheque_amount > 0 and score >= 40:
+        settlement_percentage = '70-80%' if score < 60 else '80-90%'
+        suggestions['medium_priority']['actions'].append({
+            'step': f'Attempt out-of-court settlement at {settlement_percentage} of cheque amount',
+            'details': f'Send strong legal notice demanding ₹{indian_number_format(cheque_amount * 0.8)} with clear deadline. Offer 2-3 installments with post-dated cheques as security. Settlement saves time and legal costs.'
+        })
+    
+    # Witness preparation
+    if not no_witness:
+        suggestions['medium_priority']['actions'].append({
+            'step': 'Prepare witness affidavits',
+            'details': 'Draft affidavits from: (1) Anyone present during transaction, (2) Family members aware of the loan, (3) Business associates who can corroborate'
+        })
+    else:
+        suggestions['medium_priority']['actions'].append({
+            'step': 'Identify and prepare corroborative witnesses',
+            'details': 'Find witnesses who: (1) Saw the transaction, (2) Know about the debt, (3) Can testify to your financial capacity and accused\'s acknowledgment'
+        })
+    
+    # Company case specific
+    if case_data.get('is_company_case'):
+        suggestions['medium_priority']['actions'].append({
+            'step': 'Verify director liability documentation (Section 141)',
+            'details': 'Ensure: (1) Directors named in complaint, (2) Board resolution/authorization collected, (3) MCA records showing director status at time of cheque issuance'
+        })
+    
+    # Procedural items
+    if len(suggestions['medium_priority']['actions']) < 4:
+        suggestions['medium_priority']['actions'].append({
+            'step': 'Review and organize all case documents',
+            'details': 'Create indexed folder with: (1) Original cheque, (2) Return memo, (3) Notice and proof, (4) All supporting documents in chronological order'
+        })
+    
+    # LOW PRIORITY / OPTIONAL
+    if score >= 50:
+        suggestions['low_priority']['actions'].append({
+            'step': 'Apply for interim compensation under Section 143A',
+            'details': 'If you want early partial recovery, file application for interim compensation (up to 20% of cheque amount) after framing charges'
+        })
+    
+    suggestions['low_priority']['actions'].append({
+        'step': 'Prepare for trial documentation',
+        'details': 'Keep ready: (1) Additional copies of all documents, (2) List of questions for cross-examination, (3) Timeline chart for court reference'
+    })
+    
+    if not case_data.get('lawyer_name'):
+        suggestions['low_priority']['actions'].append({
+            'step': 'Engage experienced Section 138 counsel',
+            'details': 'Hire advocate with proven NI Act experience. Check their track record in similar cases before engagement.'
+        })
+    
+    # WHAT TO AVOID
+    suggestions['avoid']['actions'].append({
+        'action': 'Filing without original cheque and return memo',
+        'reason': 'These are primary evidence - case will fail without them'
+    })
+    
+    suggestions['avoid']['actions'].append({
+        'action': 'Accepting verbal settlement without written agreement',
+        'reason': 'Get all settlement terms in writing with post-dated cheques as security'
+    })
+    
+    if timeline.get('limitation_risk') not in ['HIGH', 'CRITICAL']:
+        suggestions['avoid']['actions'].append({
+            'action': 'Rushing to file without strengthening weak evidence',
+            'reason': 'You have time - use it to collect missing documents and strengthen your case'
+        })
+    
+    suggestions['avoid']['actions'].append({
+        'action': 'Making inconsistent statements in complaint and evidence',
+        'reason': 'Any contradiction will be exploited during cross-examination'
+    })
+    
+    if no_written_agreement:
+        suggestions['avoid']['actions'].append({
+            'action': 'Relying solely on oral evidence for debt proof',
+            'reason': 'Without documents, accused can easily deny the debt. Courts prefer documentary evidence.'
+        })
+    
+    # Clean all text in suggestions
+    suggestions = final_clean(suggestions)
+    
+    return suggestions
+
+
+def _safe_score(value):
+    """Helper to safely convert score to float"""
+    if value is None:
+        return 0
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return 0
+
+
+def _safe(value, default=''):
+    """Helper to safely get string value"""
+    if value is None or value == '':
+        return default
+    return str(value).strip()
+
+
 def format_timeline_transparency(timeline_data: Dict) -> Dict:
 
     transparent_timeline = {
@@ -10556,7 +10818,10 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             'Reassess viability after remediation'
         ]
 
-    return {
+    # Generate ChatGPT-style actionable suggestions
+    actionable_suggestions = generate_actionable_suggestions(analysis, case_data)
+    
+    report = {
         'report_type': 'Professional Compliance Analysis',
         'report_format': 'Structured 5-Page Brief',
         'page_1_executive': page_1,
@@ -10564,12 +10829,18 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
         'page_3_risk_framework': page_3,
         'page_4_strategic_intelligence': page_4,
         'page_5_conclusions': page_5,
+        'actionable_suggestions': actionable_suggestions,
         'metadata': {
             'engine': 'JUDIQ Intelligence Engine',
             'analysis_id': analysis.get('case_id'),
             'generated': analysis.get('analysis_timestamp')
         }
     }
+    
+    # Apply final clean to entire report
+    report = final_clean(report)
+    
+    return report
 
 
 def generate_executive_report(analysis_data: Dict) -> Dict:
