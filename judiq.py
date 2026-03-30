@@ -10818,9 +10818,6 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             'Reassess viability after remediation'
         ]
 
-    # Generate ChatGPT-style actionable suggestions
-    actionable_suggestions = generate_actionable_suggestions(analysis, case_data)
-    
     report = {
         'report_type': 'Professional Compliance Analysis',
         'report_format': 'Structured 5-Page Brief',
@@ -10829,7 +10826,6 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
         'page_3_risk_framework': page_3,
         'page_4_strategic_intelligence': page_4,
         'page_5_conclusions': page_5,
-        'actionable_suggestions': actionable_suggestions,
         'metadata': {
             'engine': 'JUDIQ Intelligence Engine',
             'analysis_id': analysis.get('case_id'),
@@ -10837,10 +10833,39 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
         }
     }
     
+    # NEW: Premium Senior-Advocate style actionable suggestions
+    report["actionable_suggestions"] = generate_simple_suggestions(analysis)
+    
     # Apply final clean to entire report
     report = final_clean(report)
     
     return report
+
+def generate_simple_suggestions(analysis: Dict) -> list:
+    """Premium, real, senior-advocate style 3-4 line suggestions"""
+    score = analysis.get('final_score', 63)
+    weaknesses = analysis.get('report', {}).get('executive_summary', {}).get('weaknesses', [])
+    
+    suggestions = []
+    
+    # Line 1 - Always documentary focus (most common weakness)
+    suggestions.append("Immediately collect written agreement and ledger entries to strengthen the legally enforceable debt.")
+    
+    # Line 2 - Section 63
+    suggestions.append("Prepare and file Section 63 certificate for all electronic evidence before proceeding.")
+    
+    # Line 3 - Settlement or Filing decision
+    if score < 70:
+        suggestions.append("Initiate settlement talks with the accused at 75-85% of the cheque amount to avoid long litigation.")
+    else:
+        suggestions.append("File the complaint only after completing all supporting documents.")
+    
+    # Line 4 - Risk reduction (only if needed)
+    if any("written agreement" in str(w).lower() or "document" in str(w).lower() for w in weaknesses):
+        suggestions.append("Fix all documentary gaps before filing to significantly reduce defence risk.")
+    
+    # Maximum 4 lines
+    return suggestions[:4]
 
 
 def generate_executive_report(analysis_data: Dict) -> Dict:
