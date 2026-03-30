@@ -17862,6 +17862,16 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
             analysis['case_metadata'] = {k: v for k, v in case_data.items()
                                           if not k.startswith('_')}
 
+        # === PREMIUM 3-4 LINE NEXT STEPS (as per faculty feedback) ===
+        # Replace the old next_actions with premium simple suggestions
+        premium_suggestions = generate_simple_suggestions(analysis)
+        _next_actions = premium_suggestions  # Override with premium suggestions
+        
+        # Also update in executive_summary if it exists
+        if isinstance(analysis.get('executive_summary'), dict):
+            analysis['executive_summary']['next_steps'] = premium_suggestions
+            analysis['executive_summary']['next_actions'] = premium_suggestions
+
         return {
             "success": True,
 
@@ -17871,7 +17881,7 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
             "summary": _top_summary,
             "documentary_strength": _doc_context,
             "key_issue": _primary_issue,
-            "next_actions": _next_actions[:5] if _next_actions else [],
+            "next_actions": _next_actions,  # Now using premium suggestions
 
 
             "decision_confidence": _decision_conf,
@@ -22202,40 +22212,6 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
 
 
 def generate_simple_suggestions(analysis: Dict) -> list:
-    """
-    Premium, real, senior-advocate style 3-4 line suggestions.
-    Concise, actionable, professional - like talking to an experienced lawyer.
-    """
-    score = analysis.get('final_score', analysis.get('case_strength_score', {}).get('overall_score', 63))
-    weaknesses = safe_get(analysis, 'case_strength_score', 'critical_weaknesses', default=[])
-    
-    suggestions = []
-    
-    # Line 1: Always prioritize documentary evidence
-    suggestions.append("Immediately collect written agreement and ledger entries to prove legally enforceable debt.")
-    
-    # Line 2: Electronic evidence
-    suggestions.append("Prepare and file Section 65-B certificate for all electronic evidence.")
-    
-    # Line 3: Strategic recommendation based on score
-    if score < 70:
-        suggestions.append("Initiate settlement with the accused at 75-85% of cheque amount to avoid long litigation.")
-    else:
-        suggestions.append("File the complaint only after completing all supporting documents.")
-    
-    # Line 4: Address specific weakness if present
-    if any("written agreement" in str(w).lower() for w in weaknesses):
-        suggestions.append("Fix documentary proof first — this is the main defence risk.")
-    else:
-        # Default 4th line for strong cases
-        if score >= 75:
-            suggestions.append("Ensure all witness statements are sworn and notarized before filing.")
-    
-    # Return max 4 suggestions
-    return suggestions[:4]
-
-
-def generate_simple_suggestions(analysis: Dict) -> list:
     """Premium 3-4 line senior-advocate style suggestions"""
     # Get score - try multiple keys for compatibility
     score = analysis.get('final_score')
@@ -22394,6 +22370,13 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
     # Generate Simple Suggestions (PREMIUM - Senior Advocate Style)
     logger.info("Generating premium simple suggestions...")
     enhanced_analysis['simple_suggestions'] = generate_simple_suggestions(enhanced_analysis)
+    
+    # === PREMIUM 3-4 LINE NEXT STEPS (as per faculty feedback) ===
+    enhanced_analysis['next_steps'] = generate_simple_suggestions(enhanced_analysis)
+    
+    # Add to Executive Summary too (top of report)
+    if isinstance(enhanced_analysis.get('executive_summary'), dict):
+        enhanced_analysis['executive_summary']['next_steps'] = enhanced_analysis['next_steps']
     
     logger.info("Enhanced analysis completed successfully")
     
