@@ -23192,7 +23192,15 @@ def create_app():
                 'error': str(e)
             }), 500
     return app
+# ============================================================
+# MODULE-LEVEL APP INSTANCE (required for gunicorn / Render deployment)
+# Render Start Command: gunicorn judiq:app
+# ============================================================
+if FLASK_AVAILABLE:
+    app = create_app()
+
 if __name__ == '__main__':
     if FLASK_AVAILABLE:
-        app = create_app()
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        import os as _os
+        _port = int(_os.environ.get('PORT', 5000))
+        app.run(host='0.0.0.0', port=_port, debug=False)
