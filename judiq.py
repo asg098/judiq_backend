@@ -17169,8 +17169,8 @@ def create_app():
             }), 500
     
     @app.route('/api/health', methods=['GET'])
-    def health_check():
-        """Health check endpoint"""
+    def api_health_check():
+        """Health check endpoint with detailed status"""
         return jsonify({
             'status': 'healthy',
             'engine_version': ENGINE_VERSION,
