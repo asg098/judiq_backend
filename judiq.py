@@ -13546,12 +13546,6 @@ else:
     limiter = DummyLimiter()
     logger.warning("âš ï¸ Rate limiting disabled - install slowapi to enable")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"]
-)
 
 def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
     """
