@@ -21700,7 +21700,7 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
     # ===== ACTIONABLE SUGGESTIONS SECTION (NEW) =====
     suggestions = analysis.get('actionable_suggestions', {})
     if suggestions:
-        story.append(Paragraph("ðŸ“‹ NEXT ACTIONS - WHAT YOU SHOULD DO NOW", styles['Heading1']))
+        story.append(Paragraph("REPORT: NEXT ACTIONS - WHAT YOU SHOULD DO NOW", styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Overall Recommendation
@@ -21720,7 +21720,7 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
         # HIGH PRIORITY
         high_priority = suggestions.get('high_priority', [])
         if high_priority:
-            story.append(Paragraph("<b>ðŸ”´ HIGH PRIORITY (Do Within 2-3 Days)</b>", styles['Heading2']))
+            story.append(Paragraph("<b>[HIGH PRIORITY] (Do Within 2-3 Days)</b>", styles['Heading2']))
             
             for idx, item in enumerate(high_priority, 1):
                 # Item title
@@ -21748,7 +21748,7 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
         # MEDIUM PRIORITY
         medium_priority = suggestions.get('medium_priority', [])
         if medium_priority:
-            story.append(Paragraph("<b>ðŸŸ  MEDIUM PRIORITY (Within 5-7 Days)</b>", styles['Heading2']))
+            story.append(Paragraph("<b>[MEDIUM PRIORITY] (Within 5-7 Days)</b>", styles['Heading2']))
             
             for idx, item in enumerate(medium_priority, 1):
                 item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
@@ -21773,7 +21773,7 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
         # LOW PRIORITY
         low_priority = suggestions.get('low_priority', [])
         if low_priority:
-            story.append(Paragraph("<b>ðŸŸ¡ LOW PRIORITY / OPTIONAL</b>", styles['Heading2']))
+            story.append(Paragraph("<b>[LOW PRIORITY] / OPTIONAL</b>", styles['Heading2']))
             
             for idx, item in enumerate(low_priority, 1):
                 item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
@@ -21859,39 +21859,21 @@ class FeedbackSystem:
         
         # Analyze comments for common themes
         comments = [f['comments'].lower() for f in self.feedback_db if f['comments']]
-        
-        common_keywords = ['timeline', 'document', 'notice', 'score', 'strategy']
-        for keyword in common_keywords:
+        for keyword in ['timeline', 'document', 'notice', 'score', 'strategy']:
             count = sum(1 for c in comments if keyword in c)
             if count >= 3:
-                patterns['common_issues'].append({
-                    'keyword': keyword,
-                    'frequency': count,
-                    'percentage': (count / len(comments) * 100) if comments else 0
-                })
+                patterns['common_issues'].append({'keyword': keyword, 'frequency': count})
         
         return patterns
     
     def get_improvement_suggestions(self) -> List[str]:
         """Generate improvement suggestions based on feedback"""
         patterns = self.detect_patterns()
-        
         suggestions = []
-        
         if patterns.get('average_rating', 5) < 3:
             suggestions.append("Overall ratings are low - review analysis accuracy")
-        
-        if patterns.get('helpfulness_rate', 100) < 60:
-            suggestions.append("Many users find analysis not helpful - improve recommendations")
-        
-        common_issues = patterns.get('common_issues', [])
-        for issue in common_issues:
-            if issue['frequency'] >= 5:
-                suggestions.append(f"Frequent mentions of '{issue['keyword']}' - review this module")
-        
         if not suggestions:
             suggestions.append("No major issues detected - system performing well")
-        
         return suggestions
 
 
@@ -21911,7 +21893,7 @@ def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
     
     # Overall Recommendation
     report_text += "=" * 80 + "\n"
-    report_text += "ðŸ“‹ NEXT ACTIONS - WHAT YOU SHOULD DO NOW\n"
+    report_text += "REPORT: NEXT ACTIONS - WHAT YOU SHOULD DO NOW\n"
     report_text += "=" * 80 + "\n\n"
     
     report_text += "OVERALL RECOMMENDATION\n"
@@ -21923,7 +21905,7 @@ def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
     report_text += suggestions.get('risk_summary', 'Risk level: Unknown') + "\n\n"
     
     # High Priority
-    report_text += "ðŸ”´ HIGH PRIORITY (Do Within 2-3 Days)\n"
+    report_text += "[HIGH PRIORITY] (Do Within 2-3 Days)\n"
     report_text += "-" * 40 + "\n"
     for i, item in enumerate(suggestions.get('high_priority', []), 1):
         report_text += f"\n{i}. {item.get('title', 'Action')}\n"
@@ -21935,7 +21917,7 @@ def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
         report_text += f"   Deadline: {item.get('deadline', '')}\n"
     
     # Medium Priority
-    report_text += "\n\nðŸŸ  MEDIUM PRIORITY (Within 5-7 Days)\n"
+    report_text += "\n\n[MEDIUM PRIORITY] (Within 5-7 Days)\n"
     report_text += "-" * 40 + "\n"
     for i, item in enumerate(suggestions.get('medium_priority', []), 1):
         report_text += f"\n{i}. {item.get('title', 'Action')}\n"
@@ -21947,7 +21929,7 @@ def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
         report_text += f"   Deadline: {item.get('deadline', '')}\n"
     
     # Low Priority
-    report_text += "\n\nðŸŸ¡ LOW PRIORITY / OPTIONAL\n"
+    report_text += "\n\n[LOW PRIORITY] / OPTIONAL\n"
     report_text += "-" * 40 + "\n"
     for i, item in enumerate(suggestions.get('low_priority', []), 1):
         report_text += f"\n{i}. {item.get('title', 'Action')}\n"
@@ -22125,7 +22107,7 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
             "title": "Evaluate Negotiated Settlement (S.147)",
             "action": "Initiate pre-litigation compounding discussions",
             "steps": [
-                f"Propose resolution at 80-90% of principal amount (â‚¹{analysis.get('case_data', {}).get('cheque_amount', 0):,.2f})",
+                f"Propose resolution at 80-90% of principal amount (INR {analysis.get('case_data', {}).get('cheque_amount', 0):,.2f})",
                 "Structure payment schedule with enforceable post-dated cheques",
                 "Issue a 'Without Prejudice' offer to protect litigation standing",
                 "Document any refusal to settle for use in 'Judicial Discretion' arguments"
@@ -22393,7 +22375,7 @@ def generate_executive_summary(analysis: Dict) -> str:
     overall_score = strength.get('overall_score', 0)
     risk_level = strength.get('risk_level', 'Unknown')
     
-    summary_lines.append(f"📊 CASE STRENGTH: {overall_score:.1f}/100 - {risk_level}")
+    summary_lines.append(f"CASE STRENGTH: {overall_score:.1f}/100 - {risk_level}")
     summary_lines.append(f"   Filing Recommendation: {strength.get('filing_recommendation', 'N/A')}")
     summary_lines.append("")
     
@@ -22401,7 +22383,7 @@ def generate_executive_summary(analysis: Dict) -> str:
     outcome = analysis.get('outcome_prediction', {})
     success_prob = outcome.get('success_probability', 0)
     
-    summary_lines.append(f"ðŸŽ¯ SUCCESS PROBABILITY: {success_prob}%")
+    summary_lines.append(f"[SUCCESS] PROBABILITY: {success_prob}%")
     
     most_likely = outcome.get('most_likely', {})
     summary_lines.append(f"   Most Likely Outcome: {most_likely.get('scenario', 'Unknown')}")
@@ -22412,7 +22394,7 @@ def generate_executive_summary(analysis: Dict) -> str:
     recovery = analysis.get('recovery_intelligence', {})
     recovery_prob = recovery.get('recovery_probability', 0)
     
-    summary_lines.append(f"ðŸ’° RECOVERY PROSPECTS: {recovery_prob:.0f}/100 - {recovery.get('recovery_level', 'Unknown')}")
+    summary_lines.append(f"[RECOVERY] PROSPECTS: {recovery_prob:.0f}/100 - {recovery.get('recovery_level', 'Unknown')}")
     summary_lines.append(f"   Expected Recovery: {recovery.get('expected_recovery_amount', 'N/A')}")
     summary_lines.append(f"   Worth Filing: {'YES' if recovery.get('worth_filing', False) else 'NO'}")
     summary_lines.append("")
@@ -22429,7 +22411,7 @@ def generate_executive_summary(analysis: Dict) -> str:
     
     # Strategy
     strategy = analysis.get('filing_strategy', {})
-    summary_lines.append(f"ðŸ“‹ RECOMMENDED STRATEGY: {strategy.get('recommended_approach', 'Unknown')}")
+    summary_lines.append(f"[STRATEGY] RECOMMENDED: {strategy.get('recommended_approach', 'Unknown')}")
     summary_lines.append(f"   Filing Decision: {strategy.get('filing_decision', 'N/A')}")
     
     settlement = strategy.get('settlement_recommendation', {})
@@ -22454,9 +22436,9 @@ def generate_executive_summary(analysis: Dict) -> str:
     critical_gaps = doc_intel.get('critical_gaps', [])
     
     if critical_gaps:
-        summary_lines.append(f"ðŸ“„ CRITICAL DOCUMENT GAPS:")
+        summary_lines.append(f"[DOCUMENT] CRITICAL GAPS:")
         for gap in critical_gaps:
-            summary_lines.append(f"   â€¢ {gap.title()} missing")
+            summary_lines.append(f"   * {gap.title()} missing")
         summary_lines.append("")
     
     # Final Verdict
