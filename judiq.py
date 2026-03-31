@@ -378,8 +378,8 @@ def remove_formatting_artifacts(text):
     text = text.replace('âš ï¸', '')
     text = text.replace('âš ', '')
     text = text.replace('âŒ', '')
-    text = text.replace('âš¡', '')
-    text = text.replace('ðŸ”´', '')
+    text = text.replace('⚡', '')
+    text = text.replace('”´', '')
     text = text.replace('âœ—', '')
     text = text.replace('âœ“', '')
     return text.strip()
@@ -707,7 +707,7 @@ def format_timeline_transparency(timeline_data: Dict) -> Dict:
 
                     if notice <= notice_deadline:
                         transparent_timeline['compliance_display']['notice'] = {
-                            'status': 'âœ… COMPLIANT',
+                            'status': '✓ COMPLIANT',
                             'details': f'Notice issued {days_diff} days after dishonour',
                             'margin': f'{(notice_deadline - notice).days} days before expiry'
                         }
@@ -766,7 +766,7 @@ def format_timeline_transparency(timeline_data: Dict) -> Dict:
                             }
                         elif complaint <= complaint_deadline:
                             transparent_timeline['compliance_display']['complaint'] = {
-                                'status': 'âœ… WITHIN LIMITATION',
+                                'status': '✓ WITHIN LIMITATION',
                                 'details': f'Filed {days_from_coa} days after cause of action',
                                 'margin': f'{(complaint_deadline - complaint).days} days before expiry'
                             }
@@ -910,7 +910,7 @@ def compute_court_statistics_from_kb(kb_data: pd.DataFrame) -> Dict[str, Dict]:
     if 'case_id' not in kb_data.columns:
         return {}
 
-    logger.info("ðŸ“Š Computing ratio-based court statistics...")
+    logger.info("“Š Computing ratio-based court statistics...")
 
     for idx, row in kb_data.iterrows():
         court_name = str(row.get('court_name', row.get('court_level', 'Generic Court')))
@@ -1001,7 +1001,7 @@ def compute_court_statistics_from_kb(kb_data: pd.DataFrame) -> Dict[str, Dict]:
             stats['confidence'] = 'HIGH' if total >= 20 else ('MEDIUM' if total >= 10 else 'LOW')
             stats['sample_size'] = total
 
-    logger.info(f"âœ… Ratio-based statistics computed for {len(court_stats)} courts")
+    logger.info(f"✓ Ratio-based statistics computed for {len(court_stats)} courts")
     return dict(court_stats)
 
 
@@ -1048,7 +1048,7 @@ def save_court_statistics_to_db(court_stats: Dict):
             ))
         conn.commit()
         conn.close()
-        logger.info(f"âœ… Court statistics saved for {len(court_stats)} courts")
+        logger.info(f"✓ Court statistics saved for {len(court_stats)} courts")
     except sqlite3.Error as e:
         logger.error(f"âŒ Failed to save court statistics: {e}")
 
@@ -1709,11 +1709,10 @@ ENGINE_SCOPE = {
 
 from enum import Enum
 
-
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, field_validator
-import uvicorn
+# ============================================================
+# FRAMEWORK: Flask (WSGI) - Compatible with Gunicorn
+# FastAPI/Uvicorn removed to avoid WSGI/ASGI conflicts
+# ============================================================
 
 
 RATE_LIMITING_AVAILABLE = False
@@ -2195,11 +2194,11 @@ def apply_fatal_override(score: float, fatal_defects: List[Dict]) -> Tuple[float
     )
 
     if has_catastrophic or has_timeline_defect:
-        logger.warning(f"ðŸš¨ CATASTROPHIC FATAL DEFECT: Score forced to {FATAL_CAP_CATASTROPHIC}")
+        logger.warning(f"š¨ CATASTROPHIC FATAL DEFECT: Score forced to {FATAL_CAP_CATASTROPHIC}")
         return FATAL_CAP_CATASTROPHIC, "DO NOT FILE - FATAL DEFECT DETECTED"
 
     if has_critical or len(fatal_defects) >= 2:
-        logger.warning(f"ðŸš¨ CRITICAL FATAL DEFECTS ({len(fatal_defects)}): Score capped at {FATAL_CAP_UNIFIED}")
+        logger.warning(f"š¨ CRITICAL FATAL DEFECTS ({len(fatal_defects)}): Score capped at {FATAL_CAP_UNIFIED}")
         return min(score, FATAL_CAP_UNIFIED), "DO NOT FILE - FATAL DEFECT DETECTED"
 
     if len(fatal_defects) == 1:
@@ -2949,7 +2948,7 @@ def get_calibrated_weights() -> Dict[str, float]:
             'dishonour': 15
         }
 
-        logger.info(f"ðŸ“Š Data-calibrated weights: debt={debt_rate:.1f}% â†’ {_calibrated_weights_cache['debt']:.0f}, notice={notice_rate:.1f}% â†’ {_calibrated_weights_cache['notice']:.0f}")
+        logger.info(f"“Š Data-calibrated weights: debt={debt_rate:.1f}% â†’ {_calibrated_weights_cache['debt']:.0f}, notice={notice_rate:.1f}% â†’ {_calibrated_weights_cache['notice']:.0f}")
         return _calibrated_weights_cache
 
     except Exception as e:
@@ -3472,7 +3471,7 @@ def init_analytics_db():
 
     try:
         cursor.execute("ALTER TABLE case_analyses ADD COLUMN user_email TEXT")
-        logger.info("âœ… Migration: added user_email column to case_analyses")
+        logger.info("✓ Migration: added user_email column to case_analyses")
     except sqlite3.OperationalError:
         pass
 
@@ -3596,7 +3595,7 @@ def init_analytics_db():
     conn.commit()
     conn.close()
 
-    logger.info(f"âœ… JUDIQ database ready  |  path: {analytics_db_path}")
+    logger.info(f"✓ JUDIQ database ready  |  path: {analytics_db_path}")
     logger.info("   Tables: case_analyses, court_intelligence, case_history, "
                 "api_usage_log, knowledge_base, court_statistics, draft_logs")
 
@@ -3661,7 +3660,7 @@ def _download_kb_from_gdrive(file_id: str, dest_path: Path) -> bool:
 
     direct_url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
     try:
-        print(f"ðŸ“¥ Downloading KB from Google Drive (file ID: {file_id[:12]}...)...")
+        print(f"“¥ Downloading KB from Google Drive (file ID: {file_id[:12]}...)...")
         req = urllib.request.Request(
             direct_url,
             headers={
@@ -3689,7 +3688,7 @@ def _download_kb_from_gdrive(file_id: str, dest_path: Path) -> bool:
             with open(dest_path, 'w', encoding='utf-8') as f:
                 f.write(decoded)
             size_kb = dest_path.stat().st_size // 1024
-            print(f"âœ… KB downloaded: {dest_path.name} ({size_kb} KB)")
+            print(f"✓ KB downloaded: {dest_path.name} ({size_kb} KB)")
             return True
         else:
             logger.warning("âš ï¸ Download returned non-CSV content â€” trying API method")
@@ -3711,7 +3710,7 @@ def _download_kb_from_gdrive(file_id: str, dest_path: Path) -> bool:
             with open(dest_path, 'w', encoding='utf-8') as f:
                 f.write(raw)
             size_kb = dest_path.stat().st_size // 1024
-            print(f"âœ… KB downloaded via API: {dest_path.name} ({size_kb} KB)")
+            print(f"✓ KB downloaded via API: {dest_path.name} ({size_kb} KB)")
             return True
     except Exception as e:
         logger.error(f"âŒ API download also failed: {e}")
@@ -3757,7 +3756,7 @@ def load_kb():
                 if len(df) > 1:
                     kb_data = df
                     kb_loaded = True
-                    print(f"âœ… KB loaded from local cache: {len(df)} rows ({age_hours:.1f}h old)")
+                    print(f"✓ KB loaded from local cache: {len(df)} rows ({age_hours:.1f}h old)")
                     return True
             except Exception as e:
                 logger.warning(f"âš ï¸ Local KB read failed: {e}")
@@ -3772,7 +3771,7 @@ def load_kb():
                 if len(df) > 1:
                     kb_data = df
                     kb_loaded = True
-                    print(f"âœ… KB loaded from Google Drive: {len(df)} rows")
+                    print(f"✓ KB loaded from Google Drive: {len(df)} rows")
 
 
                     if 'case_id' in df.columns or 'court_name' in df.columns:
@@ -3780,7 +3779,7 @@ def load_kb():
                             court_stats = compute_court_statistics_from_kb(df)
                             if court_stats:
                                 save_court_statistics_to_db(court_stats)
-                                print(f"âœ… Court statistics computed: {len(court_stats)} courts")
+                                print(f"✓ Court statistics computed: {len(court_stats)} courts")
                         except Exception as e:
                             logger.warning(f"âš ï¸ Court stats computation failed: {e}")
                     return True
@@ -4132,7 +4131,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
             timeline_analysis['timeline_chart'].append({
                 'date': cheque_date.strftime('%Y-%m-%d'),
                 'event': 'Cheque Issued',
-                'status': 'âœ…',
+                'status': '✓',
                 'marker': 'GREEN'
             })
 
@@ -4147,7 +4146,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
                 })
                 timeline_analysis['compliance_status']['cheque_validity'] = 'âŒ FAILED (FATAL)'
             else:
-                timeline_analysis['compliance_status']['cheque_validity'] = 'âœ… COMPLIANT'
+                timeline_analysis['compliance_status']['cheque_validity'] = '✓ COMPLIANT'
                 timeline_analysis['calculation_log'].append({
                     'rule': 'Presentation within validity',
                     'check': f'Presentation {presentation_date} <= Validity end {cheque_validity_end}',
@@ -4158,7 +4157,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
             timeline_analysis['timeline_chart'].append({
                 'date': presentation_date.strftime('%Y-%m-%d'),
                 'event': 'Cheque Presented',
-                'status': 'âœ…'
+                'status': '✓'
             })
 
         if dishonour_date:
@@ -4192,11 +4191,11 @@ def analyze_timeline(case_data: Dict) -> Dict:
                     timeline_analysis['critical_dates']['notice_deadline'] = notice_deadline.strftime('%Y-%m-%d')
 
                     if notice_date <= notice_deadline:
-                        timeline_analysis['compliance_status']['notice_timing'] = f'âœ… COMPLIANT ({days_to_notice} days, deadline: {notice_deadline.strftime("%Y-%m-%d")})'
+                        timeline_analysis['compliance_status']['notice_timing'] = f'✓ COMPLIANT ({days_to_notice} days, deadline: {notice_deadline.strftime("%Y-%m-%d")})'
                         timeline_analysis['timeline_chart'].append({
                             'date': notice_date.strftime('%Y-%m-%d'),
                             'event': f'Notice Sent (Day {days_to_notice}, within limit)',
-                            'status': 'âœ…'
+                            'status': '✓'
                         })
                     else:
                         timeline_analysis['compliance_status']['notice_timing'] = f'âŒ DELAYED ({days_to_notice} days)'
@@ -4235,7 +4234,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
             timeline_analysis['timeline_chart'].append({
                 'date': notice_received_date.strftime('%Y-%m-%d'),
                 'event': 'Notice Received',
-                'status': 'âœ…'
+                'status': '✓'
             })
             timeline_analysis['timeline_chart'].append({
                 'date': fifteen_day_expiry.strftime('%Y-%m-%d'),
@@ -4411,7 +4410,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
                 }
 
             elif complaint_filed_date <= limitation_deadline:
-                timeline_analysis['compliance_status']['limitation'] = f'âœ… WITHIN LIMITATION ({days_to_complaint} days, deadline: {limitation_deadline.strftime("%Y-%m-%d")})'
+                timeline_analysis['compliance_status']['limitation'] = f'✓ WITHIN LIMITATION ({days_to_complaint} days, deadline: {limitation_deadline.strftime("%Y-%m-%d")})'
                 timeline_analysis['limitation_risk'] = 'LOW'
                 timeline_analysis['score'] = 95
 
@@ -4432,7 +4431,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
                 timeline_analysis['timeline_chart'].append({
                     'date': complaint_filed_date.strftime('%Y-%m-%d'),
                     'event': f'Complaint Filed (Day {days_to_complaint}/30)',
-                    'status': 'âœ…'
+                    'status': '✓'
                 })
             else:
                 delay_days = days_to_complaint - 30
@@ -4474,7 +4473,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
         critical_risks = [r for r in timeline_analysis['risk_markers'] if r['severity'] in ['HIGH', 'CRITICAL']]
         if critical_risks:
             timeline_analysis['limitation_risk'] = 'CRITICAL'
-        elif timeline_analysis['compliance_status'].get('limitation', '').startswith('âœ…'):
+        elif timeline_analysis['compliance_status'].get('limitation', '').startswith('✓'):
             timeline_analysis['limitation_risk'] = 'LOW'
         else:
             timeline_analysis['limitation_risk'] = 'MEDIUM'
@@ -4518,7 +4517,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
         'number': 1,
         'name': 'Cheque Drawn on Bank Account',
         'score': ing1_score,
-        'status': 'âœ… Compliant' if ing1_score >= SCORE_EXCELLENT else 'âš ï¸ Weak',
+        'status': '✓ Compliant' if ing1_score >= SCORE_EXCELLENT else 'âš ï¸ Weak',
         'issues': ing1_issues,
         'evidence_required': ['Original cheque', 'Cheque number', 'Bank name', 'Account details']
     })
@@ -4567,7 +4566,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
         'number': 2,
         'name': 'Legally Enforceable Debt',
         'score': max(0, ing2_score),
-        'status': 'âœ… Strong' if ing2_score >= SCORE_EXCELLENT else ('âš ï¸ Moderate' if ing2_score >= SCORE_ADEQUATE else 'âŒ Weak'),
+        'status': '✓ Strong' if ing2_score >= SCORE_EXCELLENT else ('âš ï¸ Moderate' if ing2_score >= SCORE_ADEQUATE else 'âŒ Weak'),
         'issues': ing2_issues,
         'evidence_required': ['Written agreement', 'Ledger', 'Invoices', 'Email/SMS', 'Transaction proof'],
         'presumption_status': 'Section 139 presumption active - burden on accused to rebut',
@@ -4592,7 +4591,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
         'number': 3,
         'name': 'Presented Within Validity Period',
         'score': ing3_score,
-        'status': 'âœ… Compliant' if ing3_score == 100 else 'âŒ FAILED',
+        'status': '✓ Compliant' if ing3_score == 100 else 'âŒ FAILED',
         'issues': ing3_issues,
         'evidence_required': ['Presentation date proof', 'Return memo']
     })
@@ -4623,7 +4622,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
         'number': 4,
         'name': 'Dishonoured by Bank',
         'score': ing4_score,
-        'status': 'âœ… Strong' if ing4_score >= SCORE_EXCELLENT else 'âš ï¸ Moderate',
+        'status': '✓ Strong' if ing4_score >= SCORE_EXCELLENT else 'âš ï¸ Moderate',
         'issues': ing4_issues,
         'dishonour_reason': case_data.get('dishonour_reason', 'Not specified'),
         'evidence_required': ['Return memo/cheque', 'Bank memo']
@@ -4665,7 +4664,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
         'number': 5,
         'name': 'Notice Within 30 Days of Dishonour',
         'score': ing5_score,
-        'status': 'âœ… Compliant' if ing5_score >= SCORE_EXCELLENT else ('âš ï¸ Weak' if ing5_score >= SCORE_ADEQUATE else 'âŒ FAILED'),
+        'status': '✓ Compliant' if ing5_score >= SCORE_EXCELLENT else ('âš ï¸ Weak' if ing5_score >= SCORE_ADEQUATE else 'âŒ FAILED'),
         'issues': ing5_issues,
         'evidence_required': ['Copy of notice', 'Postal receipt', 'AD/registered post proof']
     })
@@ -4683,7 +4682,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
         'number': 6,
         'name': 'Payment Failed Within 15 Days',
         'score': ing6_score,
-        'status': 'âœ… Compliant' if ing6_score == 100 else 'âš ï¸ Conditional â€” filing was premature',
+        'status': '✓ Compliant' if ing6_score == 100 else 'âš ï¸ Conditional â€” filing was premature',
         'issues': ing6_issues,
         'evidence_required': ['Affidavit stating no payment received']
     })
@@ -4740,7 +4739,7 @@ def analyze_ingredients(case_data: Dict, timeline_data: Dict) -> Dict:
         _ing7_status = 'âš ï¸ Delayed'
 
     else:
-        _ing7_status = 'âœ… Compliant'
+        _ing7_status = '✓ Compliant'
 
     ingredients['ingredient_details'].append({
         'number': 7,
@@ -5719,13 +5718,13 @@ def analyze_accused_liability(case_data: Dict) -> Dict:
         liability_analysis['case_type'] = 'Company Case - Section 141 Applicable'
 
         liability_analysis['vicarious_liability_check']['company_impleaded'] = {
-            'status': 'âœ… Company is accused',
+            'status': '✓ Company is accused',
             'requirement': 'Mandatory - Company must be accused No. 1'
         }
 
         if case_data.get('directors_impleaded'):
             liability_analysis['vicarious_liability_check']['directors_impleaded'] = {
-                'status': 'âœ… Directors impleaded',
+                'status': '✓ Directors impleaded',
                 'requirement': 'Required for vicarious liability'
             }
 
@@ -5843,7 +5842,7 @@ def analyze_accused_liability(case_data: Dict) -> Dict:
 
         if case_data.get('specific_averment_present'):
             liability_analysis['vicarious_liability_check']['specific_averment'] = {
-                'status': 'âœ… Specific averment present',
+                'status': '✓ Specific averment present',
                 'requirement': 'MANDATORY per SMS Pharmaceuticals judgment',
                 'details': 'Must specifically state each director was "in charge of and responsible for conduct of business" at relevant time'
             }
@@ -5878,7 +5877,7 @@ def analyze_accused_liability(case_data: Dict) -> Dict:
                 'board_resolution_date': board_resolution_date,
                 'cheque_date': cheque_date,
                 'authorized_signatories': case_data.get('authorized_signatories', []),
-                'status': 'âœ… Resolution predates cheque' if resolution_date_obj < cheque_date_obj else 'âš ï¸ Timeline issue'
+                'status': '✓ Resolution predates cheque' if resolution_date_obj < cheque_date_obj else 'âš ï¸ Timeline issue'
             }
 
         liability_analysis['vicarious_liability_check']['director_distinction'] = {
@@ -5914,7 +5913,7 @@ def analyze_accused_liability(case_data: Dict) -> Dict:
 
         liability_analysis['case_type'] = 'Individual Case'
         liability_analysis['vicarious_liability_check']['simple_liability'] = {
-            'status': 'âœ… Direct liability - no Section 141 issues',
+            'status': '✓ Direct liability - no Section 141 issues',
             'note': 'Individual is directly liable as drawer of cheque'
         }
 
@@ -8877,7 +8876,7 @@ def analyze_document_compliance(case_data: Dict) -> Dict:
 
             compliance['mandatory_docs'][doc_name] = {
                 'present': present,
-                'status': 'âœ… Available' if present else f"âŒ MISSING ({severity})",
+                'status': '✓ Available' if present else f"âŒ MISSING ({severity})",
                 'severity': severity,
                 'consequence': doc_info['consequence']
             }
@@ -8906,7 +8905,7 @@ def analyze_document_compliance(case_data: Dict) -> Dict:
                     })
 
     if fatal_missing:
-        compliance['filing_readiness'] = 'ðŸ”´ FILING BLOCKED'
+        compliance['filing_readiness'] = '”´ FILING BLOCKED'
         compliance['overall_compliance'] = 'FATAL - DO NOT FILE'
         compliance['compliance_score'] = min(score, 25)
         compliance['fatal_message'] = f"FILING BLOCKED: {len(fatal_missing)} fatal document defects detected"
@@ -8915,7 +8914,7 @@ def analyze_document_compliance(case_data: Dict) -> Dict:
         compliance['overall_compliance'] = 'CRITICAL GAPS'
         compliance['compliance_score'] = min(score, 60)
     elif score >= 80:
-        compliance['filing_readiness'] = 'âœ… READY TO FILE'
+        compliance['filing_readiness'] = '✓ READY TO FILE'
         compliance['overall_compliance'] = 'COMPLIANT'
         compliance['compliance_score'] = score
     else:
@@ -9116,13 +9115,13 @@ def generate_executive_summary(
     for cat, data in cat_scores.items():
         s = _n(data.get('score') if isinstance(data, dict) else data)
         if s >= 75:
-            strengths.append(f"{cat}: {s}/100 â€” Strong âœ…")
+            strengths.append(f"{cat}: {s}/100 â€” Strong ✓")
     if case_data.get('return_memo_available'):
-        strengths.append("Dishonour memo available â€” primary evidence secured âœ…")
+        strengths.append("Dishonour memo available â€” primary evidence secured ✓")
     if case_data.get('postal_proof_available'):
-        strengths.append("Postal proof available â€” notice service established âœ…")
+        strengths.append("Postal proof available â€” notice service established ✓")
     if case_data.get('original_cheque_available'):
-        strengths.append("Original cheque available â€” foundational document present âœ…")
+        strengths.append("Original cheque available â€” foundational document present ✓")
     if not strengths:
         strengths.append("Core transaction facts established")
 
@@ -9587,53 +9586,53 @@ def generate_prefiling_checklist(
 
     if 'original_cheque_missing' in documentary_gaps:
         checklist['critical_actions'].append({
-            'action': 'ðŸ“Ž Obtain and attach original cheque',
+            'action': '“Ž Obtain and attach original cheque',
             'priority': 'CRITICAL',
             'reason': 'Primary evidence required'
         })
 
     if 'return_memo_missing' in documentary_gaps:
         checklist['critical_actions'].append({
-            'action': 'ðŸ“Ž Obtain dishonour memo from bank',
+            'action': '“Ž Obtain dishonour memo from bank',
             'priority': 'CRITICAL',
             'reason': 'Statutory requirement under Section 138'
         })
 
     if 'postal_proof_missing' in documentary_gaps:
         checklist['critical_actions'].append({
-            'action': 'ðŸ“Ž Attach postal proof/acknowledgment',
+            'action': '“Ž Attach postal proof/acknowledgment',
             'priority': 'CRITICAL',
             'reason': 'Proof of notice service essential'
         })
 
     if 'written_agreement_missing' in documentary_gaps:
         checklist['recommended_actions'].append({
-            'action': 'ðŸ“„ Attach written agreement/contract',
+            'action': '“„ Attach written agreement/contract',
             'priority': 'HIGH',
             'reason': 'Strengthens proof of legally enforceable debt'
         })
 
     if 'ledger_missing' in documentary_gaps:
         checklist['recommended_actions'].append({
-            'action': 'ðŸ“Š Include ledger extract',
+            'action': '“Š Include ledger extract',
             'priority': 'HIGH',
             'reason': 'Supports transaction authenticity'
         })
 
     checklist['optional_improvements'].append({
-        'action': 'ðŸ¦ Attach bank statement trail',
+        'action': '¦ Attach bank statement trail',
         'priority': 'MEDIUM',
         'reason': 'Additional corroboration of transaction'
     })
 
     checklist['optional_improvements'].append({
-        'action': 'ðŸ‘¤ Prepare witness statements',
+        'action': '‘¤ Prepare witness statements',
         'priority': 'MEDIUM',
         'reason': 'Strengthens factual foundation'
     })
 
     checklist['optional_improvements'].append({
-        'action': 'ðŸ“§ Include email/SMS correspondence',
+        'action': '“§ Include email/SMS correspondence',
         'priority': 'MEDIUM',
         'reason': 'Demonstrates communication trail'
     })
@@ -9679,7 +9678,7 @@ def verify_documents_against_claims(
                 verified = False
                 if verified:
                     verification['verified_count'] += 1
-                    status = "âœ… VERIFIED"
+                    status = "✓ VERIFIED"
                     action = None
                 else:
                     verification['unverified_count'] += 1
@@ -9742,7 +9741,7 @@ def generate_filing_readiness_checklist(
     critical_warns = []
 
     doc_fatal = len(document_compliance.get('fatal_defects', [])) > 0
-    doc_ready = document_compliance.get('filing_readiness') == 'âœ… READY TO FILE'
+    doc_ready = document_compliance.get('filing_readiness') == '✓ READY TO FILE'
 
     if doc_fatal:
         fatal_blocks.append({
@@ -9751,7 +9750,7 @@ def generate_filing_readiness_checklist(
             'action': 'Filing will be rejected - Obtain mandatory documents'
         })
         checklist['clearance_items']['documents'] = {
-            'status': 'ðŸ”´ BLOCKED',
+            'status': '”´ BLOCKED',
             'detail': f"{len(document_compliance.get('fatal_defects', []))} FATAL defects",
             'ready': False,
             'blocking': True
@@ -9759,7 +9758,7 @@ def generate_filing_readiness_checklist(
     elif doc_ready:
         ready_count += 1
         checklist['clearance_items']['documents'] = {
-            'status': 'âœ… Ready',
+            'status': '✓ Ready',
             'detail': f"Compliance: {document_compliance.get('compliance_score', 0)}/100",
             'ready': True
         }
@@ -9781,7 +9780,7 @@ def generate_filing_readiness_checklist(
             'action': 'Filing will fail - Case is limitation-barred'
         })
         checklist['clearance_items']['limitation'] = {
-            'status': 'ðŸ”´ BLOCKED',
+            'status': '”´ BLOCKED',
             'detail': 'LIMITATION EXPIRED',
             'ready': False,
             'blocking': True
@@ -9789,7 +9788,7 @@ def generate_filing_readiness_checklist(
     elif limitation_safe:
         ready_count += 1
         checklist['clearance_items']['limitation'] = {
-            'status': 'âœ… Safe',
+            'status': '✓ Safe',
             'detail': f"Risk: {timeline_result.get('limitation_risk', 'Unknown')}",
             'ready': True
         }
@@ -9803,7 +9802,7 @@ def generate_filing_readiness_checklist(
 
     ingredients_ok = ingredients.get('overall_compliance', 0) >= 70
     checklist['clearance_items']['ingredients'] = {
-        'status': 'âœ… Compliant' if ingredients_ok else 'âš ï¸ Gaps',
+        'status': '✓ Compliant' if ingredients_ok else 'âš ï¸ Gaps',
         'detail': f"Compliance: {ingredients.get('overall_compliance', 0):.1f}%",
         'ready': ingredients_ok
     }
@@ -9822,7 +9821,7 @@ def generate_filing_readiness_checklist(
             'action': 'Address fatal defence vulnerabilities before filing'
         })
         checklist['clearance_items']['defence_exposure'] = {
-            'status': 'ðŸ”´ CRITICAL',
+            'status': '”´ CRITICAL',
             'detail': f"{len(defence_risks.get('fatal_defences', []))} fatal defence risks",
             'ready': False,
             'blocking': False
@@ -9830,7 +9829,7 @@ def generate_filing_readiness_checklist(
     elif defence_safe:
         ready_count += 1
         checklist['clearance_items']['defence_exposure'] = {
-            'status': 'âœ… Manageable',
+            'status': '✓ Manageable',
             'detail': defence_risks.get('overall_risk', 'Unknown'),
             'ready': True
         }
@@ -9844,7 +9843,7 @@ def generate_filing_readiness_checklist(
 
     _ = True
     checklist['clearance_items']['procedural'] = {
-        'status': 'âœ… Clear',
+        'status': '✓ Clear',
         'detail': 'No procedural defects detected',
         'ready': True
     }
@@ -9855,7 +9854,7 @@ def generate_filing_readiness_checklist(
     checklist['critical_warnings'] = critical_warns
 
     if len(fatal_blocks) > 0:
-        checklist['overall_status'] = 'ðŸ”´ FILING BLOCKED'
+        checklist['overall_status'] = '”´ FILING BLOCKED'
         checklist['ready_to_file'] = False
         checklist['decisive_verdict'] = f"DO NOT FILE - {len(fatal_blocks)} fatal blockers detected"
         checklist['filing_recommendation'] = f"FILING WILL FAIL due to: {fatal_blocks[0]['blocker']}"
@@ -9870,7 +9869,7 @@ def generate_filing_readiness_checklist(
         checklist['decisive_verdict'] = f"FILING POSSIBLE BUT RISKY - {len(critical_warns)} warnings present"
         checklist['filing_recommendation'] = 'Strengthen weak areas before filing'
     else:
-        checklist['overall_status'] = 'âœ… READY TO FILE'
+        checklist['overall_status'] = '✓ READY TO FILE'
         checklist['ready_to_file'] = True
         checklist['decisive_verdict'] = 'CLEAR TO FILE - All critical requirements satisfied'
         checklist['filing_recommendation'] = 'Proceed with filing - Case is ready'
@@ -10341,7 +10340,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
         'documents': [
             {
                 'document': name,
-                'status': 'âœ… Available' if available else 'âŒ Missing',
+                'status': '✓ Available' if available else 'âŒ Missing',
                 'priority': priority,
                 'importance': description
             }
@@ -10885,7 +10884,7 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
 
 
     one_liner = plain_summ.get('one_line_verdict') or exec_summ.get('case_overview') or (
-        f"{'â›” FATAL DEFECT â€” Do not file.' if fatal_flag else ('âœ… Strong case.' if score >= 75 else ('âš ï¸ Moderate case â€” evidence gaps.' if score >= 60 else 'ðŸ”´ Weak case â€” major remediation required.'))}"
+        f"{'â›” FATAL DEFECT â€” Do not file.' if fatal_flag else ('✓ Strong case.' if score >= 75 else ('âš ï¸ Moderate case â€” evidence gaps.' if score >= 60 else '”´ Weak case â€” major remediation required.'))}"
         f" Risk score: {score:.0f}/100."
     )
 
@@ -11760,7 +11759,7 @@ def save_analysis_to_db(analysis_report: Dict) -> bool:
 
         conn.commit()
         conn.close()
-        logger.info(f"âœ… Analysis saved to DB: {analysis_report['case_id']}")
+        logger.info(f"✓ Analysis saved to DB: {analysis_report['case_id']}")
         return True
 
     except sqlite3.Error as e:
@@ -12697,16 +12696,16 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
                 alerts.append({'level': 'FATAL', 'message': f'â›” LIMITATION EXPIRED {abs(days_left)} days ago â€” complaint is time-barred'})
                 urgency_level = 'CRITICAL'
             elif days_left <= 3:
-                alerts.append({'level': 'CRITICAL', 'message': f'ðŸš¨ ONLY {days_left} DAY(S) LEFT to file complaint â€” file immediately'})
+                alerts.append({'level': 'CRITICAL', 'message': f'š¨ ONLY {days_left} DAY(S) LEFT to file complaint â€” file immediately'})
                 urgency_level = 'CRITICAL'
             elif days_left <= 7:
                 alerts.append({'level': 'URGENT', 'message': f'âš ï¸ {days_left} days remaining â€” file this week without fail'})
                 urgency_level = 'URGENT'
             elif days_left <= 14:
-                alerts.append({'level': 'HIGH', 'message': f'ðŸ“… {days_left} days remaining â€” finalise complaint this week'})
+                alerts.append({'level': 'HIGH', 'message': f'“… {days_left} days remaining â€” finalise complaint this week'})
                 if urgency_level == 'NORMAL': urgency_level = 'HIGH'
             elif days_left <= 30:
-                alerts.append({'level': 'MEDIUM', 'message': f'ðŸ“… {days_left} days remaining to file complaint'})
+                alerts.append({'level': 'MEDIUM', 'message': f'“… {days_left} days remaining to file complaint'})
                 if urgency_level == 'NORMAL': urgency_level = 'MEDIUM'
         except (ValueError, TypeError) as _e:
             logger.debug(f'Time sensitivity urgency calc suppressed: {_e}')
@@ -12727,7 +12726,7 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
                 alerts.append({'level': 'FATAL', 'message': f'â›” Notice window expired {abs(nd_left)} days ago â€” notice is time-barred'})
                 urgency_level = 'CRITICAL'
             elif nd_left <= 7:
-                alerts.append({'level': 'CRITICAL', 'message': f'ðŸš¨ Only {nd_left} day(s) left to send legal notice â€” send TODAY'})
+                alerts.append({'level': 'CRITICAL', 'message': f'š¨ Only {nd_left} day(s) left to send legal notice â€” send TODAY'})
                 urgency_level = 'CRITICAL'
         except Exception as _e:
             logger.debug(f"Non-critical exception suppressed: {_e}")
@@ -12736,7 +12735,7 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
     if case_data.get('complaint_filed_date') and not case_data.get('interim_compensation_applied'):
         alerts.append({
             'level':   'OPPORTUNITY',
-            'message': 'ðŸ’¡ Section 143A: Apply for interim compensation at first hearing (up to 20% of cheque amount)',
+            'message': '’¡ Section 143A: Apply for interim compensation at first hearing (up to 20% of cheque amount)',
         })
 
 
@@ -12824,7 +12823,7 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
                     elif remaining <= 3:
                         alerts.append({
                             'level':   'CRITICAL',
-                            'message': f'ðŸš¨ ONLY {remaining} DAY(S) LEFT to file complaint â€” file immediately'
+                            'message': f'š¨ ONLY {remaining} DAY(S) LEFT to file complaint â€” file immediately'
                         })
                         urgency_level = 'CRITICAL'
                     elif remaining <= 7:
@@ -12856,7 +12855,7 @@ def get_time_sensitivity(analysis: Dict, case_data: Dict) -> Dict:
         'alerts':         alerts,
         'deadlines':      deadlines,
         'today':          today.isoformat(),
-        'summary':        (f'ðŸš¨ URGENT action required â€” {top_alert}' if urgency_level in ('CRITICAL', 'URGENT')
+        'summary':        (f'š¨ URGENT action required â€” {top_alert}' if urgency_level in ('CRITICAL', 'URGENT')
                            else f'No immediate deadline pressure â€” {top_alert}' if urgency_level == 'NORMAL'
                            else top_alert),
     }
@@ -12968,7 +12967,7 @@ def run_input_sanity_check(case_data: Dict) -> Dict:
         'warning_count':  len(warnings),
         'errors':         errors,
         'warnings':       warnings,
-        'summary':        ('âœ… All inputs are logically consistent' if is_clean and not warnings else
+        'summary':        ('✓ All inputs are logically consistent' if is_clean and not warnings else
                            f'âš ï¸ {len(warnings)} warning(s) â€” verify inputs' if is_clean else
                            f'âŒ {len(errors)} input error(s) detected â€” analysis may be unreliable'),
         'proceed':        is_clean,
@@ -13346,11 +13345,11 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
             "â›” Case has a fatal defect â€” do not file until the issue is resolved."
         )
     elif score >= 75:
-        one_line = "âœ… Strong case â€” statutory requirements are substantially satisfied. Proceed to file after final document review."
+        one_line = "✓ Strong case â€” statutory requirements are substantially satisfied. Proceed to file after final document review."
     elif score >= 55:
         one_line = "âš ï¸ Case is valid but has evidentiary gaps â€” strengthen documentary proof before filing for better conviction prospects."
     elif score >= 35:
-        one_line = "ðŸ”´ Weak case â€” significant evidentiary and procedural gaps require remediation before filing."
+        one_line = "”´ Weak case â€” significant evidentiary and procedural gaps require remediation before filing."
     else:
         one_line = "â›” Very weak case â€” multiple critical deficiencies make filing highly inadvisable without major remediation."
 
@@ -13440,49 +13439,49 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
 async def lifespan(app: FastAPI):
 
     print("\n" + "="*100)
-    print("ðŸš€ JUDIQ AI - LEGAL INTELLIGENCE PLATFORM")
+    print("š€ JUDIQ AI - LEGAL INTELLIGENCE PLATFORM")
     print("="*100 + "\n")
 
 
-    print(f"ðŸ“‚ Data directory: {DATA_DIR}")
+    print(f"“‚ Data directory: {DATA_DIR}")
     init_analytics_db()
 
 
     print("\n" + "="*80)
-    print("ðŸ“š LOADING KNOWLEDGE BASE FROM GOOGLE DRIVE")
+    print("“š LOADING KNOWLEDGE BASE FROM GOOGLE DRIVE")
     print("="*80)
     load_kb()
 
     print("="*100)
-    print("âœ… JUDIQ AI READY - PROFESSIONAL LEGAL INTELLIGENCE")
+    print("✓ JUDIQ AI READY - PROFESSIONAL LEGAL INTELLIGENCE")
     print("="*100)
-    print(f"ðŸ“š Knowledge Base: {len(kb_data) if kb_loaded else 'Minimal fallback'} rows | Drive: {'âœ…' if kb_loaded else 'âŒ Set GDRIVE_FILE_ID env var'}")
-    print("ðŸ¤– LLM Enhancement: Disabled (Render â€” cross-exam uses rule-based engine)")
-    print(f"ðŸ’¾ Analytics DB: {analytics_db_path}")
-    print("âš¡ Embedding Cache: Disabled (Render)")
+    print(f"“š Knowledge Base: {len(kb_data) if kb_loaded else 'Minimal fallback'} rows | Drive: {'✓' if kb_loaded else 'âŒ Set GDRIVE_FILE_ID env var'}")
+    print("¤– LLM Enhancement: Disabled (Render â€” cross-exam uses rule-based engine)")
+    print(f"’¾ Analytics DB: {analytics_db_path}")
+    print("⚡ Embedding Cache: Disabled (Render)")
     print("="*100 + "\n")
-    print("ðŸŽ¯ INTELLIGENCE CAPABILITIES (90% ELITE-GRADE):")
-    print("  âœ… Layer 1: Timeline Intelligence (Deterministic + Confidence)")
-    print("  âœ… Layer 2: Ingredient Compliance (Calibrated Weights)")
-    print("  âœ… Layer 3: Documentary Strength (Severity Tiers)")
-    print("  âœ… Layer 4: Liability Expansion (Section 141)")
-    print("  âœ… Layer 5: Defence Vulnerability (Logic)")
-    print("  âœ… Layer 6: Procedural Defect Scanner (Rule-Based)")
-    print("  âœ… Layer 7: Risk Scoring (Fatal Override + Confidence)")
-    print("  âœ… Layer 8: Settlement & Financial Exposure")
-    print("  âœ… Layer 9: Contradiction Detector")
-    print("  âœ… Layer 10: Judicial Behavior (RATIO-BASED ANALYTICS)")
-    print("  âœ… Layer 11: Presumption Rebuttal (Evidence-Based)")
-    print("  âœ… Layer 12: Cross-Examination Risk")
-    print("  âœ… Layer 13: Professional Reports (Dual Format)")
-    print("\nðŸ—ï¸  ARCHITECTURE:")
-    print("  ðŸ“ Deterministic: 9 modules (100% rule-based)")
-    print("  ðŸ” RAG Analytics: Ratio-based court statistics")
-    print("  ðŸ¤– LLM: Optional (explanation only)")
+    print("Ž¯ INTELLIGENCE CAPABILITIES (90% ELITE-GRADE):")
+    print("  ✓ Layer 1: Timeline Intelligence (Deterministic + Confidence)")
+    print("  ✓ Layer 2: Ingredient Compliance (Calibrated Weights)")
+    print("  ✓ Layer 3: Documentary Strength (Severity Tiers)")
+    print("  ✓ Layer 4: Liability Expansion (Section 141)")
+    print("  ✓ Layer 5: Defence Vulnerability (Logic)")
+    print("  ✓ Layer 6: Procedural Defect Scanner (Rule-Based)")
+    print("  ✓ Layer 7: Risk Scoring (Fatal Override + Confidence)")
+    print("  ✓ Layer 8: Settlement & Financial Exposure")
+    print("  ✓ Layer 9: Contradiction Detector")
+    print("  ✓ Layer 10: Judicial Behavior (RATIO-BASED ANALYTICS)")
+    print("  ✓ Layer 11: Presumption Rebuttal (Evidence-Based)")
+    print("  ✓ Layer 12: Cross-Examination Risk")
+    print("  ✓ Layer 13: Professional Reports (Dual Format)")
+    print("\n—ï¸  ARCHITECTURE:")
+    print("  “ Deterministic: 9 modules (100% rule-based)")
+    print("  ” RAG Analytics: Ratio-based court statistics")
+    print("  ¤– LLM: Optional (explanation only)")
     print("  âš ï¸  Fatal Override: Active (auto-caps scores)")
-    print("  ðŸ“Š Data Calibration: Weights from dismissal rates")
-    print("  ðŸŽ¯ Confidence Layer: Every output scored")
-    print("  âœ… Validation: Methodology documented")
+    print("  “Š Data Calibration: Weights from dismissal rates")
+    print("  Ž¯ Confidence Layer: Every output scored")
+    print("  ✓ Validation: Methodology documented")
     print("="*100 + "\n")
 
 
@@ -13491,14 +13490,9 @@ async def lifespan(app: FastAPI):
     yield
 
 
-    print("\nâœ… JUDIQ v5.0 shutting down...")
+    print("\n✓ JUDIQ v5.0 shutting down...")
 
-app = FastAPI(
-    title="JUDIQ v5.0 - Legal Intelligence Platform",
-    version="5.0.0",
-    description="90% Elite-Grade Section 138 NI Act Analysis - Ratio-Based Analytics",
-    lifespan=lifespan
-)
+# FastAPI removed - Flask only
 
 
 if RATE_LIMITING_AVAILABLE:
@@ -13508,7 +13502,7 @@ if RATE_LIMITING_AVAILABLE:
         limiter = Limiter(key_func=get_remote_address)
         app.state.limiter = limiter
         app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-        logger.info("âœ… Rate limiting enabled (30 requests/minute)")
+        logger.info("✓ Rate limiting enabled (30 requests/minute)")
     except Exception:
         limiter = DummyLimiter()
         logger.warning("âš ï¸ Rate limiting disabled - slowapi handler unavailable")
@@ -13538,7 +13532,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
 
     This function ensures NO contradictions in final output.
     """
-    logger.info("  ðŸŽ¯ Reconciling all decision modules...")
+    logger.info("  Ž¯ Reconciling all decision modules...")
 
 
     _ = analysis_report.get('fatal_flag', False)
@@ -13549,7 +13543,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
     if 'modules' in analysis_report and 'risk_assessment' in analysis_report['modules']:
         risk_module = analysis_report['modules'].get('risk_assessment', {})
         risk_score = risk_module.get('overall_risk_score', 50)
-        logger.info(f"  ðŸ“Š Reading authoritative risk score: {risk_score}")
+        logger.info(f"  “Š Reading authoritative risk score: {risk_score}")
     else:
 
         risk_score = analysis_report.get('risk_score', 50)
@@ -13622,7 +13616,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
 
                 fatal_sources.append('jurisdiction_critical')
                 jurisdiction_penalty = 40
-                logger.error("  ðŸ”´ Jurisdiction CRITICAL - FATAL condition (filing blocked)")
+                logger.error("  ”´ Jurisdiction CRITICAL - FATAL condition (filing blocked)")
             elif jurisdiction_risk == 'HIGH':
                 jurisdiction_penalty = 20
                 logger.warning("  âš ï¸ Jurisdiction INVALID (HIGH) - score reduction applied")
@@ -13644,7 +13638,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
 
 
     risk_score = round(max(15, risk_score - jurisdiction_penalty - section_63_penalty), 1)
-    logger.info(f"  ðŸ“Š Adjusted risk score after jurisdiction/63: {risk_score}")
+    logger.info(f"  “Š Adjusted risk score after jurisdiction/63: {risk_score}")
 
 
     if 'modules' in analysis_report and 'risk_assessment' in analysis_report['modules']:
@@ -13750,7 +13744,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
         }
 
 
-    logger.info(f"  âœ… Final verdict: {final_verdict['status']} - {final_verdict['category']}")
+    logger.info(f"  ✓ Final verdict: {final_verdict['status']} - {final_verdict['category']}")
 
 
     if is_fatal:
@@ -13800,7 +13794,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
         if final_verdict['status'] in ['FATAL', 'CRITICAL']:
             filing_module['filing_readiness'] = 'âŒ NOT READY TO FILE'
             filing_module['ready_to_file'] = False
-            filing_module['overall_status'] = 'ðŸ”´ FILING BLOCKED' if final_verdict['filing_blocked'] else 'âš ï¸ HIGH RISK'
+            filing_module['overall_status'] = '”´ FILING BLOCKED' if final_verdict['filing_blocked'] else 'âš ï¸ HIGH RISK'
             filing_module['decisive_verdict'] = final_verdict['recommendation']
             filing_module['final_status'] = 'NOT READY TO FILE'
         elif final_verdict['status'] == 'WEAK':
@@ -13816,9 +13810,9 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
             filing_module['decisive_verdict'] = final_verdict['recommendation']
             filing_module['final_status'] = 'READY TO FILE'
         else:
-            filing_module['filing_readiness'] = 'âœ… READY TO FILE'
+            filing_module['filing_readiness'] = '✓ READY TO FILE'
             filing_module['ready_to_file'] = True
-            filing_module['overall_status'] = 'âœ… STRONG'
+            filing_module['overall_status'] = '✓ STRONG'
             filing_module['decisive_verdict'] = final_verdict['recommendation']
             filing_module['final_status'] = 'READY TO FILE'
 
@@ -13863,7 +13857,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
                     es['overall_assessment'] = 'HIGH RISK'
 
 
-            status_marker = 'ðŸ”´' if is_fatal else ('âš ï¸' if final_verdict['status'] in ['CRITICAL', 'WEAK'] else 'âœ…')
+            status_marker = '”´' if is_fatal else ('âš ï¸' if final_verdict['status'] in ['CRITICAL', 'WEAK'] else '✓')
             es['case_overview'] = f"{status_marker} {final_verdict['status']}: {final_verdict['reasoning']}"
 
             es['final_score']     = _es_score
@@ -13895,7 +13889,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
                 analysis_report['professional_report']['summary']['final_verdict'] = final_verdict['category']
                 analysis_report['professional_report']['summary']['recommendation'] = final_verdict['recommendation']
 
-    logger.info("  âœ… Verdict integrity enforced - all modules synchronized")
+    logger.info("  ✓ Verdict integrity enforced - all modules synchronized")
 
     return analysis_report
 
@@ -14494,7 +14488,7 @@ def analyze_complaint_drafting_compliance(case_data: Dict) -> Dict:
 
     result['required_averments'].append({
         'averment':    'Dishonour Fact',
-        'status':      'âœ… Can be averred from bank dishonour memo',
+        'status':      '✓ Can be averred from bank dishonour memo',
         'requirement': 'Date of dishonour, reason, bank name, cheque details'
     })
 
@@ -14511,7 +14505,7 @@ def analyze_complaint_drafting_compliance(case_data: Dict) -> Dict:
 
     result['required_averments'].append({
         'averment':    '15-Day Demand Period',
-        'status':      'âœ… Averrable from notice and dishonour dates',
+        'status':      '✓ Averrable from notice and dishonour dates',
         'requirement': 'Aver that accused was called upon to pay within 15 days and failed'
     })
 
@@ -14529,7 +14523,7 @@ def analyze_complaint_drafting_compliance(case_data: Dict) -> Dict:
         else:
             result['required_averments'].append({
                 'averment': 'Director/Company Averments (S.141)',
-                'status':   'âœ… Directors impleaded â€” ensure specific role averments added',
+                'status':   '✓ Directors impleaded â€” ensure specific role averments added',
                 'requirement': 'Must specifically state each director was "in charge of and responsible for conduct of business" â€” Pooja Ravinder Devidasani v. State of Maharashtra (2014) 16 SCC 1'
             })
 
@@ -14540,21 +14534,21 @@ def analyze_complaint_drafting_compliance(case_data: Dict) -> Dict:
     else:
         result['required_averments'].append({
             'averment': 'Territorial Jurisdiction',
-            'status':   'âœ… Court location specified',
+            'status':   '✓ Court location specified',
             'requirement': 'Aver that cheque was presented at bank within court jurisdiction, OR notice was sent from within jurisdiction'
         })
 
 
     result['required_averments'].append({
         'averment':    'Complaint on Oath',
-        'status':      'âœ… Standard requirement â€” ensure complainant is present to verify',
+        'status':      '✓ Standard requirement â€” ensure complainant is present to verify',
         'requirement': 'Section 200 CrPC: Complainant must be examined on oath at the time of filing'
     })
 
 
     result['required_averments'].append({
         'averment':    'Cause of Action',
-        'status':      'âœ… Averrable from timeline',
+        'status':      '✓ Averrable from timeline',
         'requirement': 'State exact date of expiry of 15-day notice period (cause of action date)'
     })
 
@@ -15074,7 +15068,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
     if user_email:
         is_allowed, current_count = check_daily_limit(user_email)
         if not is_allowed:
-            logger.warning(f"ðŸš« Daily limit reached for {user_email}: {current_count}/3 analyses used")
+            logger.warning(f"š« Daily limit reached for {user_email}: {current_count}/3 analyses used")
             _limit_val = get_user_limit(user_email)
             return {
                 'success': False,
@@ -15106,7 +15100,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'timestamp': analysis_start_time.isoformat()
             }
         else:
-            logger.info(f"âœ… Daily limit check passed for {user_email}: {current_count}/3 analyses used")
+            logger.info(f"✓ Daily limit check passed for {user_email}: {current_count}/3 analyses used")
 
     try:
         if not case_data or not isinstance(case_data, dict):
@@ -15147,7 +15141,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'timestamp': analysis_start_time.isoformat()
             }
 
-        logger.info("ðŸš€ Starting comprehensive legal intelligence analysis...")
+        logger.info("š€ Starting comprehensive legal intelligence analysis...")
         start_time = time.time()
 
 
@@ -15191,7 +15185,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['processing_flags'] = processing_flags
 
 
-        logger.info("ðŸ”§ PHASE 1: FATAL EVALUATION (Pre-Analysis)")
+        logger.info("”§ PHASE 1: FATAL EVALUATION (Pre-Analysis)")
         analysis_report['audit_log']['phases_executed'].append('PHASE_1_FATAL_EVALUATION')
 
 
@@ -15238,7 +15232,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             analysis_report['fatal_flag'] = True
             analysis_report['fatal_source'] = 'timeline_intelligence'
             analysis_report['fatal_type'] = 'LIMITATION_EXPIRED'
-            logger.warning(f"ðŸ”´ FATAL TIMELINE: {_tl_lim_risk} â€” premature/time-barred â€” continuing all modules")
+            logger.warning(f"”´ FATAL TIMELINE: {_tl_lim_risk} â€” premature/time-barred â€” continuing all modules")
         elif _tl_is_same_day:
             analysis_report['same_day_filing'] = True
             logger.info("âš ï¸ Same-day filing detected â€” HIGH risk, not fatal â€” continuing all modules")
@@ -15247,12 +15241,12 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['modules']['document_compliance'] = doc_compliance
 
 
-        logger.info("ðŸ”’ Analyzing Section 63 Compliance...")
+        logger.info("”’ Analyzing Section 63 Compliance...")
         section_63 = analyze_section_63_compliance(case_data)
         analysis_report['modules']['section_63_compliance'] = section_63
 
 
-        logger.info("  ðŸ¦ Module A: Dishonour Reason Deep Analysis...")
+        logger.info("  ¦ Module A: Dishonour Reason Deep Analysis...")
         try:
             dishonour_analysis = analyze_dishonour_reason(case_data)
         except Exception as _e:
@@ -15272,7 +15266,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             analysis_report['fatal_flag'] = True
             analysis_report['fatal_source'] = str(analysis_report.get('fatal_source', '')) + ',enforceable_debt'
 
-        logger.info("  ðŸ“… Module C: Delay Condonation Analysis...")
+        logger.info("  “… Module C: Delay Condonation Analysis...")
         try:
             delay_condonation = analyze_delay_condonation(case_data, timeline_result)
         except Exception as _e:
@@ -15280,7 +15274,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             delay_condonation = {'condonation_required': False, 'risk_level': 'LOW'}
         analysis_report['modules']['delay_condonation'] = delay_condonation
 
-        logger.info("  ðŸ“‹ Module D: Complaint Drafting Compliance...")
+        logger.info("  “‹ Module D: Complaint Drafting Compliance...")
         try:
             drafting_compliance = analyze_complaint_drafting_compliance(case_data)
         except Exception as _e:
@@ -15288,7 +15282,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             drafting_compliance = {'compliance_score': 50, 'risk_level': 'MEDIUM', 'critical_gaps': []}
         analysis_report['modules']['drafting_compliance'] = drafting_compliance
 
-        logger.info("  ðŸ“„ Module E: Document Validity & Admissibility...")
+        logger.info("  “„ Module E: Document Validity & Admissibility...")
         try:
             doc_validity = analyze_document_validity(case_data)
         except Exception as _e:
@@ -15296,7 +15290,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             doc_validity = {'admissibility_score': 50, 'risk_level': 'MEDIUM', 'invalid_documents': []}
         analysis_report['modules']['document_validity'] = doc_validity
 
-        logger.info("  ðŸš¨ Module F: Fraud & False Case Signal Detection...")
+        logger.info("  š¨ Module F: Fraud & False Case Signal Detection...")
         try:
             fraud_signals = analyze_fraud_signals(case_data)
         except Exception as _e:
@@ -15305,18 +15299,18 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['modules']['fraud_signals'] = fraud_signals
 
 
-        logger.info("ðŸ’° Analyzing Income Tax 269SS Compliance...")
+        logger.info("’° Analyzing Income Tax 269SS Compliance...")
         income_tax_269ss = analyze_income_tax_269ss_compliance(case_data)
         analysis_report['modules']['income_tax_269ss'] = income_tax_269ss
         analysis_report['modules']['income_tax_269ss_compliance'] = income_tax_269ss
 
 
-        logger.info("ðŸ“¬ Analyzing Notice Delivery Status...")
+        logger.info("“¬ Analyzing Notice Delivery Status...")
         notice_delivery = analyze_notice_delivery_status(case_data)
         analysis_report['modules']['notice_delivery_status'] = notice_delivery
 
 
-        logger.info("ðŸ’µ Analyzing Part Payment Defence...")
+        logger.info("’µ Analyzing Part Payment Defence...")
         part_payment = analyze_part_payment_defence(case_data)
         analysis_report['modules']['part_payment_analysis'] = part_payment
 
@@ -15326,12 +15320,12 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['modules']['territorial_jurisdiction'] = jurisdiction
 
 
-        logger.info("ðŸ¤ Analyzing Compounding Eligibility...")
+        logger.info("¤ Analyzing Compounding Eligibility...")
         compounding = analyze_compounding_eligibility(case_data)
         analysis_report['modules']['compounding_analysis'] = compounding
 
 
-        logger.info("ðŸ‘” Analyzing Director Role-Based Liability...")
+        logger.info("‘” Analyzing Director Role-Based Liability...")
         director_role = analyze_director_role_liability(case_data)
         analysis_report['modules']['director_role_analysis'] = director_role
 
@@ -15385,12 +15379,12 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             analysis_report['fatal_type'] = 'MULTIPLE_FATAL_CONDITIONS'
             analysis_report['fatal_conditions'] = fatal_conditions
             analysis_report['fatal_details'] = [f"{f['type']}: {f['details']}" for f in fatal_conditions]
-            logger.warning(f"ðŸ”´ FATAL CONDITIONS ({len(fatal_conditions)}) â€” recording but continuing all modules for complete report")
+            logger.warning(f"”´ FATAL CONDITIONS ({len(fatal_conditions)}) â€” recording but continuing all modules for complete report")
 
-        logger.info("âœ… PHASE 1 COMPLETE: No fatal conditions - Proceeding to full analysis")
+        logger.info("✓ PHASE 1 COMPLETE: No fatal conditions - Proceeding to full analysis")
         analysis_report['audit_log']['phase_1_passed'] = True
 
-        logger.info("ðŸ”§ PHASE 2: Core Analysis Modules")
+        logger.info("”§ PHASE 2: Core Analysis Modules")
         analysis_report['audit_log']['phases_executed'].append('PHASE_2_CORE_ANALYSIS')
         analysis_report['audit_log']['phase_2_started'] = datetime.now().isoformat()
 
@@ -15555,7 +15549,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         if proc_fatal:
             analysis_report['fatal_flag'] = True
             analysis_report['fatal_source'] = analysis_report.get('fatal_source', '') + ',procedural_defects'
-            logger.warning(f"ðŸ”´ FATAL PROCEDURAL DEFECT: {proc_fatal[0].get('defect', 'Unknown')}")
+            logger.warning(f"”´ FATAL PROCEDURAL DEFECT: {proc_fatal[0].get('defect', 'Unknown')}")
 
         logger.info("  Module 7: Risk Scoring...")
         risk_result = calculate_overall_risk_score(
@@ -15584,7 +15578,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                         and 'same day' not in str(d.get('defect','')).lower()]
         if _risk_fatals:
             analysis_report['fatal_flag'] = True
-            logger.warning(f"ðŸ”´ FATAL DEFECTS DETECTED ({len(_risk_fatals)}) - Score capped")
+            logger.warning(f"”´ FATAL DEFECTS DETECTED ({len(_risk_fatals)}) - Score capped")
 
         logger.info("  Module 8: Settlement Analysis...")
         settlement_result = analyze_settlement_exposure(case_data, risk_result)
@@ -15601,7 +15595,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['modules']['edge_case_detection'] = edge_case_result
         analysis_report['architecture']['deterministic_modules'].append('Edge Case Handler')
 
-        logger.info("ðŸ” LAYER 2: RAG-Powered Pattern Analysis...")
+        logger.info("” LAYER 2: RAG-Powered Pattern Analysis...")
 
         logger.info("  Module 10: Judicial Behavior Analysis...")
 
@@ -15626,20 +15620,20 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['modules']['cross_examination_risk'] = cross_exam_result
         analysis_report['architecture']['rag_modules'].append('Cross-Examination Risk')
 
-        logger.info("ðŸ¤– LAYER 3: Deterministic Insight Generation (LLM disabled on Render)...")
+        logger.info("¤– LAYER 3: Deterministic Insight Generation (LLM disabled on Render)...")
         analysis_report['architecture']['llm_enhanced'] = False
         logger.info("  â­ï¸  LLM disabled on Render â€” using deterministic insights only")
 
 
-        logger.info("ðŸ”§ PHASE 3: Verdict Integrity + Consistency Check")
+        logger.info("”§ PHASE 3: Verdict Integrity + Consistency Check")
         analysis_report['audit_log']['phases_executed'].append('PHASE_3_CONSISTENCY')
         analysis_report['audit_log']['phase_3_started'] = datetime.now().isoformat()
 
-        logger.info("ðŸŽ¯ Enforcing Verdict Integrity (Pre-Summary)...")
+        logger.info("Ž¯ Enforcing Verdict Integrity (Pre-Summary)...")
         analysis_report = enforce_verdict_integrity(analysis_report)
 
 
-        logger.info("ðŸ” Running internal consistency check...")
+        logger.info("” Running internal consistency check...")
         _consistency = run_consistency_check(analysis_report)
         if _consistency.get('corrections'):
             _corr = _consistency['corrections']
@@ -15659,13 +15653,13 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                     logger.info(f"  âš™ï¸  Corrected filing_status â†’ {_corr['filing_status_override']}")
         analysis_report['_consistency_check'] = _consistency
         if _consistency.get('blocked'):
-            logger.error(f"  ðŸ›‘ Consistency check BLOCKED output: {_consistency.get('issues')}")
-        logger.info(f"  âœ… Consistency: {_consistency['message']}")
+            logger.error(f"  ›‘ Consistency check BLOCKED output: {_consistency.get('issues')}")
+        logger.info(f"  ✓ Consistency: {_consistency['message']}")
 
-        logger.info("ðŸ”§ PHASE 4: Decision Generation (Reports + Summaries)")
+        logger.info("”§ PHASE 4: Decision Generation (Reports + Summaries)")
         analysis_report['audit_log']['phases_executed'].append('PHASE_4_DECISION_GENERATION')
         analysis_report['audit_log']['phase_4_started'] = datetime.now().isoformat()
-        logger.info("ðŸ“Š Generating Executive Intelligence Report...")
+        logger.info("“Š Generating Executive Intelligence Report...")
         try:
             analysis_report['executive_summary'] = generate_executive_summary(
                 case_data,
@@ -15695,7 +15689,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'edge_cases_alert': [], 'fatal_defects_count': 0
             }
 
-        logger.info("ðŸš€ Adding Enterprise Features...")
+        logger.info("š€ Adding Enterprise Features...")
 
         logger.info("  âš–ï¸ Section 139 Presumption Intelligence...")
         presumption_intel = calculate_presumption_intelligence(
@@ -15712,7 +15706,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         )
         analysis_report['presumption_intelligence'] = presumption_intel
 
-        logger.info("  ðŸŽ¯ Judicial Variance Simulation...")
+        logger.info("  Ž¯ Judicial Variance Simulation...")
 
 
         kb_provisions = len(kb_court_patterns) if kb_court_patterns else 0
@@ -15735,7 +15729,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 'fallback_variance': 'Not simulated'
             }
 
-        logger.info("  ðŸ”„ Dynamic Weight Analysis...")
+        logger.info("  ”„ Dynamic Weight Analysis...")
         base_weights = CONFIG['SCORING_WEIGHTS']
         adjusted_weights, weight_explanations = adjust_weights_contextually(
             base_weights,
@@ -15748,17 +15742,17 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             'adjustments_made': weight_explanations
         }
 
-        logger.info("  ðŸ” Advanced Contradiction Detection (reusing Module 9 result)")
+        logger.info("  ” Advanced Contradiction Detection (reusing Module 9 result)")
 
         analysis_report['contradictions_detected'] = contradiction_result
 
-        logger.info("  ðŸ›¡ï¸ Fraud Risk Analysis...")
+        logger.info("  ›¡ï¸ Fraud Risk Analysis...")
         fraud_analysis = calculate_fraud_risk(case_data)
         analysis_report['fraud_risk_analysis'] = fraud_analysis
 
         analysis_report['version_info'] = get_version_info()
 
-        logger.info("ðŸ“„ Module 14: Document Compliance (reusing Phase 1 result â€” no re-run)")
+        logger.info("“„ Module 14: Document Compliance (reusing Phase 1 result â€” no re-run)")
 
 
         if len(doc_compliance.get('fatal_defects', [])) > 0:
@@ -15771,11 +15765,11 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['modules']['defence_risk_analysis'] = defence_risks
         analysis_report['architecture']['deterministic_modules'].append('Defence Risk Analysis')
 
-        logger.info("ðŸ”— Module 15B: Defence Dependency Enforcement...")
+        logger.info("”— Module 15B: Defence Dependency Enforcement...")
         dependency_check = enforce_defence_dependencies(case_data, defence_risks, doc_compliance)
         analysis_report['modules']['dependency_enforcement'] = dependency_check
 
-        logger.info("ðŸ” Module 15C: Defence-Document Cross-Validation...")
+        logger.info("” Module 15C: Defence-Document Cross-Validation...")
         cross_validation = cross_validate_defence_documents(case_data, defence_risks, doc_compliance)
         analysis_report['modules']['cross_validation'] = cross_validation
 
@@ -15784,7 +15778,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             analysis_report['overall_status'] = 'FATAL - EVIDENCE GAP'
             analysis_report['fatal_type'] = analysis_report.get('fatal_type', 'EVIDENCE_GAP')
             analysis_report['filing_blocked'] = True
-            logger.warning("ðŸ”´ FATAL EVIDENCE GAP â€” continuing modules for complete report")
+            logger.warning("”´ FATAL EVIDENCE GAP â€” continuing modules for complete report")
 
         if len(dependency_check.get('violations', [])) > 0:
             has_fatal_dependency = any(v['severity'] == 'FATAL' for v in dependency_check['violations'])
@@ -15792,13 +15786,13 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
                 analysis_report['fatal_flag'] = True
                 analysis_report['overall_status'] = 'FATAL - MANDATORY REQUIREMENTS NOT MET'
                 analysis_report['filing_blocked'] = True
-                logger.warning("ðŸ”´ MANDATORY DEPENDENCY VIOLATIONS â€” continuing modules for complete report")
+                logger.warning("”´ MANDATORY DEPENDENCY VIOLATIONS â€” continuing modules for complete report")
 
         if len(defence_risks.get('fatal_defences', [])) > 0:
             analysis_report['fatal_flag'] = True
             analysis_report['overall_status'] = 'FATAL - CASE VIABILITY COMPROMISED'
             analysis_report['filing_blocked'] = False
-            logger.warning("ðŸ”´ FATAL DEFENCE RISKS â€” continuing modules for complete report")
+            logger.warning("”´ FATAL DEFENCE RISKS â€” continuing modules for complete report")
 
         logger.info("âœ“ Module 16: Filing Readiness Checklist...")
         filing_readiness = generate_filing_readiness_checklist(
@@ -15810,7 +15804,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['modules']['filing_readiness'] = filing_readiness
         analysis_report['architecture']['deterministic_modules'].append('Filing Readiness')
 
-        logger.info("âœ… Advocate feedback modules complete")
+        logger.info("✓ Advocate feedback modules complete")
 
 
         analysis_report['processing_flags'] = {
@@ -15836,9 +15830,9 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             'filing_readiness_checklist': True
         }
 
-        logger.info("âœ… Enterprise features added")
+        logger.info("✓ Enterprise features added")
 
-        logger.info("ðŸ“Š Calculating Data Completeness...")
+        logger.info("“Š Calculating Data Completeness...")
         analysis_report['data_completeness'] = calculate_data_completeness(case_data)
 
 
@@ -15879,10 +15873,10 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             'overall':      'HIGH'   if completeness_pct >= 80 else ('MEDIUM' if completeness_pct >= 60 else 'LOW'),
         }
 
-        logger.info(f"ðŸ“Š Data completeness: {completeness_pct}%")
+        logger.info(f"“Š Data completeness: {completeness_pct}%")
 
 
-        logger.info("ðŸ” Running execution validation...")
+        logger.info("” Running execution validation...")
 
 
         _raw_v = risk_result.get('overall_risk_score') or 0
@@ -15970,7 +15964,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         if not isinstance(risk_result, dict) or not risk_result.get('category_scores'):
             _critical_failures.append('Risk scoring module returned no category scores')
         if len(_critical_failures) >= 2:
-            logger.error(f'ðŸ›‘ HARD FAIL-SAFE: {len(_critical_failures)} critical module failures â€” aborting report generation')
+            logger.error(f'›‘ HARD FAIL-SAFE: {len(_critical_failures)} critical module failures â€” aborting report generation')
             analysis_report['hard_failure'] = True
             analysis_report['hard_failure_reasons'] = _critical_failures
             analysis_report['overall_status'] = 'ANALYSIS FAILED â€” CRITICAL MODULES UNAVAILABLE'
@@ -15978,9 +15972,9 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             analysis_report['error'] = 'Critical modules failed: ' + '; '.join(_critical_failures)
             return analysis_report
 
-        logger.info("âœ… Execution validation complete")
+        logger.info("✓ Execution validation complete")
 
-        logger.info("ðŸ“‹ Generating Audit Trail + Decision Trace...")
+        logger.info("“‹ Generating Audit Trail + Decision Trace...")
         analysis_report['audit_trail'] = generate_audit_trail(
             case_data,
             timeline_result,
@@ -15995,9 +15989,9 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         _doc_score_narrative = float((analysis_report.get('modules', {}).get('risk_assessment', {}).get('category_scores') or {}).get('Documentary Strength', {}).get('score', 0) if isinstance((analysis_report.get('modules', {}).get('risk_assessment', {}).get('category_scores') or {}).get('Documentary Strength'), dict) else 0)
         _tl_score_narrative  = float((analysis_report.get('modules', {}).get('risk_assessment', {}).get('category_scores') or {}).get('Timeline Compliance', {}).get('score', 0) if isinstance((analysis_report.get('modules', {}).get('risk_assessment', {}).get('category_scores') or {}).get('Timeline Compliance'), dict) else 0)
         analysis_report['decision_narrative'] = [
-            f"Timeline compliance: {_tl_score_narrative:.0f}/100 â€” {'Strong âœ…' if _tl_score_narrative >= 75 else 'Weak âŒ'}",
-            f"Documentary strength: {_doc_score_narrative:.0f}/100 â€” {'Adequate âœ…' if _doc_score_narrative >= 60 else 'Insufficient documentary evidence âŒ'}",
-            f"Fatal defects: {'Yes â€” filing blocked' if _fatal_for_narrative else 'None detected âœ…'}",
+            f"Timeline compliance: {_tl_score_narrative:.0f}/100 â€” {'Strong ✓' if _tl_score_narrative >= 75 else 'Weak âŒ'}",
+            f"Documentary strength: {_doc_score_narrative:.0f}/100 â€” {'Adequate ✓' if _doc_score_narrative >= 60 else 'Insufficient documentary evidence âŒ'}",
+            f"Fatal defects: {'Yes â€” filing blocked' if _fatal_for_narrative else 'None detected ✓'}",
             f"Overall score: {_score_for_narrative:.1f}/100",
             f"Decision basis: {'Fatal defect present â€” do not file' if _fatal_for_narrative else 'FILE WITH CAUTION â€” documentary weakness is primary gap' if _score_for_narrative < 70 else 'Case is strong â€” proceed to file'}",
         ]
@@ -16026,12 +16020,12 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             f"CONSISTENCY: {analysis_report.get('_consistency_check', {}).get('message', 'Not checked')}",
             f"FINAL DECISION: {analysis_report.get('executive_summary', {}).get('filing_verdict', 'See analysis')}",
         ]
-        logger.info("  âœ… Decision trace built (%d steps)", len(analysis_report['decision_trace']))
+        logger.info("  ✓ Decision trace built (%d steps)", len(analysis_report['decision_trace']))
 
-        logger.info("ðŸ’¡ Generating Score Explanation...")
+        logger.info("’¡ Generating Score Explanation...")
         analysis_report['score_explanation'] = generate_score_explanation(risk_result)
 
-        logger.info("ðŸŽ¯ Classifying Case Outcome...")
+        logger.info("Ž¯ Classifying Case Outcome...")
 
         _os = (risk_result.get('overall_risk_score') or 0)
         _is_f = analysis_report.get('fatal_flag', False)
@@ -16080,7 +16074,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         })
 
 
-        logger.info("ðŸ”— Integrating advanced module outputs into risk score...")
+        logger.info("”— Integrating advanced module outputs into risk score...")
         _score_adj = 0
         _adv_fatals = []
         _adv_warnings = []
@@ -16162,7 +16156,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             if _score_adj != 0:
                 risk_result['overall_risk_score'] = _adj_score
                 risk_result['advanced_module_adjustment'] = _score_adj
-                logger.info(f"ðŸ“Š Advanced module adjustment: {_score_adj:+.0f} â†’ score {_cur_score} â†’ {_adj_score}")
+                logger.info(f"“Š Advanced module adjustment: {_score_adj:+.0f} â†’ score {_cur_score} â†’ {_adj_score}")
             if _adv_fatals:
                 risk_result.setdefault('fatal_defects', []).extend(_adv_fatals)
                 analysis_report['fatal_flag'] = True
@@ -16242,7 +16236,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             uploaded_files=case_data.get('uploaded_files', [])
         )
 
-        logger.info("âœ… Professional enhancements complete")
+        logger.info("✓ Professional enhancements complete")
 
         analysis_report['legal_disclaimer'] = {
             'primary': "This report is a structured compliance assessment tool based on information provided and does not substitute independent legal judgment. All findings should be reviewed by qualified legal counsel before filing.",
@@ -16269,11 +16263,11 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         if isinstance(analysis_report.get('overall_score'), float):
             analysis_report['overall_score'] = round(analysis_report['overall_score'], 1)
 
-        logger.info(f"âœ… Analysis complete in {analysis_report['processing_time_seconds']}s")
+        logger.info(f"✓ Analysis complete in {analysis_report['processing_time_seconds']}s")
         logger.info(f"   Deterministic Modules: {len(analysis_report['architecture']['deterministic_modules'])}")
         logger.info(f"   LLM Enhanced: {analysis_report['architecture']['llm_enhanced']}")
 
-        logger.info("ðŸŽ¯ PHASE 3: Pure Deterministic Escalation")
+        logger.info("Ž¯ PHASE 3: Pure Deterministic Escalation")
         analysis_report['audit_log']['phases_executed'].append('PHASE_3_ESCALATION')
 
         defence_result = analysis_report['modules'].get('defence_risk_analysis', {})
@@ -16316,7 +16310,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         logger.info(f"   Final Tier: {final_tier['tier']} (Locked: {final_tier.get('tier_locked', False)})")
         logger.info(f"   Production Engine v{ENGINE_VERSION}")
 
-        logger.info("ðŸ“„ Generating clean professional report...")
+        logger.info("“„ Generating clean professional report...")
 
         if "modules" in analysis_report:
             analysis_report["modules"] = sanitize_module_output(analysis_report["modules"])
@@ -16858,7 +16852,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             'note': 'Analysis locked â€” input/output hashes + decision chain recorded'
         }
 
-        logger.info(f"  ðŸ”’ Audit lock applied - Input hash: {input_hash[:16]}...")
+        logger.info(f"  ”’ Audit lock applied - Input hash: {input_hash[:16]}...")
 
 
         db_saved = save_analysis_to_db(analysis_report)
@@ -16881,9 +16875,9 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             else:
                 return obj
         
-        logger.info("ðŸ§¹ Applying final text sanitization pass...")
+        logger.info("§¹ Applying final text sanitization pass...")
         analysis_report = sanitize_nested_dict(analysis_report)
-        logger.info("âœ… Text sanitization complete")
+        logger.info("✓ Text sanitization complete")
 
         return analysis_report
 
@@ -16959,7 +16953,7 @@ async def root():
 async def test_endpoint():
 
     return {
-        "status": "âœ… API is working!",
+        "status": "✓ API is working!",
         "platform": "JUDIQ v5.0",
         "maturity": "90% Elite-Grade",
         "timestamp": time.time(),
@@ -17144,7 +17138,7 @@ async def validate_accuracy():
 
             if passed:
                 results['passed'] += 1
-                status = 'âœ… PASS'
+                status = '✓ PASS'
             else:
                 results['failed'] += 1
                 status = 'âŒ FAIL'
@@ -17594,7 +17588,7 @@ async def generate_cross_examination(request: CrossExaminationRequest):
         )
 
     try:
-        logger.info(f"ðŸ¤– Generating {request.num_questions} cross-exam questions for {request.witness_type}...")
+        logger.info(f"¤– Generating {request.num_questions} cross-exam questions for {request.witness_type}...")
 
         result = generate_cross_examination_questions(
             case_data=request.case_data,
@@ -18372,7 +18366,7 @@ def _load_db_admins():
                 }
         conn.close()
         loaded = len(ADMIN_CREDENTIALS)
-        logger.info(f"âœ… Loaded {loaded} admin account(s) into memory")
+        logger.info(f"✓ Loaded {loaded} admin account(s) into memory")
     except Exception as e:
         logger.warning(f"Could not load DB admins: {e}")
 
@@ -18440,7 +18434,7 @@ def init_admin_tables():
         # ENSURE default super-admin exists in database
         cursor.execute("SELECT email FROM admin_accounts WHERE email = ?", ("admin@judiq.com",))
         if not cursor.fetchone():
-            logger.info("ðŸ”§ Creating default super-admin in database...")
+            logger.info("”§ Creating default super-admin in database...")
             cursor.execute("""
                 INSERT INTO admin_accounts (email, name, role, password_hash, created_by)
                 VALUES (?, ?, ?, ?, ?)
@@ -18451,11 +18445,11 @@ def init_admin_tables():
                 "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",  # password = "password"
                 "SYSTEM"
             ))
-            logger.info("âœ… Default super-admin created: admin@judiq.com / password")
+            logger.info("✓ Default super-admin created: admin@judiq.com / password")
 
         conn.commit()
         conn.close()
-        logger.info("âœ… Admin tables initialized")
+        logger.info("✓ Admin tables initialized")
         _load_db_admins()
         return True
     except Exception as e:
@@ -18536,7 +18530,7 @@ def check_daily_limit(user_email: str) -> Tuple[bool, int]:
         count = cursor.fetchone()[0]
         conn.close()
 
-        logger.info(f"ðŸ“Š Daily limit check for {user_email}: {count}/{DAILY_LIMIT} used today")
+        logger.info(f"“Š Daily limit check for {user_email}: {count}/{DAILY_LIMIT} used today")
 
         return count < DAILY_LIMIT, count
 
@@ -18572,7 +18566,7 @@ def check_draft_limit(user_email: str) -> Tuple[bool, int]:
         count = cursor.fetchone()[0]
         conn.close()
 
-        logger.info(f"ðŸ“‹ Draft limit check for {user_email}: {count}/{DRAFT_LIMIT} used today")
+        logger.info(f"“‹ Draft limit check for {user_email}: {count}/{DRAFT_LIMIT} used today")
         return count < DRAFT_LIMIT, count
 
     except Exception as e:
@@ -18600,7 +18594,7 @@ def log_draft_usage(user_email: str, case_id: str = None, draft_type: str = 'com
 
         conn.commit()
         conn.close()
-        logger.info(f"âœ… Draft usage logged for {user_email} (type={draft_type})")
+        logger.info(f"✓ Draft usage logged for {user_email} (type={draft_type})")
         return True
 
     except Exception as e:
@@ -19686,7 +19680,7 @@ async def admin_create_account(request: Request):
                 }
         else:
             # Firebase verified - allow registration
-            logger.info(f"âœ… Firebase-verified registration request from {auth_email}")
+            logger.info(f"✓ Firebase-verified registration request from {auth_email}")
         
         # New admin details (matching frontend field names)
         new_email = data.get('new_email', '').strip().lower()
@@ -19797,7 +19791,7 @@ async def admin_create_account_open(request: Request):
         # Log the action
         log_admin_action(auth_email, "REGISTER_ADMIN", new_email, f"Registered new {new_role}: {new_name}")
         
-        logger.info(f"âœ… New admin registered: {new_email} ({new_role}) by {auth_email}")
+        logger.info(f"✓ New admin registered: {new_email} ({new_role}) by {auth_email}")
         
         return {
             'success': True,
@@ -19886,8 +19880,8 @@ async def admin_create_account_open(request: Request):
         # Log the action
         log_admin_action('SYSTEM', "OPEN_REGISTRATION", new_email, f"Registered via open endpoint: {new_name} ({new_role})")
         
-        logger.info(f"âœ… Admin registered via OPEN endpoint: {new_email} ({new_role})")
-        logger.warning("ðŸš¨ Remember to disable /admin/create-account-open endpoint after setup!")
+        logger.info(f"✓ Admin registered via OPEN endpoint: {new_email} ({new_role})")
+        logger.warning("š¨ Remember to disable /admin/create-account-open endpoint after setup!")
         
         return {
             'success': True,
@@ -22002,7 +21996,7 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
         suggestions['risk_summary'] = "EVIDENTIARY - Outcome depends on successful cross-examination and document curation"
     else:
         suggestions['overall_recommendation'] = (
-            f"âœ… STRONG STATUTORY MERIT - READY FOR FILING\n"
+            f"✓ STRONG STATUTORY MERIT - READY FOR FILING\n"
             f"Current score: {score:.1f}/100 ({strength_rating})\n"
             f"Comprehensive compliance detected across all 13 intelligence modules.\n"
             f"Senior Counsel Advice: Proceed with filing; apply for S.143A interim compensation immediately."
@@ -22194,7 +22188,7 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
     
     suggestions['next_steps_timeline'] = timeline
     
-    logger.info("âœ… Actionable suggestions generated successfully")
+    logger.info("✓ Actionable suggestions generated successfully")
     return suggestions
 
 
@@ -22591,7 +22585,7 @@ def generate_executive_summary(analysis: Dict) -> str:
         verdict = "âŒ FATAL DEFECTS - DO NOT FILE"
         details = "The case contains terminal statutory defects. Litigation will result in immediate dismissal."
     elif overall_score >= 70 and success_prob >= 60:
-        verdict = "âœ… STRONG CASE - PROCEED WITH FILING"
+        verdict = "✓ STRONG CASE - PROCEED WITH FILING"
         details = "High probability of success. Case is ready for litigation."
     elif overall_score >= 50 and success_prob >= 40:
         verdict = "âš ï¸  MODERATE CASE - ATTEMPT SETTLEMENT FIRST"
@@ -22630,7 +22624,7 @@ def format_concise_output(analysis: Dict) -> str:
     lines.append("â•" * 50)
 
     if analysis.get('fatal_flag'):
-        lines.append("ðŸ”´ FILING BLOCKED")
+        lines.append("”´ FILING BLOCKED")
         lines.append("â•" * 50)
         lines.append(f"Status: {analysis.get('overall_status', 'FATAL')}")
         lines.append(f"Score: {analysis.get('risk_score', 0)}/100")
@@ -22650,11 +22644,11 @@ def format_concise_output(analysis: Dict) -> str:
         lines.append("â•" * 50)
 
         if score >= 75:
-            lines.append("Status: âœ… READY TO FILE")
+            lines.append("Status: ✓ READY TO FILE")
         elif score >= 60:
             lines.append("Status: âš ï¸ GAPS PRESENT")
         else:
-            lines.append("Status: ðŸ”´ HIGH RISK")
+            lines.append("Status: ”´ HIGH RISK")
 
         issues = []
         doc_comp = analysis.get('modules', {}).get('document_compliance', {})
@@ -22678,7 +22672,7 @@ def format_concise_output(analysis: Dict) -> str:
         lines.append("")
         lines.append("")
         lines.append("=" * 80)
-        lines.append("ðŸ“‹ NEXT ACTIONS - WHAT YOU SHOULD DO NOW")
+        lines.append("“‹ NEXT ACTIONS - WHAT YOU SHOULD DO NOW")
         lines.append("=" * 80)
         lines.append("")
         
@@ -22701,7 +22695,7 @@ def format_concise_output(analysis: Dict) -> str:
         # HIGH PRIORITY
         high_priority = suggestions.get('high_priority', [])
         if high_priority:
-            lines.append("ðŸ”´ HIGH PRIORITY (Do Within 2-3 Days)")
+            lines.append("”´ HIGH PRIORITY (Do Within 2-3 Days)")
             lines.append("-" * 40)
             lines.append("")
             
@@ -22722,7 +22716,7 @@ def format_concise_output(analysis: Dict) -> str:
         medium_priority = suggestions.get('medium_priority', [])
         if medium_priority:
             lines.append("")
-            lines.append("ðŸŸ  MEDIUM PRIORITY (Within 5-7 Days)")
+            lines.append("Ÿ  MEDIUM PRIORITY (Within 5-7 Days)")
             lines.append("-" * 40)
             lines.append("")
             
@@ -22743,7 +22737,7 @@ def format_concise_output(analysis: Dict) -> str:
         low_priority = suggestions.get('low_priority', [])
         if low_priority:
             lines.append("")
-            lines.append("ðŸŸ¡ LOW PRIORITY / OPTIONAL")
+            lines.append("Ÿ¡ LOW PRIORITY / OPTIONAL")
             lines.append("-" * 40)
             lines.append("")
             
@@ -22823,6 +22817,33 @@ def create_app():
                     logger.warning("Firebase service account not found - running without Firebase")
         except Exception as e:
             logger.error(f"Firebase initialization error: {e}")
+    
+    # ============================================================================
+    # HEALTH CHECK ENDPOINT
+    # ============================================================================
+    
+    @app.route('/health', methods=['GET'])
+    def health_check():
+        """Health check endpoint for load balancers"""
+        return jsonify({
+            'status': 'healthy',
+            'service': 'JUDIQ v2.1',
+            'timestamp': datetime.now().isoformat()
+        }), 200
+    
+    @app.route('/', methods=['GET'])
+    def root():
+        """Root endpoint"""
+        return jsonify({
+            'message': 'JUDIQ Section 138 NI Act Legal Intelligence Platform',
+            'version': '2.1',
+            'endpoints': {
+                '/api/analyze': 'POST - Analyze case',
+                '/api/suggestions': 'POST - Get suggestions',
+                '/api/pdf-report': 'POST - Generate PDF',
+                '/health': 'GET - Health check'
+            }
+        }), 200
     
     # ============================================================================
     # API ENDPOINTS
