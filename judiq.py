@@ -12,6 +12,14 @@ from typing import List, Dict, Optional, Tuple, Any
 from pathlib import Path
 from collections import defaultdict
 
+# Pydantic import for request models
+try:
+    from pydantic import BaseModel, Field
+    PYDANTIC_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AVAILABLE = False
+    BaseModel = object  # Fallback if pydantic not available
+
 # ============================================================
 # NYAYASETU PRECEDENTS DATASET - 340 CASES (EMBEDDED)
 # ============================================================
@@ -3082,300 +3090,304 @@ class CaseStage(str, Enum):
     JUDGMENT = "Judgment Stage"
     APPEAL = "Appeal Stage"
 
-class CaseAnalysisRequest(BaseModel):
-    """
-    Full input model for JUDIQ Section 138 NI Act case analysis.
-    All dates must be in YYYY-MM-DD format.
-    """
+# ============================================================
+# PYDANTIC MODELS (for API validation)
+# ============================================================
+if PYDANTIC_AVAILABLE:
+    class CaseAnalysisRequest(BaseModel):
+        """
+        Full input model for JUDIQ Section 138 NI Act case analysis.
+        All dates must be in YYYY-MM-DD format.
+        """
 
 
-    case_type: str = Field(
-        ...,
-        description="Whose perspective: 'complainant' (cheque issuer defaulted) or 'accused' (defending against complaint)",
-        examples=["complainant", "accused"]
-    )
+        case_type: str = Field(
+            ...,
+            description="Whose perspective: 'complainant' (cheque issuer defaulted) or 'accused' (defending against complaint)",
+            examples=["complainant", "accused"]
+        )
 
 
-    cheque_amount: float = Field(
-        ...,
-        description="Face value of the cheque in INR (e.g. 500000 for â‚¹5,00,000)",
-        examples=[500000]
-    )
-    cheque_number: str = Field(
-        ...,
-        description="Cheque number printed on the instrument",
-        examples=["123456"]
-    )
-    cheque_date: str = Field(
-        ...,
-        description="Date printed on the cheque (YYYY-MM-DD). Must be within 3 months of presentation.",
-        examples=["2026-01-15"]
-    )
-    bank_name: str = Field(
-        ...,
-        description="Name of the bank on which the cheque was drawn",
-        examples=["HDFC Bank"]
-    )
+        cheque_amount: float = Field(
+            ...,
+            description="Face value of the cheque in INR (e.g. 500000 for â‚¹5,00,000)",
+            examples=[500000]
+        )
+        cheque_number: str = Field(
+            ...,
+            description="Cheque number printed on the instrument",
+            examples=["123456"]
+        )
+        cheque_date: str = Field(
+            ...,
+            description="Date printed on the cheque (YYYY-MM-DD). Must be within 3 months of presentation.",
+            examples=["2026-01-15"]
+        )
+        bank_name: str = Field(
+            ...,
+            description="Name of the bank on which the cheque was drawn",
+            examples=["HDFC Bank"]
+        )
 
 
-    transaction_date: Optional[str] = Field(
-        None,
-        description="Date the underlying loan/transaction occurred (YYYY-MM-DD)",
-        examples=["2025-12-15"]
-    )
-    transaction_amount: Optional[float] = Field(
-        None,
-        description="Original transaction/loan amount in INR (may differ from cheque amount)",
-        examples=[500000]
-    )
-    debt_nature: Optional[str] = Field(
-        None,
-        description="Nature of the underlying liability. Values: 'loan', 'business_transaction', 'services_rendered', 'rent', 'security_deposit', 'other'",
-        examples=["loan"]
-    )
+        transaction_date: Optional[str] = Field(
+            None,
+            description="Date the underlying loan/transaction occurred (YYYY-MM-DD)",
+            examples=["2025-12-15"]
+        )
+        transaction_amount: Optional[float] = Field(
+            None,
+            description="Original transaction/loan amount in INR (may differ from cheque amount)",
+            examples=[500000]
+        )
+        debt_nature: Optional[str] = Field(
+            None,
+            description="Nature of the underlying liability. Values: 'loan', 'business_transaction', 'services_rendered', 'rent', 'security_deposit', 'other'",
+            examples=["loan"]
+        )
 
 
-    dishonour_date: Optional[str] = Field(
-        None,
-        description="Date the bank returned/dishonoured the cheque (YYYY-MM-DD). Critical for limitation calculation.",
-        examples=["2026-01-18"]
-    )
-    dishonour_reason: Optional[str] = Field(
-        None,
-        description="Reason stated on bank memo. Values: 'Insufficient Funds', 'Account Closed', 'Payment Stopped', 'Signature Mismatch', 'Stale Cheque', 'Other'",
-        examples=["Insufficient Funds"]
-    )
-    presentation_date: Optional[str] = Field(
-        None,
-        description="Date cheque was presented to bank (YYYY-MM-DD). Must be within cheque validity (3 months).",
-        examples=["2026-01-18"]
-    )
-    return_memo_available: bool = Field(
-        False,
-        description="Is the original bank dishonour memo (return memo) available? Critical primary evidence."
-    )
+        dishonour_date: Optional[str] = Field(
+            None,
+            description="Date the bank returned/dishonoured the cheque (YYYY-MM-DD). Critical for limitation calculation.",
+            examples=["2026-01-18"]
+        )
+        dishonour_reason: Optional[str] = Field(
+            None,
+            description="Reason stated on bank memo. Values: 'Insufficient Funds', 'Account Closed', 'Payment Stopped', 'Signature Mismatch', 'Stale Cheque', 'Other'",
+            examples=["Insufficient Funds"]
+        )
+        presentation_date: Optional[str] = Field(
+            None,
+            description="Date cheque was presented to bank (YYYY-MM-DD). Must be within cheque validity (3 months).",
+            examples=["2026-01-18"]
+        )
+        return_memo_available: bool = Field(
+            False,
+            description="Is the original bank dishonour memo (return memo) available? Critical primary evidence."
+        )
 
 
-    notice_date: Optional[str] = Field(
-        None,
-        description="Date the statutory demand notice was sent (YYYY-MM-DD). Must be within 30 days of dishonour.",
-        examples=["2026-02-01"]
-    )
-    notice_received_date: Optional[str] = Field(
-        None,
-        description="Date notice was actually received / deemed served (YYYY-MM-DD). 15-day payment period starts from this date.",
-        examples=["2026-02-03"]
-    )
-    notice_sent_to_address: Optional[str] = Field(
-        None,
-        description="Address to which notice was sent. Should match accused's registered/known address.",
-        examples=["Registered residential address of accused"]
-    )
-    notice_signed: bool = Field(
-        True,
-        description="Was the notice signed by the complainant or authorised signatory?"
-    )
-    postal_proof_available: bool = Field(
-        False,
-        description="Is postal proof of notice dispatch available? (AD card, speed post receipt, tracking). Needed to prove service."
-    )
+        notice_date: Optional[str] = Field(
+            None,
+            description="Date the statutory demand notice was sent (YYYY-MM-DD). Must be within 30 days of dishonour.",
+            examples=["2026-02-01"]
+        )
+        notice_received_date: Optional[str] = Field(
+            None,
+            description="Date notice was actually received / deemed served (YYYY-MM-DD). 15-day payment period starts from this date.",
+            examples=["2026-02-03"]
+        )
+        notice_sent_to_address: Optional[str] = Field(
+            None,
+            description="Address to which notice was sent. Should match accused's registered/known address.",
+            examples=["Registered residential address of accused"]
+        )
+        notice_signed: bool = Field(
+            True,
+            description="Was the notice signed by the complainant or authorised signatory?"
+        )
+        postal_proof_available: bool = Field(
+            False,
+            description="Is postal proof of notice dispatch available? (AD card, speed post receipt, tracking). Needed to prove service."
+        )
 
 
-    complaint_filed_date: Optional[str] = Field(
-        None,
-        description="Date complaint was / will be filed in court (YYYY-MM-DD). Must be within 30 days after the 15-day payment period expires.",
-        examples=["2026-03-01"]
-    )
-    court_location: Optional[str] = Field(
-        None,
-        description="Court where complaint is / will be filed. Used for judicial behaviour analysis.",
-        examples=["Mumbai Metropolitan Magistrate Court"]
-    )
+        complaint_filed_date: Optional[str] = Field(
+            None,
+            description="Date complaint was / will be filed in court (YYYY-MM-DD). Must be within 30 days after the 15-day payment period expires.",
+            examples=["2026-03-01"]
+        )
+        court_location: Optional[str] = Field(
+            None,
+            description="Court where complaint is / will be filed. Used for judicial behaviour analysis.",
+            examples=["Mumbai Metropolitan Magistrate Court"]
+        )
 
 
-    original_cheque_available: bool = Field(
-        False,
-        description="Is the original dishonoured cheque available with the complainant?"
-    )
-    written_agreement_exists: bool = Field(
-        False,
-        description="Is there a written loan/transaction agreement signed by both parties? Absence is a major defence weakness."
-    )
-    ledger_available: bool = Field(
-        False,
-        description="Are ledger entries or account records available to prove the transaction?"
-    )
-    email_sms_evidence: bool = Field(
-        False,
-        description="Are WhatsApp/SMS/email messages available that reference the loan or cheque?"
-    )
-    witness_available: bool = Field(
-        False,
-        description="Is a witness available who can depose about the transaction?"
-    )
+        original_cheque_available: bool = Field(
+            False,
+            description="Is the original dishonoured cheque available with the complainant?"
+        )
+        written_agreement_exists: bool = Field(
+            False,
+            description="Is there a written loan/transaction agreement signed by both parties? Absence is a major defence weakness."
+        )
+        ledger_available: bool = Field(
+            False,
+            description="Are ledger entries or account records available to prove the transaction?"
+        )
+        email_sms_evidence: bool = Field(
+            False,
+            description="Are WhatsApp/SMS/email messages available that reference the loan or cheque?"
+        )
+        witness_available: bool = Field(
+            False,
+            description="Is a witness available who can depose about the transaction?"
+        )
 
 
-    is_company_case: bool = Field(
-        False,
-        description="Was the cheque issued by a company? If yes, Section 141 director liability applies."
-    )
-    directors_impleaded: bool = Field(
-        False,
-        description="Have directors/officers of the company been named as accused? Required under Section 141."
-    )
-    specific_averment_present: bool = Field(
-        False,
-        description="Does the complaint contain specific averments about directors' role in company affairs? Required for Section 141 conviction."
-    )
+        is_company_case: bool = Field(
+            False,
+            description="Was the cheque issued by a company? If yes, Section 141 director liability applies."
+        )
+        directors_impleaded: bool = Field(
+            False,
+            description="Have directors/officers of the company been named as accused? Required under Section 141."
+        )
+        specific_averment_present: bool = Field(
+            False,
+            description="Does the complaint contain specific averments about directors' role in company affairs? Required for Section 141 conviction."
+        )
 
 
-    is_multiple_cheques: bool = Field(
-        False,
-        description="Does this case involve multiple dishonoured cheques? Each creates a separate cause of action."
-    )
-    number_of_cheques: int = Field(
-        1,
-        description="Total number of dishonoured cheques in this case",
-        examples=[1]
-    )
+        is_multiple_cheques: bool = Field(
+            False,
+            description="Does this case involve multiple dishonoured cheques? Each creates a separate cause of action."
+        )
+        number_of_cheques: int = Field(
+            1,
+            description="Total number of dishonoured cheques in this case",
+            examples=[1]
+        )
 
 
-    civil_suit_pending: bool = Field(
-        False,
-        description="Is a civil money recovery suit pending for the same debt? Affects strategy and settlement."
-    )
-    insolvency_proceedings: bool = Field(
-        False,
-        description="Are insolvency/bankruptcy proceedings pending against the accused? May affect enforcement."
-    )
+        civil_suit_pending: bool = Field(
+            False,
+            description="Is a civil money recovery suit pending for the same debt? Affects strategy and settlement."
+        )
+        insolvency_proceedings: bool = Field(
+            False,
+            description="Are insolvency/bankruptcy proceedings pending against the accused? May affect enforcement."
+        )
 
 
-    defence_type: Optional[str] = Field(
-        None,
-        description="Known or expected defence. Values: 'security_cheque', 'no_debt', 'stop_payment', 'time_barred', 'signature_mismatch', 'company_director', 'stolen_cheque', 'no_legally_enforceable_debt'",
-        examples=["security_cheque"]
-    )
+        defence_type: Optional[str] = Field(
+            None,
+            description="Known or expected defence. Values: 'security_cheque', 'no_debt', 'stop_payment', 'time_barred', 'signature_mismatch', 'company_director', 'stolen_cheque', 'no_legally_enforceable_debt'",
+            examples=["security_cheque"]
+        )
 
 
-    case_summary: Optional[str] = Field(
-        None,
-        description="Brief narrative of the case facts in plain language. Used for cross-examination risk and context.",
-        examples=["Accused borrowed â‚¹5,00,000 as a friendly loan and issued a cheque for repayment. Cheque dishonoured due to insufficient funds."]
-    )
+        case_summary: Optional[str] = Field(
+            None,
+            description="Brief narrative of the case facts in plain language. Used for cross-examination risk and context.",
+            examples=["Accused borrowed â‚¹5,00,000 as a friendly loan and issued a cheque for repayment. Cheque dishonoured due to insufficient funds."]
+        )
 
-    model_config = {
-        "json_schema_extra": {
-            "example": {
+        model_config = {
+            "json_schema_extra": {
+                "example": {
+                    "case_type": "complainant",
+                    "cheque_amount": 500000,
+                    "cheque_number": "123456",
+                    "cheque_date": "2026-01-15",
+                    "bank_name": "HDFC Bank",
+                    "transaction_date": "2025-12-15",
+                    "transaction_amount": 500000,
+                    "debt_nature": "loan",
+                    "dishonour_date": "2026-01-18",
+                    "dishonour_reason": "Insufficient Funds",
+                    "presentation_date": "2026-01-18",
+                    "return_memo_available": True,
+                    "notice_date": "2026-02-01",
+                    "notice_received_date": "2026-02-03",
+                    "notice_sent_to_address": "Registered residential address of accused",
+                    "notice_signed": True,
+                    "postal_proof_available": True,
+                    "complaint_filed_date": "2026-03-10",
+                    "court_location": "Mumbai Metropolitan Magistrate Court",
+                    "original_cheque_available": True,
+                    "written_agreement_exists": False,
+                    "ledger_available": False,
+                    "email_sms_evidence": True,
+                    "witness_available": True,
+                    "is_company_case": False,
+                    "directors_impleaded": False,
+                    "specific_averment_present": False,
+                    "is_multiple_cheques": False,
+                    "number_of_cheques": 1,
+                    "civil_suit_pending": False,
+                    "insolvency_proceedings": False,
+                    "defence_type": "security_cheque",
+                    "case_summary": "Accused borrowed â‚¹5,00,000 as a friendly loan in December 2025 and issued a cheque for repayment. Cheque dishonoured due to insufficient funds."
+                }
+            }
+        }
+
+
+        user_email: Optional[str] = Field(
+            None,
+            description="User email from Firebase Auth â€” required for per-user daily limit enforcement.",
+            examples=["lawyer@example.com"]
+        )
+
+        @field_validator('cheque_date', 'transaction_date', 'dishonour_date', 'notice_date', 'complaint_filed_date', mode='before')
+        @classmethod
+        def validate_date_format(cls, v):
+            if v:
+                try:
+                    datetime.strptime(v, '%Y-%m-%d')
+                except Exception:
+                    raise ValueError('Date must be in YYYY-MM-DD format (e.g. 2026-01-15)')
+            return v
+
+    class SearchKBRequest(BaseModel):
+        query: str
+        top_k: int = 5
+        category_filter: Optional[str] = None
+
+
+    class CrossExaminationRequest(BaseModel):
+        """
+        Request model for AI cross-examination question generation.
+        Pass the same case_data you would send to /analyze-case.
+        """
+        case_data: Dict = Field(
+            ...,
+            description="Case details â€” same structure as /analyze-case request body",
+            examples=[{
                 "case_type": "complainant",
                 "cheque_amount": 500000,
                 "cheque_number": "123456",
                 "cheque_date": "2026-01-15",
                 "bank_name": "HDFC Bank",
-                "transaction_date": "2025-12-15",
-                "transaction_amount": 500000,
-                "debt_nature": "loan",
                 "dishonour_date": "2026-01-18",
                 "dishonour_reason": "Insufficient Funds",
-                "presentation_date": "2026-01-18",
-                "return_memo_available": True,
                 "notice_date": "2026-02-01",
                 "notice_received_date": "2026-02-03",
-                "notice_sent_to_address": "Registered residential address of accused",
-                "notice_signed": True,
-                "postal_proof_available": True,
-                "complaint_filed_date": "2026-03-10",
-                "court_location": "Mumbai Metropolitan Magistrate Court",
-                "original_cheque_available": True,
                 "written_agreement_exists": False,
                 "ledger_available": False,
-                "email_sms_evidence": True,
-                "witness_available": True,
-                "is_company_case": False,
-                "directors_impleaded": False,
-                "specific_averment_present": False,
-                "is_multiple_cheques": False,
-                "number_of_cheques": 1,
-                "civil_suit_pending": False,
-                "insolvency_proceedings": False,
+                "postal_proof_available": True,
+                "debt_nature": "loan",
                 "defence_type": "security_cheque",
-                "case_summary": "Accused borrowed â‚¹5,00,000 as a friendly loan in December 2025 and issued a cheque for repayment. Cheque dishonoured due to insufficient funds."
-            }
-        }
-    }
+                "case_summary": "Accused borrowed â‚¹5,00,000 as a friendly loan and issued a cheque for repayment."
+            }]
+        )
+        witness_type: str = Field(
+            "complainant",
+            description=(
+                "Who is being cross-examined. "
+                "'complainant' = person who filed the case; "
+                "'accused' = person who issued the cheque; "
+                "'drawer' = same as accused (alias); "
+                "'bank_official' = bank witness regarding dishonour memo; "
+                "'witness' = third-party transaction witness"
+            ),
+            examples=["complainant", "accused", "bank_official", "witness"]
+        )
+        num_questions: int = Field(
+            5,
+            description="Number of questions to generate (5â€“15)",
+            ge=5,
+            le=15
+        )
 
-
-    user_email: Optional[str] = Field(
-        None,
-        description="User email from Firebase Auth â€” required for per-user daily limit enforcement.",
-        examples=["lawyer@example.com"]
-    )
-
-    @field_validator('cheque_date', 'transaction_date', 'dishonour_date', 'notice_date', 'complaint_filed_date', mode='before')
-    @classmethod
-    def validate_date_format(cls, v):
-        if v:
-            try:
-                datetime.strptime(v, '%Y-%m-%d')
-            except Exception:
-                raise ValueError('Date must be in YYYY-MM-DD format (e.g. 2026-01-15)')
-        return v
-
-class SearchKBRequest(BaseModel):
-    query: str
-    top_k: int = 5
-    category_filter: Optional[str] = None
-
-
-class CrossExaminationRequest(BaseModel):
-    """
-    Request model for AI cross-examination question generation.
-    Pass the same case_data you would send to /analyze-case.
-    """
-    case_data: Dict = Field(
-        ...,
-        description="Case details â€” same structure as /analyze-case request body",
-        examples=[{
-            "case_type": "complainant",
-            "cheque_amount": 500000,
-            "cheque_number": "123456",
-            "cheque_date": "2026-01-15",
-            "bank_name": "HDFC Bank",
-            "dishonour_date": "2026-01-18",
-            "dishonour_reason": "Insufficient Funds",
-            "notice_date": "2026-02-01",
-            "notice_received_date": "2026-02-03",
-            "written_agreement_exists": False,
-            "ledger_available": False,
-            "postal_proof_available": True,
-            "debt_nature": "loan",
-            "defence_type": "security_cheque",
-            "case_summary": "Accused borrowed â‚¹5,00,000 as a friendly loan and issued a cheque for repayment."
-        }]
-    )
-    witness_type: str = Field(
-        "complainant",
-        description=(
-            "Who is being cross-examined. "
-            "'complainant' = person who filed the case; "
-            "'accused' = person who issued the cheque; "
-            "'drawer' = same as accused (alias); "
-            "'bank_official' = bank witness regarding dishonour memo; "
-            "'witness' = third-party transaction witness"
-        ),
-        examples=["complainant", "accused", "bank_official", "witness"]
-    )
-    num_questions: int = Field(
-        5,
-        description="Number of questions to generate (5â€“15)",
-        ge=5,
-        le=15
-    )
-
-    model_config = {
-        "json_schema_extra": {
-            "example": {
-                "case_data": {
-                    "case_type": "complainant",
+        model_config = {
+            "json_schema_extra": {
+                "example": {
+                    "case_data": {
+                        "case_type": "complainant",
                     "cheque_amount": 500000,
                     "cheque_number": "123456",
                     "cheque_date": "2026-01-15",
@@ -3394,8 +3406,16 @@ class CrossExaminationRequest(BaseModel):
                 "witness_type": "complainant",
                 "num_questions": 5
             }
+            }
         }
-    }
+else:
+    # Fallback classes when Pydantic is not available
+    class CaseAnalysisRequest:
+        pass
+    class SearchKBRequest:
+        pass
+    class CrossExaminationRequest:
+        pass
 
 
 embed_model = None
