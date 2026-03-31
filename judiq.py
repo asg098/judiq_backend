@@ -12,12 +12,15 @@ from dateutil.relativedelta import relativedelta
 from typing import List, Dict, Optional, Tuple, Any
 from pathlib import Path
 from collections import defaultdict
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
-
 # --- CONFIGURATION FLAGS ---
 ENGINE_VERSION = "2.1.0-PRO"
 FLASK_AVAILABLE = True
+
+def run_complete_analysis(case_data):
+    """Alias for perform_comprehensive_analysis to ensure backward compatibility."""
+    return perform_comprehensive_analysis(case_data)
 
 try:
     import firebase_admin
@@ -21527,6 +21530,7 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
     
     if output_path is None:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        os.makedirs("outputs", exist_ok=True)
         output_path = f"outputs/case_analysis_{timestamp}.pdf"
 
     doc = SimpleDocTemplate(output_path, pagesize=A4)
@@ -22431,9 +22435,17 @@ def create_app():
         r"/*": {
             "origins": "*",
             "methods": ["GET", "POST", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
+            "allow_headers": "*",
+            "expose_headers": "*"
         }
     })
+
+    @app.after_request
+    def add_cors_headers(response):
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        return response
 
     @app.route('/')
     def serve_frontend():
@@ -22441,12 +22453,14 @@ def create_app():
             return send_file('index.html')
         return "INDEX.HTML NOT FOUND", 404
 
-    @app.route('/health')
+    @app.route('/health', methods=['GET', 'OPTIONS'])
     def health_check():
+        if request.method == 'OPTIONS':
+            return '', 204
         return jsonify({
             'status': 'healthy', 
             'engine': 'JUDIQ',
-            'version': globals().get('ENGINE_VERSION', '2.1'), 
+            'version': ENGINE_VERSION, 
             'cases_loaded': len(PRECEDENTS_DATA)
         }), 200
 
@@ -22558,15 +22572,16 @@ def create_app():
 if FLASK_AVAILABLE:
     app = create_app()
     flask_app = app
+    application = app # Standard for some WSGI servers
     try:
         from a2wsgi import ASGIMiddleware
         asgi_app = ASGIMiddleware(app)
-    except ImportError:
+    except:
         asgi_app = None
 
 if __name__ == '__main__':
     if FLASK_AVAILABLE:
-        import os as _os
-        _port = int(_os.environ.get('PORT', 5010))
-        app.run(host='0.0.0.0', port=_port, debug=False)
+        port = int(os.environ.get('PORT', 10000))
+        logger.info(f"Starting JUDIQ Engine on port {port}")
+        app.run(host='0.0.0.0', port=port, debug=False)
 
