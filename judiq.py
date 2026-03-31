@@ -19151,8 +19151,13 @@ def _build_enhanced_complaint_draft(case_data: dict, suggestion_data: dict) -> d
     has_agreement = case_data.get("written_agreement_exists", False)
     debt_nat_raw  = case_data.get("debt_nature", "loan")
 
-    amt_fmt  = "\u20b9{:,.2f}".format(float(amount)) if amount else "[AMOUNT]"
-    amt_2x   = "\u20b9{:,.2f}".format(float(amount) * 2) if amount else "[AMOUNT x2]"
+    try:
+        amt_clean = float(str(amount).replace(',', '').strip())
+        amt_fmt = "\u20b9{:,.2f}".format(amt_clean)
+        amt_2x = "\u20b9{:,.2f}".format(amt_clean * 2)
+    except (ValueError, TypeError):
+        amt_fmt = "[AMOUNT]"
+        amt_2x = "[AMOUNT x2]"
     year     = date.today().year
 
     sug_all  = suggestion_data.get("suggestions", {}) if suggestion_data else {}
