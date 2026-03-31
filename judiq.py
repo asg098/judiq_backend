@@ -14,7 +14,7 @@ from collections import defaultdict
 
 # Pydantic import for request models
 try:
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel, Field, field_validator
     PYDANTIC_AVAILABLE = True
 except ImportError:
     PYDANTIC_AVAILABLE = False
