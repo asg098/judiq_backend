@@ -22486,19 +22486,51 @@ def create_app():
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 
+    @app.route('/admin/login', methods=['POST', 'OPTIONS'])
+    def admin_login():
+        if request.method == 'OPTIONS': return '', 204
+        try:
+            d = request.get_json()
+            e, p = d.get('email'), d.get('password')
+            if e in ADMIN_CREDENTIALS:
+                pw_hash = hashlib.sha256(p.encode()).hexdigest()
+                if pw_hash == ADMIN_CREDENTIALS[e]['password_hash']:
+                    return jsonify({'success': True, 'admin': {
+                        'email': e, 'name': ADMIN_CREDENTIALS[e]['name'], 'role': ADMIN_CREDENTIALS[e]['role']
+                    }})
+            return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/admin/register', methods=['POST', 'OPTIONS'])
+    def admin_register():
+        if request.method == 'OPTIONS': return '', 204
+        try:
+            d = request.get_json()
+            n, e, p = d.get('name'), d.get('email'), d.get('password')
+            if e in ADMIN_CREDENTIALS: return jsonify({'success': False, 'error': 'User exists'}), 400
+            ADMIN_CREDENTIALS[e] = {
+                'password_hash': hashlib.sha256(p.encode()).hexdigest(),
+                'name': n, 'role': 'admin'
+            }
+            return jsonify({'success': True, 'admin': {'email': e, 'name': n, 'role': 'admin'}})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     return app
 
 if FLASK_AVAILABLE:
-    flask_app = create_app()
+    app = create_app()
+    flask_app = app
     try:
-        from a2wsgi import WSGIMiddleware
-        app = WSGIMiddleware(flask_app)
+        from a2wsgi import ASGIMiddleware
+        asgi_app = ASGIMiddleware(app)
     except ImportError:
-        app = flask_app
+        asgi_app = None
 
 if __name__ == '__main__':
     if FLASK_AVAILABLE:
         import os as _os
         _port = int(_os.environ.get('PORT', 5010))
-        flask_app.run(host='0.0.0.0', port=_port, debug=False)
+        app.run(host='0.0.0.0', port=_port, debug=False)
 
