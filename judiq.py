@@ -1742,11 +1742,27 @@ logging.basicConfig(
 )
 
 
+
 DATA_DIR = (Path(__file__).parent if '__file__' in globals() else Path.cwd()) / "data_judiq"
 BASE_DIR = DATA_DIR.parent
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-(DATA_DIR / "legal_kb").mkdir(exist_ok=True)
-(DATA_DIR / "case_analysis").mkdir(exist_ok=True)
+
+# Create directories with error handling
+try:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    (DATA_DIR / "legal_kb").mkdir(exist_ok=True)
+    (DATA_DIR / "case_analysis").mkdir(exist_ok=True)
+except Exception as e:
+    print(f"Warning: Could not create data directories: {e}")
+    # Fallback to temp directory if needed
+    import tempfile
+    DATA_DIR = Path(tempfile.gettempdir()) / "data_judiq"
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        (DATA_DIR / "legal_kb").mkdir(exist_ok=True)
+        (DATA_DIR / "case_analysis").mkdir(exist_ok=True)
+    except Exception as e2:
+        print(f"Warning: Could not create temp directories either: {e2}")
+
 
 CONFIG = {
 
@@ -18477,7 +18493,11 @@ def init_admin_tables():
         return False
 
 
-init_admin_tables()
+try:
+    init_admin_tables()
+except Exception as e:
+    logger.warning(f"Could not initialize admin tables at module load: {e}")
+
 
 def verify_admin(email: str, password: str) -> bool:
     """Verify admin credentials"""
@@ -22821,6 +22841,13 @@ def create_app():
             "allow_headers": ["Content-Type", "Authorization"]
         }
     })
+    
+    # Initialize database
+    try:
+        init_analytics_db()
+        logger.info("Analytics database initialized successfully")
+    except Exception as e:
+        logger.warning(f"Analytics database initialization failed (will retry on demand): {e}")
     
     # Initialize Firebase
     db = None
