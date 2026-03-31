@@ -18673,7 +18673,12 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
     proc     = mods.get("procedural_defects", analysis_result.get("procedural", {})) or {}
     draft_c  = mods.get("drafting_compliance", analysis_result.get("drafting_compliance", {})) or {}
 
-    score        = float(analysis_result.get("final_score") or analysis_result.get("overall_score") or 0)
+    raw_score = analysis_result.get("final_score") or analysis_result.get("overall_score") or 0
+    try:
+        score = float(raw_score)
+    except (TypeError, ValueError):
+        score = 0.0
+
     is_fatal     = bool(analysis_result.get("fatal_flag"))
     lim_risk     = timeline.get("limitation_risk", "UNKNOWN")
     case_type    = case_data.get("case_type", "complainant")
