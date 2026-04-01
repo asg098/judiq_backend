@@ -21651,160 +21651,160 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
         story.append(Paragraph("JUDIQ AI - Case Analysis Report", title_style))
         story.append(Spacer(1, 12))
     
-    # Case Details
-    story.append(Paragraph("<b>Case Details</b>", styles['Heading2']))
-    case_info_data = [
-        ['Case ID:', analysis.get('case_id', 'N/A')],
-        ['Analysis Date:', datetime.now().strftime('%d %B %Y')],
-        ['Cheque Amount:', f"₹{indian_number_format(case_data.get('cheque_amount', 0))}"],
-        ['Cheque Date:', case_data.get('cheque_date', 'N/A')],
-        ['Dishonour Date:', case_data.get('dishonour_date', 'N/A')]
-    ]
-    
-    case_table = Table(case_info_data, colWidths=[150, 300])
-    case_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.grey),
-        ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    story.append(case_table)
-    story.append(Spacer(1, 20))
-    
-    # Case Strength Score
-    strength = analysis.get('case_strength_score', {})
-    story.append(Paragraph("<b>Case Strength Score</b>", styles['Heading2']))
-    score_text = f"<b>Overall Score: {strength.get('overall_score', 0):.1f}/100</b><br/>"
-    score_text += f"Risk Level: {strength.get('risk_level', 'Unknown')}<br/>"
-    score_text += f"Recommendation: {strength.get('filing_recommendation', 'N/A')}"
-    story.append(Paragraph(score_text, styles['BodyText']))
-    story.append(Spacer(1, 20))
-    
-    # Outcome Prediction
-    outcome = analysis.get('outcome_prediction', {})
-    story.append(Paragraph("<b>Outcome Prediction</b>", styles['Heading2']))
-    
-    most_likely = outcome.get('most_likely', {})
-    outcome_text = f"Most Likely Scenario: {most_likely.get('scenario', 'Unknown')}<br/>"
-    outcome_text += f"Success Probability: {outcome.get('success_probability', 0)}%<br/>"
-    outcome_text += f"Expected Outcome: {most_likely.get('outcome', 'N/A')}"
-    story.append(Paragraph(outcome_text, styles['BodyText']))
-    story.append(Spacer(1, 20))
-    
-    # Filing Strategy
-    strategy = analysis.get('filing_strategy', {})
-    story.append(Paragraph("<b>Filing Strategy</b>", styles['Heading2']))
-    strategy_text = f"Approach: {strategy.get('recommended_approach', 'N/A')}<br/>"
-    strategy_text += f"Decision: {strategy.get('filing_decision', 'N/A')}"
-    story.append(Paragraph(strategy_text, styles['BodyText']))
-    story.append(Spacer(1, 20))
-    
-    # ===== ACTIONABLE SUGGESTIONS SECTION (NEW) =====
-    suggestions = analysis.get('actionable_suggestions', {})
-    if suggestions:
-        story.append(Paragraph("📋 NEXT ACTIONS - WHAT YOU SHOULD DO NOW", styles['Heading1']))
-        story.append(Spacer(1, 12))
+        # Case Details
+        story.append(Paragraph("<b>Case Details</b>", styles['Heading2']))
+        case_info_data = [
+            ['Case ID:', analysis.get('case_id', 'N/A')],
+            ['Analysis Date:', datetime.now().strftime('%d %B %Y')],
+            ['Cheque Amount:', f"₹{indian_number_format(case_data.get('cheque_amount', 0))}"],
+            ['Cheque Date:', case_data.get('cheque_date', 'N/A')],
+            ['Dishonour Date:', case_data.get('dishonour_date', 'N/A')]
+        ]
         
-        # Overall Recommendation
-        overall = suggestions.get('overall_recommendation', '')
-        if overall:
-            story.append(Paragraph("<b>OVERALL RECOMMENDATION</b>", styles['Heading2']))
-            story.append(Paragraph(overall.replace('\n', '<br/>'), styles['BodyText']))
+        case_table = Table(case_info_data, colWidths=[150, 300])
+        case_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.grey),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        story.append(case_table)
+        story.append(Spacer(1, 20))
+        
+        # Case Strength Score
+        strength = analysis.get('case_strength_score', {})
+        story.append(Paragraph("<b>Case Strength Score</b>", styles['Heading2']))
+        score_text = f"<b>Overall Score: {strength.get('overall_score', 0):.1f}/100</b><br/>"
+        score_text += f"Risk Level: {strength.get('risk_level', 'Unknown')}<br/>"
+        score_text += f"Recommendation: {strength.get('filing_recommendation', 'N/A')}"
+        story.append(Paragraph(score_text, styles['BodyText']))
+        story.append(Spacer(1, 20))
+        
+        # Outcome Prediction
+        outcome = analysis.get('outcome_prediction', {})
+        story.append(Paragraph("<b>Outcome Prediction</b>", styles['Heading2']))
+        
+        most_likely = outcome.get('most_likely', {})
+        outcome_text = f"Most Likely Scenario: {most_likely.get('scenario', 'Unknown')}<br/>"
+        outcome_text += f"Success Probability: {outcome.get('success_probability', 0)}%<br/>"
+        outcome_text += f"Expected Outcome: {most_likely.get('outcome', 'N/A')}"
+        story.append(Paragraph(outcome_text, styles['BodyText']))
+        story.append(Spacer(1, 20))
+        
+        # Filing Strategy
+        strategy = analysis.get('filing_strategy', {})
+        story.append(Paragraph("<b>Filing Strategy</b>", styles['Heading2']))
+        strategy_text = f"Approach: {strategy.get('recommended_approach', 'N/A')}<br/>"
+        strategy_text += f"Decision: {strategy.get('filing_decision', 'N/A')}"
+        story.append(Paragraph(strategy_text, styles['BodyText']))
+        story.append(Spacer(1, 20))
+        
+        # ===== ACTIONABLE SUGGESTIONS SECTION (NEW) =====
+        suggestions = analysis.get('actionable_suggestions', {})
+        if suggestions:
+            story.append(Paragraph("📋 NEXT ACTIONS - WHAT YOU SHOULD DO NOW", styles['Heading1']))
             story.append(Spacer(1, 12))
-        
-        # Risk Summary
-        risk = suggestions.get('risk_summary', '')
-        if risk:
-            story.append(Paragraph("<b>RISK ASSESSMENT</b>", styles['Heading2']))
-            story.append(Paragraph(risk.replace('\n', '<br/>'), styles['BodyText']))
-            story.append(Spacer(1, 12))
-        
-        # HIGH PRIORITY
-        high_priority = suggestions.get('high_priority', [])
-        if high_priority:
-            story.append(Paragraph("<b>🔴 HIGH PRIORITY (Do Within 2-3 Days)</b>", styles['Heading2']))
             
-            for idx, item in enumerate(high_priority, 1):
-                # Item title
-                item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
-                story.append(Paragraph(item_title, styles['Heading3']))
-                
-                # Item details
-                item_detail = f"<b>Action:</b> {item.get('action', '')}<br/>"
-                item_detail += f"<b>Deadline:</b> {item.get('deadline', '')}<br/>"
-                item_detail += f"<b>Impact:</b> {item.get('impact', '')}"
-                story.append(Paragraph(item_detail, styles['BodyText']))
-                
-                # Steps
-                steps = item.get('steps', [])
-                if steps:
-                    story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
-                    steps_list = []
-                    for step_idx, step in enumerate(steps, 1):
-                        steps_list.append(f"{step_idx}) {step}")
-                    steps_text = '<br/>'.join(steps_list)
-                    story.append(Paragraph(steps_text, styles['BodyText']))
-                
-                story.append(Spacer(1, 10))
-        
-        # MEDIUM PRIORITY
-        medium_priority = suggestions.get('medium_priority', [])
-        if medium_priority:
-            story.append(Paragraph("<b>🟠 MEDIUM PRIORITY (Within 5-7 Days)</b>", styles['Heading2']))
+            # Overall Recommendation
+            overall = suggestions.get('overall_recommendation', '')
+            if overall:
+                story.append(Paragraph("<b>OVERALL RECOMMENDATION</b>", styles['Heading2']))
+                story.append(Paragraph(overall.replace('\n', '<br/>'), styles['BodyText']))
+                story.append(Spacer(1, 12))
             
-            for idx, item in enumerate(medium_priority, 1):
-                item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
-                story.append(Paragraph(item_title, styles['Heading3']))
-                
-                item_detail = f"<b>Action:</b> {item.get('action', '')}<br/>"
-                item_detail += f"<b>Deadline:</b> {item.get('deadline', '')}<br/>"
-                item_detail += f"<b>Impact:</b> {item.get('impact', '')}"
-                story.append(Paragraph(item_detail, styles['BodyText']))
-                
-                steps = item.get('steps', [])
-                if steps:
-                    story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
-                    steps_list = []
-                    for step_idx, step in enumerate(steps, 1):
-                        steps_list.append(f"{step_idx}) {step}")
-                    steps_text = '<br/>'.join(steps_list)
-                    story.append(Paragraph(steps_text, styles['BodyText']))
-                
-                story.append(Spacer(1, 10))
-        
-        # LOW PRIORITY
-        low_priority = suggestions.get('low_priority', [])
-        if low_priority:
-            story.append(Paragraph("<b>🟡 LOW PRIORITY / OPTIONAL</b>", styles['Heading2']))
+            # Risk Summary
+            risk = suggestions.get('risk_summary', '')
+            if risk:
+                story.append(Paragraph("<b>RISK ASSESSMENT</b>", styles['Heading2']))
+                story.append(Paragraph(risk.replace('\n', '<br/>'), styles['BodyText']))
+                story.append(Spacer(1, 12))
             
-            for idx, item in enumerate(low_priority, 1):
-                item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
-                story.append(Paragraph(item_title, styles['Heading3']))
+            # HIGH PRIORITY
+            high_priority = suggestions.get('high_priority', [])
+            if high_priority:
+                story.append(Paragraph("<b>🔴 HIGH PRIORITY (Do Within 2-3 Days)</b>", styles['Heading2']))
                 
-                item_detail = f"<b>Action:</b> {item.get('action', '')}<br/>"
-                item_detail += f"<b>Timeline:</b> {item.get('deadline', '')}"
-                story.append(Paragraph(item_detail, styles['BodyText']))
+                for idx, item in enumerate(high_priority, 1):
+                    # Item title
+                    item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
+                    story.append(Paragraph(item_title, styles['Heading3']))
+                    
+                    # Item details
+                    item_detail = f"<b>Action:</b> {item.get('action', '')}<br/>"
+                    item_detail += f"<b>Deadline:</b> {item.get('deadline', '')}<br/>"
+                    item_detail += f"<b>Impact:</b> {item.get('impact', '')}"
+                    story.append(Paragraph(item_detail, styles['BodyText']))
+                    
+                    # Steps
+                    steps = item.get('steps', [])
+                    if steps:
+                        story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
+                        steps_list = []
+                        for step_idx, step in enumerate(steps, 1):
+                            steps_list.append(f"{step_idx}) {step}")
+                        steps_text = '<br/>'.join(steps_list)
+                        story.append(Paragraph(steps_text, styles['BodyText']))
+                    
+                    story.append(Spacer(1, 10))
+            
+            # MEDIUM PRIORITY
+            medium_priority = suggestions.get('medium_priority', [])
+            if medium_priority:
+                story.append(Paragraph("<b>🟠 MEDIUM PRIORITY (Within 5-7 Days)</b>", styles['Heading2']))
                 
-                steps = item.get('steps', [])
-                if steps:
-                    story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
-                    steps_list = []
-                    for step_idx, step in enumerate(steps, 1):
-                        steps_list.append(f"{step_idx}) {step}")
-                    steps_text = '<br/>'.join(steps_list)
-                    story.append(Paragraph(steps_text, styles['BodyText']))
+                for idx, item in enumerate(medium_priority, 1):
+                    item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
+                    story.append(Paragraph(item_title, styles['Heading3']))
+                    
+                    item_detail = f"<b>Action:</b> {item.get('action', '')}<br/>"
+                    item_detail += f"<b>Deadline:</b> {item.get('deadline', '')}<br/>"
+                    item_detail += f"<b>Impact:</b> {item.get('impact', '')}"
+                    story.append(Paragraph(item_detail, styles['BodyText']))
+                    
+                    steps = item.get('steps', [])
+                    if steps:
+                        story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
+                        steps_list = []
+                        for step_idx, step in enumerate(steps, 1):
+                            steps_list.append(f"{step_idx}) {step}")
+                        steps_text = '<br/>'.join(steps_list)
+                        story.append(Paragraph(steps_text, styles['BodyText']))
+                    
+                    story.append(Spacer(1, 10))
+            
+            # LOW PRIORITY
+            low_priority = suggestions.get('low_priority', [])
+            if low_priority:
+                story.append(Paragraph("<b>🟡 LOW PRIORITY / OPTIONAL</b>", styles['Heading2']))
                 
-                story.append(Spacer(1, 10))
-        
-        # Timeline
-        timeline = suggestions.get('next_steps_timeline', '')
-        if timeline:
-            story.append(Paragraph("<b>⏰ RECOMMENDED TIMELINE</b>", styles['Heading2']))
-            story.append(Paragraph(timeline.replace('\n', '<br/>'), styles['BodyText']))
-            story.append(Spacer(1, 20))
+                for idx, item in enumerate(low_priority, 1):
+                    item_title = f"<b>{idx}. {item.get('title', 'Action')}</b>"
+                    story.append(Paragraph(item_title, styles['Heading3']))
+                    
+                    item_detail = f"<b>Action:</b> {item.get('action', '')}<br/>"
+                    item_detail += f"<b>Timeline:</b> {item.get('deadline', '')}"
+                    story.append(Paragraph(item_detail, styles['BodyText']))
+                    
+                    steps = item.get('steps', [])
+                    if steps:
+                        story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
+                        steps_list = []
+                        for step_idx, step in enumerate(steps, 1):
+                            steps_list.append(f"{step_idx}) {step}")
+                        steps_text = '<br/>'.join(steps_list)
+                        story.append(Paragraph(steps_text, styles['BodyText']))
+                    
+                    story.append(Spacer(1, 10))
+            
+            # Timeline
+            timeline = suggestions.get('next_steps_timeline', '')
+            if timeline:
+                story.append(Paragraph("<b>⏰ RECOMMENDED TIMELINE</b>", styles['Heading2']))
+                story.append(Paragraph(timeline.replace('\n', '<br/>'), styles['BodyText']))
+                story.append(Spacer(1, 20))
     
         # Build PDF
         doc.build(story)
