@@ -8962,7 +8962,7 @@ def analyze_document_compliance(case_data: Dict) -> Dict:
     return compliance
 
 
-def generate_executive_summary(
+def generate_executive_summary_dict(
     case_data, timeline_data, ingredient_data, doc_data,
     liability_data, defence_data, defect_data, risk_data, settlement_data,
     presumption_data, cross_exam_data, judicial_behavior, contradiction_data,
@@ -9378,6 +9378,7 @@ def generate_executive_summary(
         'verdict_driven_by':         f'Decision driven by: {_verdict_source.replace("_"," ").title()} module',
 
         'case_overview':             case_overview,
+        'case_summary':              case_overview, # Alias for frontend
         'outcome_probability':       outcome_probability,
         'dismissal_risk':            dismissal_risk,
         'opponent_likely_strategy':  opponent_strategies[:2],
@@ -9391,6 +9392,7 @@ def generate_executive_summary(
         'critical_risks':            critical_risks[:6],
         'strategic_recommendations': strategic_recommendations[:5],
         'next_actions':              next_actions[:5],
+        'next_steps':                next_actions[:5], # Alias for frontend
         'limitation_status':         limitation_status,
         'processing_time':           'See response root',
         'edge_cases_alert':          edge_cases_alert[:3],
@@ -15567,7 +15569,6 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             defect_result
         )
 
-
         if not isinstance(risk_result, dict):
             logger.error(f"risk_result is not a dict: {type(risk_result)}")
             risk_result = {'overall_risk_score': 0, 'category_scores': {}, 'fatal_defects': []}
@@ -15668,7 +15669,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['audit_log']['phase_4_started'] = datetime.now().isoformat()
         logger.info("ðŸ“Š Generating Executive Intelligence Report...")
         try:
-            analysis_report['executive_summary'] = generate_executive_summary(
+            analysis_report['executive_summary'] = generate_executive_summary_dict(
                 case_data,
                 timeline_result,
                 ingredient_result,
@@ -17544,7 +17545,7 @@ def _build_flat_report(a: dict) -> dict:
         )
 
     if result_with_enhanced.get('case_strength_score'):
-        result_with_enhanced['executive_summary_enhanced'] = generate_executive_summary(result_with_enhanced)
+        result_with_enhanced['executive_summary_enhanced'] = generate_executive_summary_text(result_with_enhanced)
 
 
 
@@ -22341,7 +22342,7 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
     return enhanced_analysis
 
 
-def generate_executive_summary(analysis: Dict) -> str:
+def generate_executive_summary_text(analysis: Dict) -> str:
     """
     Auto-generate executive summary of the complete analysis
     """
