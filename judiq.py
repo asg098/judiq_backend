@@ -11728,7 +11728,7 @@ def save_analysis_to_db(analysis_report: Dict) -> bool:
 
 
         cursor.execute("""
-            INSERT INTO case_analyses (
+            INSERT OR REPLACE INTO case_analyses (
                 case_id, analysis_timestamp, case_type, cheque_amount,
                 overall_risk_score, compliance_level, fatal_defect_override,
                 fatal_type, timeline_risk, ingredient_compliance,
@@ -15565,7 +15565,9 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             risk_result = {'overall_risk_score': 0, 'category_scores': {}, 'fatal_defects': []}
 
         if not isinstance(risk_result, dict) or 'overall_risk_score' not in risk_result or risk_result['overall_risk_score'] is None:
-            logger.error("risk_result missing or None overall_risk_score - setting to 0")
+            logger.warning("⚠️ risk_result missing overall_risk_score - setting to 0 (safe default)")
+            if not isinstance(risk_result, dict):
+                risk_result = {}
             risk_result['overall_risk_score'] = 0
 
         analysis_report['modules']['risk_assessment'] = risk_result
@@ -17540,7 +17542,7 @@ def _build_flat_report(a: dict) -> dict:
     
     # Generate executive summary if enabled
     if result_with_enhanced.get('case_strength_score'):
-        result_with_enhanced['executive_summary_enhanced'] = generate_executive_summary(result_with_enhanced)
+        result_with_enhanced['executive_summary_enhanced'] = generate_enhanced_executive_summary(result_with_enhanced)
     
     # ============================================================================
     # FINAL CLEANUP - THIS MUST BE THE LAST STEP BEFORE RETURNING
@@ -22380,7 +22382,7 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
     }
     
     # Generate Executive Summary
-    enhanced_analysis['executive_summary'] = generate_executive_summary(enhanced_analysis)
+    enhanced_analysis['executive_summary'] = generate_enhanced_executive_summary(enhanced_analysis)
     
     # Generate Actionable Suggestions (NEW)
     logger.info("Generating actionable next steps...")
@@ -22418,9 +22420,10 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
     return enhanced_analysis
 
 
-def generate_executive_summary(analysis: Dict) -> str:
+def generate_enhanced_executive_summary(analysis: Dict) -> str:
     """
     Auto-generate executive summary of the complete analysis
+    (Renamed to avoid conflict with main generate_executive_summary function)
     """
     
     summary_lines = []
