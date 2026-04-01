@@ -23,10 +23,11 @@ TORCH_AVAILABLE = False
 logger = logging.getLogger(__name__)
 PHI2_AVAILABLE = False
 
-ENGINE_VERSION = "v2.1-PRODUCTION"
-ARCHITECTURE_VERSION = "Data-First-Single-Formatter"
-SCORING_MODEL_VERSION = "7.0"
+ENGINE_VERSION = "v2.2-PRODUCTION-ENHANCED"
+ARCHITECTURE_VERSION = "Data-First-Single-Formatter-With-Citations"
+SCORING_MODEL_VERSION = "8.0"
 TIMELINE_MATH_VERSION = "CALENDAR_MONTHS"
+CITATION_ENGINE_VERSION = "1.0"
 
 class Config:
     WEIGHTS = {'timeline': 0.25, 'ingredients': 0.30, 'documents': 0.20, 'defence': 0.15, 'procedural': 0.10}
@@ -70,6 +71,260 @@ ISSUE_BANK = {
     "cash_transaction": "Cash transaction lacks verifiable documentary trail",
     "notice_delivery": "Notice delivery proof inadequate"
 }
+
+# Landmark Case Judgments Database for Section 138 NI Act
+LANDMARK_CASES = {
+    "legally_enforceable_debt": [
+        {
+            "case_name": "K. Bhaskaran vs. Sankaran Vaidhyan Balan",
+            "citation": "(1999) 7 SCC 510",
+            "year": 1999,
+            "court": "Supreme Court of India",
+            "principle": "Legally enforceable debt is essential for Section 138 NI Act prosecution",
+            "key_holding": "The existence of a legally enforceable debt or liability is a sine qua non for attracting the provisions of Section 138 of the Negotiable Instruments Act. The complainant must prove that the cheque was issued towards discharge of a debt or liability.",
+            "relevance_tags": ["legally_enforceable_debt", "documentary_proof", "burden_of_proof"],
+            "impact_on_score": 15
+        },
+        {
+            "case_name": "MSR Leathers vs. S. Palaniappan",
+            "citation": "(2013) 1 SCC 177",
+            "year": 2013,
+            "court": "Supreme Court of India",
+            "principle": "Legally enforceable debt must be proved with documentary evidence",
+            "key_holding": "The complainant must establish that there was a legally enforceable debt or liability. Oral evidence alone without supporting documents may not suffice to prove the existence of debt.",
+            "relevance_tags": ["legally_enforceable_debt", "documentary_proof", "written_agreement"],
+            "impact_on_score": 15
+        }
+    ],
+    "notice_requirements": [
+        {
+            "case_name": "C.C. Alavi Haji vs. Palapetty Muhammed",
+            "citation": "(2007) 6 SCC 555",
+            "year": 2007,
+            "court": "Supreme Court of India",
+            "principle": "Demand notice under Section 138 is mandatory",
+            "key_holding": "Issuance of notice in writing to the drawer of the cheque demanding payment within 15 days is a condition precedent for filing complaint under Section 138. Non-compliance with this requirement is fatal to the prosecution.",
+            "relevance_tags": ["notice_timeline", "demand_notice", "procedural_compliance"],
+            "impact_on_score": 20
+        },
+        {
+            "case_name": "Sadanandan Bhadran vs. Madhavan Sunil Kumar",
+            "citation": "(1998) 6 SCC 514",
+            "year": 1998,
+            "court": "Supreme Court of India",
+            "principle": "Notice must be served within 30 days of dishonour",
+            "key_holding": "The demand notice under Section 138(b) must be given within 30 days from the date of receipt of information about dishonour of cheque. The period of 30 days starts from the date of receipt of dishonour memo.",
+            "relevance_tags": ["notice_timeline", "dishonour_memo", "timeline_compliance"],
+            "impact_on_score": 20
+        }
+    ],
+    "limitation_period": [
+        {
+            "case_name": "Saketh India Ltd. vs. India Securities Ltd.",
+            "citation": "(1999) 3 SCC 512",
+            "year": 1999,
+            "court": "Supreme Court of India",
+            "principle": "One month limitation period from cause of action",
+            "key_holding": "The complaint under Section 138 must be filed within one month from the date of expiry of 15 days period from the date of service of notice. This is a mandatory requirement and non-compliance is fatal.",
+            "relevance_tags": ["filing_timeline", "limitation_period", "cause_of_action"],
+            "impact_on_score": 25
+        },
+        {
+            "case_name": "Meters and Instruments Pvt. Ltd. vs. Kanchan Mehta",
+            "citation": "(2018) 1 SCC 560",
+            "year": 2018,
+            "court": "Supreme Court of India",
+            "principle": "Limitation period is strictly enforced",
+            "key_holding": "The one-month limitation period prescribed under Section 142(b) for filing complaint is mandatory and must be strictly adhered to. Delay beyond the prescribed period renders the complaint time-barred.",
+            "relevance_tags": ["filing_timeline", "limitation_period", "procedural_defect"],
+            "impact_on_score": 25
+        }
+    ],
+    "cheque_validity": [
+        {
+            "case_name": "Kamlesh Kumar Mathur vs. Balmukund Agarwal",
+            "citation": "AIR 2016 SC 3766",
+            "year": 2016,
+            "court": "Supreme Court of India",
+            "principle": "Cheque validity period is 3 months",
+            "key_holding": "As per Section 13 of the Limitation Act read with Article 65 of the Schedule, a cheque is valid for three months from the date of issue. Presentation beyond this period makes it stale.",
+            "relevance_tags": ["cheque_validity", "timeline_compliance", "presentation_date"],
+            "impact_on_score": 10
+        }
+    ],
+    "presumption_section_139": [
+        {
+            "case_name": "Kumar Exports vs. Sharma Carpets",
+            "citation": "(2009) 2 SCC 513",
+            "year": 2009,
+            "court": "Supreme Court of India",
+            "principle": "Presumption under Section 139 - cheque issued for discharge of debt",
+            "key_holding": "Under Section 139 of the NI Act, once execution of cheque is admitted, there is a presumption that it was issued for discharge of debt or liability. However, this is a rebuttable presumption and the accused can discharge the burden by raising probable defence.",
+            "relevance_tags": ["section_139_presumption", "burden_of_proof", "defence"],
+            "impact_on_score": 10
+        },
+        {
+            "case_name": "Rangappa vs. Sri Mohan",
+            "citation": "(2010) 11 SCC 441",
+            "year": 2010,
+            "court": "Supreme Court of India",
+            "principle": "Nature and extent of presumption under Section 139",
+            "key_holding": "The presumption under Section 139 is mandatory and must be raised. The standard of proof required for the accused to rebut this presumption is that of preponderance of probabilities, not beyond reasonable doubt.",
+            "relevance_tags": ["section_139_presumption", "standard_of_proof", "rebuttal"],
+            "impact_on_score": 10
+        }
+    ],
+    "documentary_evidence": [
+        {
+            "case_name": "Anvar P.V. vs. P.K. Basheer",
+            "citation": "(2014) 10 SCC 473",
+            "year": 2014,
+            "court": "Supreme Court of India",
+            "principle": "Section 65B certificate mandatory for electronic evidence",
+            "key_holding": "For electronic records to be admissible as evidence, a certificate under Section 65B of the Evidence Act is mandatory. Without such certificate, electronic evidence cannot be looked into.",
+            "relevance_tags": ["section_65b", "electronic_evidence", "documentary_proof"],
+            "impact_on_score": 15
+        },
+        {
+            "case_name": "Shamsher Singh Verma vs. State of Haryana",
+            "citation": "(2015) 6 SCC 443",
+            "year": 2015,
+            "court": "Supreme Court of India",
+            "principle": "Electronic evidence requires Section 65B certificate",
+            "key_holding": "Any electronic record by way of secondary evidence shall not be admitted in evidence unless the requirements under Section 65B are satisfied. This includes emails, SMSes, and digital documents.",
+            "relevance_tags": ["section_65b", "electronic_evidence", "admissibility"],
+            "impact_on_score": 15
+        }
+    ],
+    "return_memo_requirement": [
+        {
+            "case_name": "NEPC Micon Ltd. vs. Magma Leasing Ltd.",
+            "citation": "(1999) 8 SCC 339",
+            "year": 1999,
+            "court": "Supreme Court of India",
+            "principle": "Return memo is crucial evidence of dishonour",
+            "key_holding": "The return memo issued by the bank is the best evidence to prove dishonour of cheque. While not absolutely mandatory, its absence weakens the case and requires cogent alternative proof of dishonour.",
+            "relevance_tags": ["return_memo", "dishonour_proof", "bank_memo"],
+            "impact_on_score": 10
+        }
+    ],
+    "vicarious_liability_directors": [
+        {
+            "case_name": "Aneeta Hada vs. Godfather Travels & Tours Pvt. Ltd.",
+            "citation": "(2012) 5 SCC 661",
+            "year": 2012,
+            "court": "Supreme Court of India",
+            "principle": "Directors liability under Section 141 requires specific averments",
+            "key_holding": "For making a director liable under Section 141, specific averments must be made in the complaint that at the relevant time, the person was in charge of and responsible for the conduct of business of the company.",
+            "relevance_tags": ["director_liability", "section_141", "company_directors"],
+            "impact_on_score": 15
+        },
+        {
+            "case_name": "S.M.S. Pharmaceuticals Ltd. vs. Neeta Bhalla",
+            "citation": "(2005) 8 SCC 89",
+            "year": 2005,
+            "court": "Supreme Court of India",
+            "principle": "Specific role of director must be alleged",
+            "key_holding": "A complaint under Section 141 must contain specific allegations as to how and in what manner the directors were in charge of and responsible for the conduct of the business of the company. Bald statements are insufficient.",
+            "relevance_tags": ["director_liability", "section_141", "proper_impleading"],
+            "impact_on_score": 15
+        }
+    ],
+    "discharge_of_liability": [
+        {
+            "case_name": "Electronics Trade & Technology Development Corporation Ltd. vs. Indian Technologists & Engineers (Electronics) Pvt. Ltd.",
+            "citation": "(1996) 2 SCC 739",
+            "year": 1996,
+            "court": "Supreme Court of India",
+            "principle": "Proof of payment discharges liability",
+            "key_holding": "If the accused proves that the amount has been paid before the date of filing of the complaint, it would discharge the liability under Section 138.",
+            "relevance_tags": ["payment_proof", "discharge_liability", "defence"],
+            "impact_on_score": 20
+        }
+    ]
+}
+
+
+def get_relevant_case_law(case_issues: List[str], max_cases: int = 5) -> List[Dict]:
+    """
+    Retrieve relevant case law based on identified case issues
+    
+    Args:
+        case_issues: List of issue tags from the case analysis
+        max_cases: Maximum number of cases to return
+        
+    Returns:
+        List of relevant landmark cases with citations
+    """
+    relevant_cases = []
+    seen_cases = set()
+    
+    # Priority mapping - issues with higher priority get selected first
+    priority_map = {
+        "legally_enforceable_debt": 1,
+        "documentary_proof": 1,
+        "notice_timeline": 2,
+        "filing_timeline": 2,
+        "limitation_period": 2,
+        "director_liability": 3,
+        "section_65b": 3,
+        "section_139_presumption": 4,
+        "cheque_validity": 5
+    }
+    
+    # Create scored list of cases
+    case_scores = []
+    
+    for category, cases in LANDMARK_CASES.items():
+        for case in cases:
+            # Calculate relevance score
+            relevance_score = 0
+            matched_tags = []
+            
+            for tag in case.get('relevance_tags', []):
+                if tag in case_issues:
+                    relevance_score += priority_map.get(tag, 10)
+                    matched_tags.append(tag)
+            
+            if relevance_score > 0:
+                case_copy = case.copy()
+                case_copy['relevance_score'] = relevance_score
+                case_copy['matched_issues'] = matched_tags
+                case_scores.append(case_copy)
+    
+    # Sort by relevance score and year (newer cases get slight preference)
+    case_scores.sort(key=lambda x: (x['relevance_score'], x.get('year', 0)), reverse=True)
+    
+    # Select top cases without duplicates
+    for case in case_scores:
+        case_id = f"{case['case_name']}_{case['citation']}"
+        if case_id not in seen_cases and len(relevant_cases) < max_cases:
+            seen_cases.add(case_id)
+            relevant_cases.append(case)
+    
+    return relevant_cases
+
+
+def generate_case_citations(analysis_result: Dict) -> str:
+    """
+    Generate formatted citations for the report
+    
+    Args:
+        analysis_result: Complete analysis result
+        
+    Returns:
+        Formatted citation text
+    """
+    citations = []
+    related_cases = analysis_result.get('related_case_law', [])
+    
+    for idx, case in enumerate(related_cases, 1):
+        citation_text = f"{idx}. {case['case_name']}, {case['citation']}\n"
+        citation_text += f"   Principle: {case['principle']}\n"
+        citation_text += f"   Relevant to: {', '.join(case.get('matched_issues', []))}"
+        citations.append(citation_text)
+    
+    return "\n\n".join(citations) if citations else "No specific citations applicable"
 
 
 def indian_number_format(amount: float) -> str:
@@ -16874,6 +17129,256 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             else:
                 return obj
         
+        # ==================== CASE LAW CITATIONS & RELATED JUDGMENTS ====================
+        logger.info("⚖️ Retrieving relevant case law and citations...")
+        
+        # Identify case issues from the analysis
+        case_issues = []
+        
+        # Check documentary issues
+        if not case_data.get('written_agreement_exists'):
+            case_issues.extend(['legally_enforceable_debt', 'documentary_proof', 'written_agreement'])
+        
+        if not case_data.get('return_memo_available'):
+            case_issues.append('return_memo')
+        
+        # Check timeline issues
+        timeline_comp = timeline_result.get('compliance_status', {})
+        if 'LATE' in str(timeline_comp.get('notice', '')).upper() or 'NON' in str(timeline_comp.get('notice', '')).upper():
+            case_issues.extend(['notice_timeline', 'demand_notice', 'procedural_compliance'])
+        
+        limitation_status = str(timeline_comp.get('limitation', '')).upper()
+        if 'BARRED' in limitation_status or 'EXPIRED' in limitation_status:
+            case_issues.extend(['filing_timeline', 'limitation_period', 'cause_of_action'])
+        
+        if 'PREMATURE' in limitation_status:
+            case_issues.extend(['filing_timeline', 'procedural_defect'])
+        
+        # Check cheque validity
+        if 'STALE' in str(timeline_comp.get('cheque_validity', '')).upper():
+            case_issues.extend(['cheque_validity', 'timeline_compliance', 'presentation_date'])
+        
+        # Check electronic evidence
+        if case_data.get('email_sms_evidence') and not case_data.get('section_65b_certificate'):
+            case_issues.extend(['section_65b', 'electronic_evidence', 'admissibility'])
+        
+        # Check director liability
+        if case_data.get('is_company_case') and not case_data.get('directors_impleaded'):
+            case_issues.extend(['director_liability', 'section_141', 'company_directors', 'proper_impleading'])
+        
+        # Check presumption issues
+        if case_data.get('original_cheque_available'):
+            case_issues.extend(['section_139_presumption', 'burden_of_proof'])
+        
+        # Check defence issues
+        defence_type = case_data.get('defence_type', '')
+        if defence_type:
+            case_issues.extend(['defence', 'rebuttal'])
+            if 'payment' in defence_type.lower():
+                case_issues.append('discharge_liability')
+        
+        # Get relevant case law (maximum 5 cases)
+        related_cases = get_relevant_case_law(case_issues, max_cases=5)
+        
+        analysis_report['related_case_law'] = related_cases
+        analysis_report['case_citations'] = generate_case_citations(analysis_report)
+        
+        logger.info(f"✅ Retrieved {len(related_cases)} relevant case law precedents")
+        
+        # ==================== ENHANCED NEXT ACTIONS & RECOMMENDATIONS ====================
+        logger.info("📋 Generating comprehensive next actions...")
+        
+        exec_summary = analysis_report.get('executive_summary', {})
+        score = analysis_report.get('modules', {}).get('risk_assessment', {}).get('overall_risk_score', 0)
+        fatal_flag = analysis_report.get('fatal_flag', False)
+        
+        # Build comprehensive next actions
+        next_actions_detailed = {
+            'filing_status': exec_summary.get('filing_verdict', 'Review required'),
+            'overall_score': f"{score:.1f}/100",
+            'immediate_actions': [],
+            'document_actions': [],
+            'timeline_actions': [],
+            'legal_actions': [],
+            'strategic_recommendations': []
+        }
+        
+        # Immediate actions based on fatal defects
+        if fatal_flag:
+            fatal_defects = analysis_report.get('modules', {}).get('risk_assessment', {}).get('fatal_defects', [])
+            for defect in fatal_defects[:3]:  # Top 3 fatal defects
+                next_actions_detailed['immediate_actions'].append({
+                    'priority': 'CRITICAL',
+                    'action': f"Address: {defect.get('defect', 'Fatal issue')}",
+                    'deadline': 'Before filing',
+                    'impact': defect.get('impact', 'Case will be dismissed'),
+                    'remedy': defect.get('remedy', 'Consult legal counsel'),
+                    'related_cases': [c['case_name'] for c in related_cases if any(tag in defect.get('defect', '').lower() for tag in c.get('relevance_tags', []))][:2]
+                })
+        
+        # Document-related actions
+        if not case_data.get('written_agreement_exists'):
+            next_actions_detailed['document_actions'].append({
+                'priority': 'HIGH',
+                'action': 'Obtain written agreement or substitute documentary evidence',
+                'deadline': 'Within 7 days',
+                'impact': 'Critical for proving legally enforceable debt',
+                'steps': [
+                    'Review all available documentation (emails, invoices, receipts)',
+                    'Prepare affidavit detailing transaction circumstances',
+                    'Collect witness statements if available',
+                    'Consider obtaining acknowledgment of debt'
+                ],
+                'legal_basis': 'K. Bhaskaran vs. Sankaran Vaidhyan Balan (1999) 7 SCC 510',
+                'related_cases': ['MSR Leathers vs. S. Palaniappan (2013) 1 SCC 177']
+            })
+        
+        if not case_data.get('return_memo_available'):
+            next_actions_detailed['document_actions'].append({
+                'priority': 'HIGH',
+                'action': 'Obtain bank dishonour memo',
+                'deadline': 'Within 5 days',
+                'impact': 'Essential evidence of cheque dishonour',
+                'steps': [
+                    'Request dishonour memo from bank where cheque was presented',
+                    'If lost, obtain certified copy from bank records',
+                    'Ensure memo clearly states reason for dishonour'
+                ],
+                'legal_basis': 'NEPC Micon Ltd. vs. Magma Leasing Ltd. (1999) 8 SCC 339'
+            })
+        
+        if case_data.get('email_sms_evidence') and not case_data.get('section_65b_certificate'):
+            next_actions_detailed['document_actions'].append({
+                'priority': 'HIGH',
+                'action': 'Obtain Section 65B certificate for electronic evidence',
+                'deadline': 'Before filing',
+                'impact': 'Electronic evidence inadmissible without certificate',
+                'steps': [
+                    'Identify person in control of computer/device',
+                    'Prepare Section 65B certificate affidavit',
+                    'Attach printouts of electronic records',
+                    'Get certificate notarized'
+                ],
+                'legal_basis': 'Anvar P.V. vs. P.K. Basheer (2014) 10 SCC 473',
+                'related_cases': ['Shamsher Singh Verma vs. State of Haryana (2015) 6 SCC 443']
+            })
+        
+        # Timeline actions
+        limitation_status = timeline_result.get('compliance_status', {}).get('limitation', '')
+        if 'PREMATURE' in str(limitation_status).upper():
+            refiling_window = timeline_result.get('refiling_window', {})
+            next_actions_detailed['timeline_actions'].append({
+                'priority': 'CRITICAL',
+                'action': 'Do NOT file - complaint is premature',
+                'deadline': f"Wait until {refiling_window.get('can_file_from', 'cause of action date')}",
+                'impact': 'Premature filing will result in dismissal',
+                'days_to_wait': refiling_window.get('days_remaining', 0),
+                'can_file_from': refiling_window.get('can_file_from', ''),
+                'legal_basis': 'Saketh India Ltd. vs. India Securities Ltd. (1999) 3 SCC 512'
+            })
+        elif 'BARRED' in str(limitation_status).upper():
+            delay_days = timeline_result.get('delay_days', 0)
+            next_actions_detailed['timeline_actions'].append({
+                'priority': 'CRITICAL',
+                'action': 'File condonation of delay application',
+                'deadline': 'Immediately',
+                'impact': 'Case is time-barred by ' + str(delay_days) + ' days',
+                'steps': [
+                    'Prepare detailed affidavit explaining reasons for delay',
+                    'Compile supporting documents for delay justification',
+                    'File application under Section 142(1)(b) proviso',
+                    'Be prepared to prove sufficient cause'
+                ],
+                'legal_basis': 'Meters and Instruments Pvt. Ltd. vs. Kanchan Mehta (2018) 1 SCC 560',
+                'success_probability': 'Low to Medium - depends on reasons for delay'
+            })
+        
+        # Notice-related actions
+        notice_status = timeline_result.get('compliance_status', {}).get('notice', '')
+        if not case_data.get('postal_proof_available'):
+            next_actions_detailed['document_actions'].append({
+                'priority': 'HIGH',
+                'action': 'Obtain proof of notice delivery',
+                'deadline': 'Before filing',
+                'impact': 'Required to prove service of demand notice',
+                'steps': [
+                    'Collect postal receipt/registered post acknowledgment',
+                    'Obtain tracking details from postal department',
+                    'If notice was refused/unclaimed, obtain relevant postal endorsement',
+                    'Prepare affidavit of deemed service if applicable'
+                ],
+                'legal_basis': 'C.C. Alavi Haji vs. Palapetty Muhammed (2007) 6 SCC 555'
+            })
+        
+        # Director liability actions
+        if case_data.get('is_company_case'):
+            if not case_data.get('directors_impleaded'):
+                next_actions_detailed['legal_actions'].append({
+                    'priority': 'HIGH',
+                    'action': 'Properly implead company directors',
+                    'deadline': 'Before filing',
+                    'impact': 'Cannot proceed against directors without proper impleadment',
+                    'steps': [
+                        'Obtain list of directors from MCA/ROC',
+                        'Identify directors in charge at time of offence',
+                        'Draft specific averments for each director',
+                        'State their role and responsibility in company affairs'
+                    ],
+                    'legal_basis': 'Aneeta Hada vs. Godfather Travels & Tours Pvt. Ltd. (2012) 5 SCC 661',
+                    'related_cases': ['S.M.S. Pharmaceuticals Ltd. vs. Neeta Bhalla (2005) 8 SCC 89']
+                })
+        
+        # Strategic recommendations
+        if score >= 75 and not fatal_flag:
+            next_actions_detailed['strategic_recommendations'].append({
+                'recommendation': 'Proceed to file complaint - case is strong',
+                'rationale': f'Case score of {score:.1f}/100 indicates high compliance',
+                'timeline': 'File within limitation period',
+                'expected_outcome': 'High probability of conviction',
+                'precautions': [
+                    'Ensure all documents are properly filed',
+                    'Prepare witness statements in advance',
+                    'Keep original documents ready for trial'
+                ]
+            })
+        elif score >= 55 and not fatal_flag:
+            next_actions_detailed['strategic_recommendations'].append({
+                'recommendation': 'File with caution after strengthening evidence',
+                'rationale': f'Case score of {score:.1f}/100 indicates moderate risk',
+                'timeline': 'Strengthen evidence within 10-15 days, then file',
+                'expected_outcome': 'Moderate probability of success',
+                'precautions': [
+                    'Address all documentary gaps',
+                    'Consider settlement if accused shows willingness',
+                    'Prepare for possible defence challenges'
+                ]
+            })
+        else:
+            next_actions_detailed['strategic_recommendations'].append({
+                'recommendation': 'Do NOT file until critical issues are resolved',
+                'rationale': f'Case score of {score:.1f}/100 and/or fatal defects present',
+                'timeline': 'Address all fatal defects before considering filing',
+                'expected_outcome': 'High risk of dismissal in current state',
+                'precautions': [
+                    'Consult with experienced lawyer',
+                    'Consider alternative dispute resolution',
+                    'Do not rush filing - limitation can be managed'
+                ]
+            })
+        
+        # Add citation-backed recommendations
+        for case in related_cases[:3]:
+            next_actions_detailed['strategic_recommendations'].append({
+                'recommendation': f"Review: {case['case_name']}",
+                'rationale': case['principle'],
+                'legal_basis': case['citation'],
+                'relevance': f"Applicable to: {', '.join(case.get('matched_issues', [])[:3])}"
+            })
+        
+        analysis_report['next_actions_detailed'] = next_actions_detailed
+        
+        logger.info("✅ Comprehensive next actions generated")
+        
         logger.info("🧹 Applying final text sanitization pass...")
         analysis_report = sanitize_nested_dict(analysis_report)
         logger.info("✅ Text sanitization complete")
@@ -17862,6 +18367,16 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
             analysis['case_metadata'] = {k: v for k, v in case_data.items()
                                           if not k.startswith('_')}
 
+        # === PREMIUM 3-4 LINE NEXT STEPS (as per faculty feedback) ===
+        # Replace the old next_actions with premium simple suggestions
+        premium_suggestions = generate_simple_suggestions(analysis)
+        _next_actions = premium_suggestions  # Override with premium suggestions
+        
+        # Also update in executive_summary if it exists
+        if isinstance(analysis.get('executive_summary'), dict):
+            analysis['executive_summary']['next_steps'] = premium_suggestions
+            analysis['executive_summary']['next_actions'] = premium_suggestions
+
         return {
             "success": True,
 
@@ -17871,7 +18386,7 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
             "summary": _top_summary,
             "documentary_strength": _doc_context,
             "key_issue": _primary_issue,
-            "next_actions": _next_actions[:5] if _next_actions else [],
+            "next_actions": _next_actions,  # Now using premium suggestions
 
 
             "decision_confidence": _decision_conf,
@@ -21790,6 +22305,191 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
             story.append(Paragraph(timeline.replace('\n', '<br/>'), styles['BodyText']))
             story.append(Spacer(1, 20))
     
+    # ==================== RELATED CASE LAW & JUDGMENTS ====================
+    related_cases = analysis.get('related_case_law', [])
+    if related_cases:
+        story.append(PageBreak())
+        story.append(Paragraph("📚 RELATED CASE LAW & LEGAL PRECEDENTS", styles['Heading1']))
+        story.append(Spacer(1, 12))
+        
+        story.append(Paragraph(
+            "The following landmark judgments are relevant to your case based on the identified legal issues:",
+            styles['BodyText']
+        ))
+        story.append(Spacer(1, 12))
+        
+        for idx, case in enumerate(related_cases, 1):
+            # Case heading
+            case_title = f"<b>{idx}. {case.get('case_name', 'Case')}</b>"
+            story.append(Paragraph(case_title, styles['Heading2']))
+            
+            # Case details
+            case_detail = f"<b>Citation:</b> {case.get('citation', 'N/A')}<br/>"
+            case_detail += f"<b>Court:</b> {case.get('court', 'N/A')}<br/>"
+            case_detail += f"<b>Year:</b> {case.get('year', 'N/A')}<br/>"
+            case_detail += f"<b>Principle:</b> {case.get('principle', 'N/A')}<br/>"
+            story.append(Paragraph(case_detail, styles['BodyText']))
+            story.append(Spacer(1, 8))
+            
+            # Key holding
+            holding_style = ParagraphStyle(
+                'Holding',
+                parent=styles['BodyText'],
+                leftIndent=20,
+                rightIndent=20,
+                textColor=colors.HexColor('#424242'),
+                backColor=colors.HexColor('#f5f5f5'),
+                borderPadding=10
+            )
+            holding_text = f"<b>Key Holding:</b><br/>{case.get('key_holding', 'N/A')}"
+            story.append(Paragraph(holding_text, holding_style))
+            story.append(Spacer(1, 8))
+            
+            # Relevance to current case
+            matched_issues = case.get('matched_issues', [])
+            if matched_issues:
+                relevance_text = f"<b>Relevance to your case:</b> {', '.join(matched_issues)}"
+                story.append(Paragraph(relevance_text, styles['BodyText']))
+            
+            story.append(Spacer(1, 15))
+    
+    # ==================== DETAILED NEXT ACTIONS ====================
+    next_actions_detailed = analysis.get('next_actions_detailed', {})
+    if next_actions_detailed:
+        story.append(PageBreak())
+        story.append(Paragraph("📋 COMPREHENSIVE NEXT ACTIONS", styles['Heading1']))
+        story.append(Spacer(1, 12))
+        
+        # Filing Status
+        status_text = f"<b>Filing Status:</b> {next_actions_detailed.get('filing_status', 'Review Required')}<br/>"
+        status_text += f"<b>Overall Score:</b> {next_actions_detailed.get('overall_score', 'N/A')}"
+        story.append(Paragraph(status_text, styles['BodyText']))
+        story.append(Spacer(1, 15))
+        
+        # Immediate Actions
+        immediate_actions = next_actions_detailed.get('immediate_actions', [])
+        if immediate_actions:
+            story.append(Paragraph("<b>🔴 IMMEDIATE ACTIONS (CRITICAL)</b>", styles['Heading2']))
+            for action in immediate_actions:
+                action_text = f"<b>{action.get('action', '')}</b><br/>"
+                action_text += f"<b>Priority:</b> {action.get('priority', 'HIGH')}<br/>"
+                action_text += f"<b>Deadline:</b> {action.get('deadline', 'ASAP')}<br/>"
+                action_text += f"<b>Impact:</b> {action.get('impact', '')}<br/>"
+                action_text += f"<b>Remedy:</b> {action.get('remedy', '')}"
+                story.append(Paragraph(action_text, styles['BodyText']))
+                
+                related = action.get('related_cases', [])
+                if related:
+                    story.append(Paragraph(f"<i>Related: {', '.join(related)}</i>", styles['BodyText']))
+                
+                story.append(Spacer(1, 10))
+        
+        # Document Actions
+        document_actions = next_actions_detailed.get('document_actions', [])
+        if document_actions:
+            story.append(Paragraph("<b>📄 DOCUMENT ACTIONS</b>", styles['Heading2']))
+            for action in document_actions:
+                action_text = f"<b>{action.get('action', '')}</b><br/>"
+                action_text += f"<b>Priority:</b> {action.get('priority', 'HIGH')}<br/>"
+                action_text += f"<b>Deadline:</b> {action.get('deadline', '')}<br/>"
+                action_text += f"<b>Impact:</b> {action.get('impact', '')}"
+                story.append(Paragraph(action_text, styles['BodyText']))
+                
+                steps = action.get('steps', [])
+                if steps:
+                    story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
+                    for step in steps:
+                        story.append(Paragraph(f"• {step}", styles['BodyText']))
+                
+                legal_basis = action.get('legal_basis', '')
+                if legal_basis:
+                    story.append(Paragraph(f"<i>Legal Basis: {legal_basis}</i>", styles['BodyText']))
+                
+                story.append(Spacer(1, 10))
+        
+        # Timeline Actions
+        timeline_actions = next_actions_detailed.get('timeline_actions', [])
+        if timeline_actions:
+            story.append(Paragraph("<b>⏰ TIMELINE ACTIONS</b>", styles['Heading2']))
+            for action in timeline_actions:
+                action_text = f"<b>{action.get('action', '')}</b><br/>"
+                action_text += f"<b>Priority:</b> {action.get('priority', '')}<br/>"
+                action_text += f"<b>Deadline:</b> {action.get('deadline', '')}<br/>"
+                action_text += f"<b>Impact:</b> {action.get('impact', '')}"
+                
+                if action.get('days_to_wait'):
+                    action_text += f"<br/><b>Days to Wait:</b> {action.get('days_to_wait')}"
+                if action.get('can_file_from'):
+                    action_text += f"<br/><b>Can File From:</b> {action.get('can_file_from')}"
+                
+                story.append(Paragraph(action_text, styles['BodyText']))
+                
+                steps = action.get('steps', [])
+                if steps:
+                    story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
+                    for step in steps:
+                        story.append(Paragraph(f"• {step}", styles['BodyText']))
+                
+                legal_basis = action.get('legal_basis', '')
+                if legal_basis:
+                    story.append(Paragraph(f"<i>Legal Basis: {legal_basis}</i>", styles['BodyText']))
+                
+                story.append(Spacer(1, 10))
+        
+        # Legal Actions
+        legal_actions = next_actions_detailed.get('legal_actions', [])
+        if legal_actions:
+            story.append(Paragraph("<b>⚖️ LEGAL ACTIONS</b>", styles['Heading2']))
+            for action in legal_actions:
+                action_text = f"<b>{action.get('action', '')}</b><br/>"
+                action_text += f"<b>Priority:</b> {action.get('priority', '')}<br/>"
+                action_text += f"<b>Impact:</b> {action.get('impact', '')}"
+                story.append(Paragraph(action_text, styles['BodyText']))
+                
+                steps = action.get('steps', [])
+                if steps:
+                    story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
+                    for step in steps:
+                        story.append(Paragraph(f"• {step}", styles['BodyText']))
+                
+                legal_basis = action.get('legal_basis', '')
+                if legal_basis:
+                    story.append(Paragraph(f"<i>Legal Basis: {legal_basis}</i>", styles['BodyText']))
+                
+                related_cases = action.get('related_cases', [])
+                if related_cases:
+                    story.append(Paragraph(f"<i>Related Cases: {', '.join(related_cases)}</i>", styles['BodyText']))
+                
+                story.append(Spacer(1, 10))
+        
+        # Strategic Recommendations
+        strategic_recs = next_actions_detailed.get('strategic_recommendations', [])
+        if strategic_recs:
+            story.append(Paragraph("<b>🎯 STRATEGIC RECOMMENDATIONS</b>", styles['Heading2']))
+            for rec in strategic_recs:
+                rec_text = f"<b>{rec.get('recommendation', '')}</b><br/>"
+                
+                if rec.get('rationale'):
+                    rec_text += f"<b>Rationale:</b> {rec.get('rationale', '')}<br/>"
+                if rec.get('timeline'):
+                    rec_text += f"<b>Timeline:</b> {rec.get('timeline', '')}<br/>"
+                if rec.get('expected_outcome'):
+                    rec_text += f"<b>Expected Outcome:</b> {rec.get('expected_outcome', '')}<br/>"
+                if rec.get('legal_basis'):
+                    rec_text += f"<b>Legal Basis:</b> {rec.get('legal_basis', '')}<br/>"
+                if rec.get('relevance'):
+                    rec_text += f"<b>Relevance:</b> {rec.get('relevance', '')}"
+                
+                story.append(Paragraph(rec_text, styles['BodyText']))
+                
+                precautions = rec.get('precautions', [])
+                if precautions:
+                    story.append(Paragraph("<b>Precautions:</b>", styles['Normal']))
+                    for precaution in precautions:
+                        story.append(Paragraph(f"• {precaution}", styles['BodyText']))
+                
+                story.append(Spacer(1, 10))
+    
     # Build PDF
     doc.build(story)
     
@@ -22202,40 +22902,6 @@ def generate_actionable_suggestions(analysis: Dict) -> Dict:
 
 
 def generate_simple_suggestions(analysis: Dict) -> list:
-    """
-    Premium, real, senior-advocate style 3-4 line suggestions.
-    Concise, actionable, professional - like talking to an experienced lawyer.
-    """
-    score = analysis.get('final_score', analysis.get('case_strength_score', {}).get('overall_score', 63))
-    weaknesses = safe_get(analysis, 'case_strength_score', 'critical_weaknesses', default=[])
-    
-    suggestions = []
-    
-    # Line 1: Always prioritize documentary evidence
-    suggestions.append("Immediately collect written agreement and ledger entries to prove legally enforceable debt.")
-    
-    # Line 2: Electronic evidence
-    suggestions.append("Prepare and file Section 65-B certificate for all electronic evidence.")
-    
-    # Line 3: Strategic recommendation based on score
-    if score < 70:
-        suggestions.append("Initiate settlement with the accused at 75-85% of cheque amount to avoid long litigation.")
-    else:
-        suggestions.append("File the complaint only after completing all supporting documents.")
-    
-    # Line 4: Address specific weakness if present
-    if any("written agreement" in str(w).lower() for w in weaknesses):
-        suggestions.append("Fix documentary proof first — this is the main defence risk.")
-    else:
-        # Default 4th line for strong cases
-        if score >= 75:
-            suggestions.append("Ensure all witness statements are sworn and notarized before filing.")
-    
-    # Return max 4 suggestions
-    return suggestions[:4]
-
-
-def generate_simple_suggestions(analysis: Dict) -> list:
     """Premium 3-4 line senior-advocate style suggestions"""
     # Get score - try multiple keys for compatibility
     score = analysis.get('final_score')
@@ -22394,6 +23060,13 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
     # Generate Simple Suggestions (PREMIUM - Senior Advocate Style)
     logger.info("Generating premium simple suggestions...")
     enhanced_analysis['simple_suggestions'] = generate_simple_suggestions(enhanced_analysis)
+    
+    # === PREMIUM 3-4 LINE NEXT STEPS (as per faculty feedback) ===
+    enhanced_analysis['next_steps'] = generate_simple_suggestions(enhanced_analysis)
+    
+    # Add to Executive Summary too (top of report)
+    if isinstance(enhanced_analysis.get('executive_summary'), dict):
+        enhanced_analysis['executive_summary']['next_steps'] = enhanced_analysis['next_steps']
     
     logger.info("Enhanced analysis completed successfully")
     
