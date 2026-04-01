@@ -18,6 +18,25 @@ try:
 except ImportError:
     PANDAS_AVAILABLE = False
 
+# Try to import PDF libraries
+REPORTLAB_AVAILABLE = False
+FPDF_AVAILABLE = False
+
+try:
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    try:
+        from fpdf import FPDF
+        FPDF_AVAILABLE = True
+    except ImportError:
+        pass
+
 TORCH_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
@@ -21620,11 +21639,12 @@ CASE_DB = CaseDatabase()
 def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None) -> str:
     """
     Generate professional PDF report of case analysis
+    Uses ReportLab if available, falls back to FPDF, or creates simple HTML report
     """
     
-    if not REPORTLAB_AVAILABLE:
-        logger.warning("ReportLab not available - PDF generation skipped")
-        raise ImportError("ReportLab library not installed - cannot generate PDF")
+    if not REPORTLAB_AVAILABLE and not FPDF_AVAILABLE:
+        logger.warning("No PDF library available - generating HTML report instead")
+        return generate_html_report(case_data, analysis, output_path)
     
     if output_path is None:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -21635,6 +21655,216 @@ def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
     
+    # Use FPDF as the primary method (simpler and more reliable)
+    if FPDF_AVAILABLE:
+        return generate_fpdf_report(case_data, analysis, output_path)
+    else:
+        return generate_reportlab_report(case_data, analysis, output_path)
+
+def generate_html_report(case_data: Dict, analysis: Dict, output_path: str = None) -> str:
+    """
+    Fallback: Generate HTML report when PDF libraries are not available
+    """
+    if output_path is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_path = f"/mnt/user-data/outputs/case_analysis_{timestamp}.html"
+    else:
+        output_path = output_path.replace('.pdf', '.html')
+    
+    # Extract key data
+    strength = analysis.get('case_strength_score', {})
+    exec_summary = analysis.get('modules', {}).get('executive_summary', {})
+    timeline = analysis.get('modules', {}).get('timeline_intelligence', {})
+    
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>JUDIQ AI - Case Analysis Report</title>
+    <style>
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 40px; line-height: 1.6; color: #333; }}
+        h1 {{ color: #1a237e; border-bottom: 3px solid #00b894; padding-bottom: 10px; }}
+        h2 {{ color: #00b894; margin-top: 30px; }}
+        .score-box {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; text-align: center; margin: 20px 0; }}
+        .score {{ font-size: 48px; font-weight: bold; }}
+        .info-table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+        .info-table th {{ background: #f0f0f0; padding: 12px; text-align: left; border: 1px solid #ddd; }}
+        .info-table td {{ padding: 12px; border: 1px solid #ddd; }}
+        .action-item {{ background: #fff3cd; padding: 15px; margin: 10px 0; border-left: 4px solid #ffc107; border-radius: 4px; }}
+        .risk-high {{ background: #f8d7da; border-left-color: #dc3545; }}
+        .risk-low {{ background: #d4edda; border-left-color: #28a745; }}
+        @media print {{ body {{ margin: 20px; }} }}
+    </style>
+</head>
+<body>
+    <h1>📊 JUDIQ AI - Section 138 Case Analysis Report</h1>
+    
+    <div class="score-box">
+        <div>Case Strength Score</div>
+        <div class="score">{strength.get('overall_score', 0):.1f}/100</div>
+        <div>Risk Level: {strength.get('risk_level', 'Unknown')}</div>
+    </div>
+    
+    <h2>📋 Case Details</h2>
+    <table class="info-table">
+        <tr><th>Case ID</th><td>{analysis.get('case_id', 'N/A')}</td></tr>
+        <tr><th>Analysis Date</th><td>{datetime.now().strftime('%d %B %Y, %I:%M %p')}</td></tr>
+        <tr><th>Cheque Amount</th><td>₹{indian_number_format(case_data.get('cheque_amount', 0))}</td></tr>
+        <tr><th>Cheque Date</th><td>{case_data.get('cheque_date', 'N/A')}</td></tr>
+        <tr><th>Dishonour Date</th><td>{case_data.get('dishonour_date', 'N/A')}</td></tr>
+        <tr><th>Filing Status</th><td>{exec_summary.get('filing_status', 'Not assessed')}</td></tr>
+    </table>
+    
+    <h2>📊 Executive Summary</h2>
+    <p><strong>{exec_summary.get('top_summary', 'Analysis completed')}</strong></p>
+    
+    <h2>⏱️ Timeline Compliance</h2>
+    <table class="info-table">
+        <tr>
+            <th>Event</th>
+            <th>Date</th>
+            <th>Status</th>
+        </tr>"""
+    
+    # Add timeline events
+    for event in timeline.get('events', []):
+        html_content += f"""
+        <tr>
+            <td>{event.get('event', 'Event')}</td>
+            <td>{event.get('date', 'N/A')}</td>
+            <td>{event.get('status', 'Unknown')}</td>
+        </tr>"""
+    
+    html_content += """
+    </table>
+    
+    <h2>🎯 Next Actions</h2>"""
+    
+    # Add critical risks
+    for risk in exec_summary.get('critical_risks', [])[:5]:
+        html_content += f"""
+    <div class="action-item risk-high">
+        <strong>⚠️ CRITICAL:</strong> {risk.get('risk', risk.get('issue', 'Risk identified'))}
+        {f'<br><em>Remediation: {risk.get("remediation")}</em>' if risk.get('remediation') else ''}
+    </div>"""
+    
+    # Add next actions
+    for action in exec_summary.get('next_actions', [])[:5]:
+        html_content += f"""
+    <div class="action-item">
+        <strong>Action:</strong> {action.get('action', 'Action required')}
+        {f'<br><em>Timeline: {action.get("timeline")}</em>' if action.get('timeline') else ''}
+    </div>"""
+    
+    html_content += f"""
+    
+    <h2>📈 Outcome Prediction</h2>
+    <p>Success Probability: <strong>{analysis.get('outcome_prediction', {}).get('success_probability', 0)}%</strong></p>
+    
+    <hr style="margin: 40px 0; border: none; border-top: 2px solid #ddd;">
+    <p style="text-align: center; color: #888; font-size: 0.9em;">
+        Generated by JUDIQ v{ENGINE_VERSION} on {datetime.now().strftime('%d %B %Y at %I:%M %p')}<br>
+        This report is for informational purposes only and does not constitute legal advice.
+    </p>
+</body>
+</html>"""
+    
+    # Write to file
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+    
+    logger.info(f"HTML report generated: {output_path}")
+    return output_path
+
+def generate_fpdf_report(case_data: Dict, analysis: Dict, output_path: str) -> str:
+    """
+    Generate PDF using FPDF library
+    """
+    try:
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font('Arial', 'B', 16)
+        
+        # Title
+        pdf.cell(0, 10, 'JUDIQ AI - Case Analysis Report', 0, 1, 'C')
+        pdf.ln(5)
+        
+        # Case Strength Score
+        strength = analysis.get('case_strength_score', {})
+        pdf.set_font('Arial', 'B', 24)
+        pdf.set_text_color(0, 184, 148)
+        pdf.cell(0, 15, f"Score: {strength.get('overall_score', 0):.1f}/100", 0, 1, 'C')
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font('Arial', '', 12)
+        pdf.cell(0, 8, f"Risk Level: {strength.get('risk_level', 'Unknown')}", 0, 1, 'C')
+        pdf.ln(10)
+        
+        # Case Details
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 8, 'Case Details', 0, 1)
+        pdf.set_font('Arial', '', 11)
+        pdf.cell(60, 7, 'Case ID:', 0, 0)
+        pdf.cell(0, 7, analysis.get('case_id', 'N/A'), 0, 1)
+        pdf.cell(60, 7, 'Analysis Date:', 0, 0)
+        pdf.cell(0, 7, datetime.now().strftime('%d %B %Y'), 0, 1)
+        pdf.cell(60, 7, 'Cheque Amount:', 0, 0)
+        pdf.cell(0, 7, f"Rs. {indian_number_format(case_data.get('cheque_amount', 0))}", 0, 1)
+        pdf.cell(60, 7, 'Cheque Date:', 0, 0)
+        pdf.cell(0, 7, str(case_data.get('cheque_date', 'N/A')), 0, 1)
+        pdf.cell(60, 7, 'Dishonour Date:', 0, 0)
+        pdf.cell(0, 7, str(case_data.get('dishonour_date', 'N/A')), 0, 1)
+        pdf.ln(10)
+        
+        # Executive Summary
+        exec_summary = analysis.get('modules', {}).get('executive_summary', {})
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 8, 'Executive Summary', 0, 1)
+        pdf.set_font('Arial', '', 11)
+        pdf.multi_cell(0, 6, exec_summary.get('top_summary', 'Analysis completed'))
+        pdf.ln(5)
+        
+        # Critical Risks
+        critical_risks = exec_summary.get('critical_risks', [])
+        if critical_risks:
+            pdf.set_font('Arial', 'B', 14)
+            pdf.cell(0, 8, 'Critical Risks', 0, 1)
+            pdf.set_font('Arial', '', 10)
+            for idx, risk in enumerate(critical_risks[:5], 1):
+                pdf.set_font('Arial', 'B', 10)
+                pdf.cell(0, 6, f"{idx}. {risk.get('risk', risk.get('issue', 'Risk'))}", 0, 1)
+                if risk.get('remediation'):
+                    pdf.set_font('Arial', 'I', 9)
+                    pdf.multi_cell(0, 5, f"   Remediation: {risk['remediation']}")
+            pdf.ln(5)
+        
+        # Next Actions
+        next_actions = exec_summary.get('next_actions', [])
+        if next_actions:
+            pdf.set_font('Arial', 'B', 14)
+            pdf.cell(0, 8, 'Recommended Next Actions', 0, 1)
+            pdf.set_font('Arial', '', 10)
+            for idx, action in enumerate(next_actions[:5], 1):
+                pdf.multi_cell(0, 6, f"{idx}. {action.get('action', 'Action required')}")
+        
+        # Footer
+        pdf.ln(10)
+        pdf.set_font('Arial', 'I', 9)
+        pdf.set_text_color(128, 128, 128)
+        pdf.multi_cell(0, 5, f"Generated by JUDIQ v{ENGINE_VERSION} on {datetime.now().strftime('%d %B %Y')}\nThis report is for informational purposes only and does not constitute legal advice.", 0, 'C')
+        
+        pdf.output(output_path)
+        logger.info(f"FPDF report generated: {output_path}")
+        return output_path
+        
+    except Exception as e:
+        logger.error(f"FPDF generation failed: {e}")
+        # Fallback to HTML
+        return generate_html_report(case_data, analysis, output_path)
+
+def generate_reportlab_report(case_data: Dict, analysis: Dict, output_path: str) -> str:
+    """
+    Original ReportLab implementation (kept for compatibility)
+    """
     try:
         # Create PDF
         doc = SimpleDocTemplate(output_path, pagesize=A4)
@@ -22359,7 +22589,7 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
         CASE_DB.add_case(case_id, case_data, enhanced_analysis)
     
     # 11. Generate PDF Report
-    if PDF_REPORT_GENERATION and REPORTLAB_AVAILABLE:
+    if PDF_REPORT_GENERATION and (REPORTLAB_AVAILABLE or FPDF_AVAILABLE):
         try:
             pdf_path = generate_pdf_report(case_data, enhanced_analysis)
             enhanced_analysis['pdf_report_path'] = pdf_path
@@ -23098,10 +23328,11 @@ def create_app():
                     'error': 'Case not found'
                 }), 404
             
-            if not REPORTLAB_AVAILABLE:
+            if not REPORTLAB_AVAILABLE and not FPDF_AVAILABLE:
                 return jsonify({
                     'success': False,
-                    'error': 'PDF generation not available - reportlab library not installed'
+                    'error': 'PDF generation not available - installing fpdf library recommended',
+                    'fallback': 'HTML report will be generated instead'
                 }), 503
             
             # Ensure output directory exists
