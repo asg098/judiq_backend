@@ -17892,6 +17892,10 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
         if isinstance(analysis.get('executive_summary'), dict):
             analysis['executive_summary']['next_steps'] = premium_suggestions
             analysis['executive_summary']['next_actions'] = premium_suggestions
+        
+        # Add to top-level for easy access
+        analysis['next_actions'] = premium_suggestions
+        analysis['next_steps'] = premium_suggestions
 
         return {
             "success": True,
@@ -17903,6 +17907,7 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
             "documentary_strength": _doc_context,
             "key_issue": _primary_issue,
             "next_actions": _next_actions,  # Now using premium suggestions
+            "next_steps": _next_actions,    # Also add as next_steps
 
 
             "decision_confidence": _decision_conf,
@@ -22473,6 +22478,9 @@ def generate_simple_suggestions(analysis: Dict) -> list:
         risk_module = analysis.get('modules', {}).get('risk_assessment', {})
         score = risk_module.get('final_score', 63)
     
+    # Get fatal flag
+    is_fatal = analysis.get('fatal_flag', False) or analysis.get('_result', {}).get('is_fatal', False)
+    
     # Get weaknesses
     weaknesses = analysis.get('report', {}).get('executive_summary', {}).get('weaknesses', [])
     if not weaknesses:
@@ -22480,26 +22488,37 @@ def generate_simple_suggestions(analysis: Dict) -> list:
     
     suggestions = []
     
-    # Line 1: Always - Documentary evidence
-    suggestions.append("Immediately collect written agreement and ledger entries to prove legally enforceable debt.")
-    
-    # Line 2: Always - Electronic evidence (Section 63 not 65-B)
-    suggestions.append("Prepare and file Section 63 certificate for all electronic evidence.")
-    
-    # Line 3: Score-based strategy
-    if score < 70:
-        suggestions.append("Initiate settlement with the accused at 75-85% of cheque amount to avoid long litigation.")
+    # If fatal defects exist, prioritize those
+    if is_fatal:
+        fatal_defects = analysis.get('modules', {}).get('risk_assessment', {}).get('fatal_defects', [])
+        if fatal_defects:
+            for defect in fatal_defects[:2]:
+                remedy = defect.get('remedy', defect.get('defect', 'Address critical defect'))
+                suggestions.append(f"URGENT: {remedy}")
+        if len(suggestions) < 2:
+            suggestions.append("DO NOT FILE until fatal defects are remedied as case will be dismissed")
+            suggestions.append("Consult with legal counsel immediately to address statutory violations")
     else:
-        suggestions.append("File the complaint only after completing all supporting documents.")
-    
-    # Line 4: Weakness-specific or general
-    if any("written agreement" in str(w).lower() for w in weaknesses):
-        suggestions.append("Fix documentary proof first — this is the main defence risk.")
-    else:
-        if score >= 75:
-            suggestions.append("Ensure all witness statements are sworn and notarized before filing.")
+        # Line 1: Always - Documentary evidence
+        suggestions.append("Immediately collect written agreement and ledger entries to prove legally enforceable debt.")
+        
+        # Line 2: Always - Electronic evidence (Section 63 not 65-B)
+        suggestions.append("Prepare and file Section 63 certificate for all electronic evidence.")
+        
+        # Line 3: Score-based strategy
+        if score < 70:
+            suggestions.append("Initiate settlement with the accused at 75-85% of cheque amount to avoid long litigation.")
         else:
-            suggestions.append("Build strongest case possible before deciding between filing and settlement.")
+            suggestions.append("File the complaint only after completing all supporting documents.")
+        
+        # Line 4: Weakness-specific or general
+        if any("written agreement" in str(w).lower() for w in weaknesses):
+            suggestions.append("Fix documentary proof first — this is the main defence risk.")
+        else:
+            if score >= 75:
+                suggestions.append("Ensure all witness statements are sworn and notarized before filing.")
+            else:
+                suggestions.append("Build strongest case possible before deciding between filing and settlement.")
     
     return suggestions[:4]
 
