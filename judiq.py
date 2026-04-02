@@ -21127,10 +21127,6 @@ def calculate_case_strength_score(case_data: Dict, analysis_modules: Dict) -> Di
 # DOCUMENT INTELLIGENCE SYSTEM
 # ============================================================================
 
-# ============================================================================
-# ⚠️ OPTIONAL MODULE: DOCUMENT INTELLIGENCE (Large - 250+ lines)
-# ============================================================================
-
 def analyze_document_intelligence(case_data: Dict) -> Dict:
     """
     Advanced document presence detection, strength grading, and contradiction detection
@@ -21381,10 +21377,6 @@ def analyze_director_liability(case_data: Dict) -> Dict:
 
 # ============================================================================
 # PAYMENT DISPUTE SYSTEM
-# ============================================================================
-
-# ============================================================================
-# ⚠️ OPTIONAL MODULE: PAYMENT DISPUTE ANALYSIS (Large - 500+ lines)
 # ============================================================================
 
 def analyze_payment_dispute(case_data: Dict) -> Dict:
@@ -21956,10 +21948,6 @@ def analyze_time_and_cost(case_data: Dict, case_strength: Dict) -> Dict:
 # RECOVERY INTELLIGENCE
 # ============================================================================
 
-# ============================================================================
-# ⚠️ OPTIONAL MODULE: RECOVERY INTELLIGENCE (Large - 800+ lines)
-# ============================================================================
-
 def analyze_recovery_intelligence(case_data: Dict, case_strength: Dict, outcome_prediction: Dict) -> Dict:
     """
     Analyze recovery probability, financial viability, and worth-filing decision
@@ -22161,29 +22149,55 @@ CASE_DB = CaseDatabase()
 # ============================================================================
 
 def generate_pdf_report(case_data: Dict, analysis: Dict, output_path: str = None) -> str:
-    """
-    Generate professional PDF report of case analysis
-    Uses ReportLab if available, falls back to FPDF, or creates simple HTML report
-    """
-    
-    if not REPORTLAB_AVAILABLE and not FPDF_AVAILABLE:
-        logger.warning("No PDF library available - generating HTML report instead")
-        return generate_html_report(case_data, analysis, output_path)
-    
+    """NEW PDF GENERATOR - Uses single-brain output properly"""
     if output_path is None:
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        output_path = f"/mnt/user-data/outputs/case_analysis_{timestamp}.pdf"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = str(Config.PDF_OUTPUT_DIR / f"JUDIQ_Full_Report_{timestamp}.pdf")
     
-    # Ensure output directory exists
-    output_dir = os.path.dirname(output_path)
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
+    Config.PDF_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     
-    # Use FPDF as the primary method (simpler and more reliable)
-    if FPDF_AVAILABLE:
-        return generate_fpdf_report(case_data, analysis, output_path)
-    else:
-        return generate_reportlab_report(case_data, analysis, output_path)
+    if REPORTLAB_AVAILABLE:
+        doc = SimpleDocTemplate(output_path, pagesize=A4)
+        styles = getSampleStyleSheet()
+        story = []
+        
+        # Header
+        story.append(Paragraph(f"JUDIQ v4.0.0 - Case Analysis Report", styles['Title']))
+        story.append(Spacer(1, 12))
+        
+        # Executive Summary with real data
+        score = analysis.get('case_strength_score', {}).get('score', 0)
+        category = analysis.get('case_strength_score', {}).get('category', 'UNKNOWN')
+        story.append(Paragraph(f"FINAL SCORE: {score}/100 — {category}", styles['Heading1']))
+        
+        # Score Breakdown
+        breakdown = analysis.get('case_strength_score', {}).get('score_breakdown', {})
+        if breakdown:
+            story.append(Paragraph("SCORE BREAKDOWN (Why this score)", styles['Heading2']))
+            for key, data in breakdown.items():
+                story.append(Paragraph(f"• {key.replace('_', ' ').title()}: {data.get('score', 0)}/{data.get('max', 0)}", styles['Normal']))
+        
+        # Next Steps (from single brain)
+        next_steps = analysis.get('next_steps', []) or analysis.get('simple_suggestions', [])
+        if next_steps:
+            story.append(Paragraph("NEXT STEPS - WHAT TO DO NOW", styles['Heading2']))
+            for step in next_steps[:4]:
+                story.append(Paragraph(f"• {step}", styles['Normal']))
+        
+        # Fatal Issues
+        fatal = analysis.get('fatal_issues', [])
+        if fatal:
+            story.append(Paragraph("FATAL ISSUES", styles['Heading2']))
+            for issue in fatal:
+                story.append(Paragraph(f"• {issue}", styles['Normal']))
+        
+        doc.build(story)
+        logger.info(f"✅ PDF generated: {output_path}")
+        return output_path
+    
+    # Fallback if ReportLab not available
+    logger.warning("ReportLab not available, PDF generation skipped")
+    return None
 
 def generate_html_report(case_data: Dict, analysis: Dict, output_path: str = None) -> str:
     """
@@ -22785,10 +22799,6 @@ def format_actionable_suggestions_for_report(suggestions: Dict) -> str:
     return report_text
 
 
-# ============================================================================
-# ⚠️ OPTIONAL MODULE: ACTIONABLE SUGGESTIONS ENGINE (Large - 600+ lines)
-# ============================================================================
-
 def generate_actionable_suggestions(analysis: Dict) -> Dict:
     """
     ChatGPT-style clear, numbered, actionable suggestions for lawyer/user.
@@ -23280,8 +23290,13 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
     }
     
     # 1. Case Strength Scoring
-    # Already have case_strength_score from core_decision (final_decision_engine)
-    # No additional calculation needed - single brain architecture
+    if CASE_STRENGTH_SCORING:
+        logger.info("Calculating case strength score...")
+        # Already have case_strength_score from core_decision
+    # enhanced_analysis['case_strength_score'] = calculate_case_strength_score(
+            case_data, 
+            base_analysis.get('modules', {})
+        )
     
     # 2. Document Intelligence
     if DOCUMENT_INTELLIGENCE:
@@ -23346,15 +23361,6 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
         case_id = enhanced_analysis.get('case_id', f"CASE_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         CASE_DB.add_case(case_id, case_data, enhanced_analysis)
     
-    # 11. Generate PDF Report
-    if PDF_REPORT_GENERATION and (REPORTLAB_AVAILABLE or FPDF_AVAILABLE):
-        try:
-            pdf_path = generate_pdf_report(case_data, enhanced_analysis)
-            enhanced_analysis['pdf_report_path'] = pdf_path
-        except Exception as e:
-            logger.error(f"PDF generation failed: {e}")
-            enhanced_analysis['pdf_report_path'] = None
-    
     # Add metadata
     enhanced_analysis['engine_version'] = ENGINE_VERSION
     enhanced_analysis['enhanced_features'] = {
@@ -23369,8 +23375,15 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
         'recovery_intelligence': RECOVERY_INTELLIGENCE
     }
     
-    # Generate Executive Summary
-    enhanced_analysis['executive_summary'] = generate_enhanced_executive_summary(enhanced_analysis)
+    # Generate Executive Summary - Use real single-brain data
+    core = enhanced_analysis.get('case_strength_score', {})
+    enhanced_analysis['executive_summary'] = {
+        'score': core.get('score', 0),
+        'category': core.get('category', 'UNKNOWN'),
+        'next_steps': enhanced_analysis.get('next_steps', [])[:4] if 'next_steps' in enhanced_analysis else [],
+        'fatal_issues': core.get('fatal_issues', []),
+        'recommendation': core.get('recommendation', 'Proceed with caution')
+    }
     
     # Generate Actionable Suggestions (NEW)
     logger.info("Generating actionable next steps...")
@@ -23417,6 +23430,15 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
         enhanced_analysis["defence_analysis"] = final_clean(enhanced_analysis["defence_analysis"])
     
     logger.info("✅ Nuclear final clean applied")
+    
+    # FINAL PDF GENERATION (now uses clean single-brain data)
+    if PDF_REPORT_GENERATION and (REPORTLAB_AVAILABLE or FPDF_AVAILABLE):
+        try:
+            pdf_path = generate_pdf_report(case_data, enhanced_analysis)
+            enhanced_analysis['pdf_report_path'] = pdf_path
+        except Exception as e:
+            logger.error(f"PDF generation failed: {e}")
+            enhanced_analysis['pdf_report_path'] = None
     
     return enhanced_analysis
 
