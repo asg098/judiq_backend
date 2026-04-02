@@ -2187,6 +2187,7 @@ from enum import Enum
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel, Field, field_validator
 import uvicorn
 
@@ -17358,55 +17359,64 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
 
         return analysis_report
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def root():
-
-
-    phi2_status = {
-        'libraries_installed': PHI2_AVAILABLE,
-        'enabled': PHI2_AVAILABLE,
-        'purpose': 'Cross-examination questions only'
-    }
-
-    return {
-        "platform": "JUDIQ v5.0 - Legal Intelligence Platform",
-        "version": "5.0.0",
-        "maturity": "90% Elite-Grade",
-        "status": "operational",
-        "message": "Welcome to JUDIQ AI - Section 138 NI Act Intelligence Platform",
-        "capabilities": {
-            "ratio_based_analytics": True,
-            "data_calibrated_scoring": True,
-            "confidence_layer": True,
-            "severity_tiers": True,
-            "validation_framework": True,
-            "cross_examination_llm": phi2_status['enabled']
-        },
-        "phi2_status": phi2_status,
-        "endpoints": {
-            "health": "GET /health",
-            "validation": "GET /validation/accuracy",
-            "analyze_case": "POST /analyze-case",
-            "cross_examination": "POST /generate-cross-examination",
-            "court_intelligence": "GET /court-intelligence/{court_name}",
-            "generate_report": "POST /generate-report",
-            "api_docs": "/docs",
-            "openapi_schema": "/openapi.json"
-        },
-        "quick_start": {
-            "1_check_health": "GET /health",
-            "2_test_validation": "GET /validation/accuracy",
-            "3_view_docs": "Visit /docs for interactive API documentation",
-            "4_analyze_case": "POST /analyze-case with case details",
-            "5_cross_exam": "POST /generate-cross-examination for AI questions"
-        },
-        "documentation": "/docs",
-        "note": "This is NOT legal advice - intelligence tool only. LLM used ONLY for cross-examination questions."
-    }
+    """Serve the main frontend HTML interface"""
+    try:
+        # Try to find index.html in common locations
+        possible_paths = [
+            Path("index.html"),
+            Path("frontend/index.html"),
+            Path("static/index.html"),
+            Path("/opt/render/project/src/index.html"),
+        ]
+        
+        for html_path in possible_paths:
+            if html_path.exists():
+                with open(html_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+        
+        # If no HTML file found, return a basic landing page with link to API docs
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>JUDIQ AI - Legal Intelligence Platform</title>
+            <style>
+                body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+                h1 { color: #1a2332; }
+                .card { background: #f8f9fb; padding: 20px; border-radius: 10px; margin: 20px 0; }
+                a { color: #00b894; text-decoration: none; font-weight: bold; }
+                a:hover { text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+            <h1>🚀 JUDIQ AI - Legal Intelligence Platform</h1>
+            <div class="card">
+                <h2>✅ API is Running</h2>
+                <p><strong>Version:</strong> 5.0.0</p>
+                <p><strong>Status:</strong> Operational (90% Elite-Grade)</p>
+            </div>
+            <div class="card">
+                <h2>📚 Quick Links</h2>
+                <p>➡️ <a href="/docs">Interactive API Documentation</a></p>
+                <p>➡️ <a href="/health">Health Check</a></p>
+                <p>➡️ <a href="/validation/accuracy">Validation Status</a></p>
+            </div>
+            <div class="card">
+                <h2>⚠️ Frontend Not Found</h2>
+                <p>The frontend HTML file (index.html) is not deployed to the server.</p>
+                <p><strong>To fix:</strong> Upload index.html to the same directory as judiq.py</p>
+            </div>
+        </body>
+        </html>
+        """
+    except Exception as e:
+        logger.error(f"Error serving root: {e}")
+        return f"<h1>Error loading frontend: {e}</h1><p><a href='/docs'>Visit API Docs</a></p>"
 
 @app.get("/test")
 async def test_endpoint():
-
     return {
         "status": "✅ API is working!",
         "platform": "JUDIQ v5.0",
