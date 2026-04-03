@@ -24406,11 +24406,47 @@ async def root():
         "version": ENGINE_VERSION,
         "architecture": ARCHITECTURE_VERSION,
         "status": "operational",
-        "documentation": "/api/docs",
+        "message": "Backend is running successfully ✅",
+        "documentation": "/docs",
         "endpoints": {
-            "health": "/api/health",
-            "analyze": "/api/analyze-case",
-            "case_history": "/api/user/case-history/{email}"
+            "health_checks": [
+                "/health",
+                "/api/health"
+            ],
+            "analytics": [
+                "/analytics/summary"
+            ],
+            "case_analysis": [
+                "/api/analyze-case"
+            ],
+            "user_routes": [
+                "/user/usage-status/{email}",
+                "/user/case-history/{email}",
+                "/api/user/case-history/{email}",
+                "/api/user/usage-quota/{email}"
+            ],
+            "case_management": [
+                "/api/case/{case_id}",
+                "/api/case/compare",
+                "/api/case/pdf-report/{case_id}"
+            ]
+        }
+    }
+
+@fastapi_app.get("/health", response_model=HealthResponse)
+async def health_check_root():
+    """Health check endpoint - Frontend expects this route"""
+    return {
+        "status": "healthy",
+        "version": ENGINE_VERSION,
+        "timestamp": datetime.now().isoformat(),
+        "database": "connected" if CASE_DB else "not_initialized",
+        "features_enabled": {
+            "enhanced_analysis": ENHANCED_FEATURES_ENABLED,
+            "document_intelligence": DOCUMENT_INTELLIGENCE,
+            "pdf_reports": PDF_REPORT_GENERATION,
+            "director_liability": DIRECTOR_LIABILITY_ANALYSIS,
+            "recovery_intelligence": RECOVERY_INTELLIGENCE
         }
     }
 
@@ -24430,6 +24466,42 @@ async def health_check():
             "recovery_intelligence": RECOVERY_INTELLIGENCE
         }
     }
+
+@fastapi_app.get("/analytics/summary", response_model=Dict[str, Any])
+async def get_analytics_summary():
+    """Get analytics summary - Dashboard statistics"""
+    try:
+        logger.info("[ANALYTICS] Analytics summary requested")
+        
+        # Mock implementation - replace with actual database queries
+        return {
+            "success": True,
+            "summary": {
+                "total_cases": 0,
+                "average_score": 0.0,
+                "high_risk_cases": 0,
+                "medium_risk_cases": 0,
+                "low_risk_cases": 0,
+                "success_rate": 0.0,
+                "total_amount": 0.0
+            },
+            "message": "Analytics will be available after first case analysis"
+        }
+    except Exception as e:
+        logger.error(f"[ANALYTICS] Error: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "summary": {
+                "total_cases": 0,
+                "average_score": 0.0,
+                "high_risk_cases": 0,
+                "medium_risk_cases": 0,
+                "low_risk_cases": 0,
+                "success_rate": 0.0,
+                "total_amount": 0.0
+            }
+        }
 
 @fastapi_app.post("/api/analyze-case", response_model=Dict[str, Any])
 async def analyze_case(request: CaseAnalysisRequest):
@@ -24494,6 +24566,61 @@ async def analyze_case(request: CaseAnalysisRequest):
                 'message': 'Case analysis failed. Please check input data.'
             }
         )
+
+@fastapi_app.get("/user/usage-status/{email}", response_model=Dict[str, Any])
+async def get_user_usage_status(email: str):
+    """Get usage status for a user - Frontend expects this route"""
+    try:
+        logger.info(f"[API] Usage status requested for: {email}")
+        
+        # Mock implementation - replace with actual quota logic
+        return {
+            'success': True,
+            'email': email,
+            'quota': {
+                'used': 0,
+                'limit': 100,
+                'remaining': 100,
+                'reset_date': (datetime.now() + timedelta(days=30)).isoformat()
+            },
+            'status': 'active',
+            'plan': 'free'
+        }
+    except Exception as e:
+        logger.error(f"[API] Usage status error: {e}")
+        raise HTTPException(status_code=500, detail={'error': str(e)})
+
+@fastapi_app.get("/user/case-history/{email}", response_model=Dict[str, Any])
+async def get_user_case_history_alt(email: str):
+    """Get case history for a user - Alternative route"""
+    try:
+        if not CASE_DB:
+            return {
+                'success': False,
+                'email': email,
+                'count': 0,
+                'history': [],
+                'message': 'Database not initialized'
+            }
+        
+        history = CASE_DB.get_user_cases(email, limit=50)
+        
+        return {
+            'success': True,
+            'email': email,
+            'count': len(history),
+            'history': history
+        }
+        
+    except Exception as e:
+        logger.error(f"[API] Case history error: {e}")
+        return {
+            'success': False,
+            'email': email,
+            'count': 0,
+            'history': [],
+            'error': str(e)
+        }
 
 @fastapi_app.get("/api/user/case-history/{email}", response_model=Dict[str, Any])
 async def get_case_history(email: str):
