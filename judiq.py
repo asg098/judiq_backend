@@ -23439,6 +23439,14 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
     
     logger.info("✅ Nuclear final clean applied")
     
+    # ✅ FRONTEND COMPATIBILITY: Add top-level fields that frontend expects
+    case_strength = enhanced_analysis.get('case_strength_score', {})
+    enhanced_analysis['score'] = case_strength.get('score', 0)
+    enhanced_analysis['category'] = case_strength.get('category', 'UNKNOWN')
+    enhanced_analysis['priority'] = case_strength.get('category', 'UNKNOWN')
+    enhanced_analysis['verdict'] = case_strength.get('final_verdict', '')
+    enhanced_analysis['recommendation'] = case_strength.get('recommendation', '')
+    
     # FINAL PDF GENERATION (now uses clean single-brain data)
     if PDF_REPORT_GENERATION and (REPORTLAB_AVAILABLE or FPDF_AVAILABLE):
         try:
