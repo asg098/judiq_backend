@@ -24483,6 +24483,18 @@ async def analyze_case_options():
         }
     )
 
+@fastapi_app.options("/analyze-case")
+async def analyze_case_options_no_prefix():
+    """Handle CORS preflight for analyze-case endpoint (no /api prefix)"""
+    return JSONResponse(
+        content={"message": "OK"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        }
+    )
+
 @fastapi_app.options("/analytics/summary")
 async def analytics_summary_options():
     """Handle CORS preflight for analytics endpoint"""
@@ -24621,6 +24633,11 @@ async def analyze_case(request: CaseAnalysisRequest):
                 'message': 'Case analysis failed. Please check input data.'
             }
         )
+
+@fastapi_app.post("/analyze-case", response_model=Dict[str, Any])
+async def analyze_case_no_prefix(request: CaseAnalysisRequest):
+    """Main case analysis endpoint - Frontend expects this route without /api prefix"""
+    return await analyze_case(request)
 
 @fastapi_app.get("/user/usage-status/{email}", response_model=Dict[str, Any])
 async def get_user_usage_status(email: str):
