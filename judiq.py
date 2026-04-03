@@ -24467,6 +24467,57 @@ async def health_check():
         }
     }
 
+# ============================================================================
+# CORS PREFLIGHT HANDLERS
+# ============================================================================
+
+@fastapi_app.options("/api/analyze-case")
+async def analyze_case_options():
+    """Handle CORS preflight for analyze-case endpoint"""
+    return JSONResponse(
+        content={"message": "OK"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        }
+    )
+
+@fastapi_app.options("/analytics/summary")
+async def analytics_summary_options():
+    """Handle CORS preflight for analytics endpoint"""
+    return JSONResponse(
+        content={"message": "OK"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        }
+    )
+
+# ============================================================================
+# TEST/DEBUG ENDPOINT
+# ============================================================================
+
+@fastapi_app.post("/api/test-echo")
+async def test_echo(request: Request):
+    """Test endpoint to echo back the request - useful for debugging"""
+    try:
+        body = await request.json()
+        logger.info(f"[TEST] Received test request: {body}")
+        return {
+            "success": True,
+            "echo": body,
+            "headers": dict(request.headers),
+            "message": "Backend is receiving requests correctly"
+        }
+    except Exception as e:
+        logger.error(f"[TEST] Error: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 @fastapi_app.get("/analytics/summary", response_model=Dict[str, Any])
 async def get_analytics_summary():
     """Get analytics summary - Dashboard statistics"""
@@ -24516,7 +24567,11 @@ async def analyze_case(request: CaseAnalysisRequest):
     - Strategic recommendations
     """
     try:
-        logger.info(f"[API] Received case analysis request from: {request.user_email}")
+        logger.info("=" * 80)
+        logger.info(f"[API] 🎯 CASE ANALYSIS REQUEST RECEIVED")
+        logger.info(f"[API] User Email: {request.user_email}")
+        logger.info(f"[API] Request Data: {request.dict(exclude_none=True)}")
+        logger.info("=" * 80)
         
         # Convert request to case_data dictionary
         case_data = request.dict(exclude_none=True)
