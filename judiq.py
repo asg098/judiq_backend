@@ -313,14 +313,14 @@ def detect_fatal_conditions(case_data: Dict) -> Tuple[List[str], str, int]:
     # 6. Timeline Defects
     if case_data.get('notice_delay') or case_data.get('notice_timeline_issue'):
         fatal_issues.append("MEDIUM RISK: Notice sent beyond 30-day deadline")
-        max_override_score = min(max_override_score, Config.FATAL_OVERRIDES['major_timeline_defect'])
+        max_override_score = min(max_override_score, FATAL_OVERRIDES.get('major_timeline_defect', 20))
         if priority_category not in ["FATAL", "HIGH_RISK"]:
             priority_category = "MEDIUM_RISK"
     
     # 7. Critical Ingredients Missing
     if not case_data.get('dishonour_memo'):
         fatal_issues.append("MEDIUM RISK: Bank dishonour memo missing")
-        max_override_score = min(max_override_score, Config.FATAL_OVERRIDES['critical_ingredient_missing'])
+        max_override_score = min(max_override_score, FATAL_OVERRIDES.get('critical_ingredient_missing', 25))
         if priority_category not in ["FATAL", "HIGH_RISK"]:
             priority_category = "MEDIUM_RISK"
     
