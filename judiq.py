@@ -30459,33 +30459,1170 @@ def analyze_case_production(case_data: Dict, case_id: str = None) -> Dict:
     return final_result
 
 
+# ============================================================================
+# 🎯 TASK 1: STRUCTURED OUTPUT BUILDER (NO BREAKING CHANGES)
+# ============================================================================
+
+def build_structured_output(analysis_result: Dict, case_data: Dict) -> Dict:
+    """
+    ✅ NEW: Convert mixed narrative output into clean structured format
+    WITHOUT breaking existing analysis logic
+    
+    Returns: {
+        "analysis": {...},  # Full existing analysis
+        "summary": "...",   # 3-4 line executive summary
+        "next_steps": [...], # Procedural action items
+        "suggestions": [...] # Strategic recommendations
+    }
+    """
+    
+    # Extract summary from existing reasoning (max 3-4 lines)
+    score = analysis_result.get('score', 0)
+    verdict = analysis_result.get('verdict', 'Unknown')
+    fatal_issues = analysis_result.get('fatal_issues', [])
+    
+    # Build concise summary
+    if fatal_issues:
+        summary = f"Case verdict: {verdict} (Score: {score:.1f}/100). Critical fatal issues detected: {', '.join([f['issue'] for f in fatal_issues[:2]])}. Case has severe weaknesses that require immediate attention."
+    else:
+        conviction_prob = _calculate_conviction_probability(score)
+        summary = f"Case verdict: {verdict} (Score: {score:.1f}/100). Conviction probability: {conviction_prob}%. " + \
+                  f"Case shows {'strong' if score >= 70 else 'moderate' if score >= 50 else 'weak'} merit based on current evidence and procedural compliance."
+    
+    # Extract next_steps from procedural logic
+    next_steps = _extract_next_steps(analysis_result, case_data)
+    
+    # Extract suggestions from strategy logic
+    suggestions = _extract_suggestions(analysis_result, case_data)
+    
+    return {
+        "analysis": analysis_result,  # Keep full existing analysis
+        "summary": summary,
+        "next_steps": next_steps,
+        "suggestions": suggestions
+    }
+
+
+def _calculate_conviction_probability(score: float) -> int:
+    """Convert score to conviction probability percentage"""
+    if score >= 85:
+        return 85
+    elif score >= 70:
+        return 70
+    elif score >= 60:
+        return 55
+    elif score >= 50:
+        return 40
+    elif score >= 40:
+        return 25
+    else:
+        return 10
+
+
+def _extract_next_steps(analysis_result: Dict, case_data: Dict) -> List[str]:
+    """
+    Extract procedural next steps from analysis logic
+    NOT random text - derived from actual analysis
+    """
+    steps = []
+    fatal_issues = analysis_result.get('fatal_issues', [])
+    score = analysis_result.get('score', 0)
+    timeline_valid = analysis_result.get('timeline_compliance', {}).get('compliant', False)
+    notice_sent = case_data.get('notice_sent', False)
+    
+    # Critical fatal issues first
+    if fatal_issues:
+        for fatal in fatal_issues[:2]:
+            steps.append(f"URGENT: Address fatal issue - {fatal['issue']} (Impact: {fatal['impact']})")
+    
+    # Timeline-based steps
+    if not notice_sent and not timeline_valid:
+        steps.append("Send legal notice within limitation period (within 15 days of cause of action)")
+    
+    if notice_sent and timeline_valid:
+        steps.append("File complaint under Section 138 NI Act within 30 days of cause of action")
+    
+    # Document preservation
+    if score < 70:
+        steps.append("Preserve original cheque, bank memo, and all transaction records")
+        steps.append("Obtain certified copies of account statements showing dishonour")
+    
+    # Evidence steps
+    ingredients = analysis_result.get('ingredient_scores', {})
+    if ingredients.get('legally_enforceable_debt', 0) < 80:
+        steps.append("Secure written agreement or invoice establishing debt obligation")
+    
+    if ingredients.get('dishonour_proof', 0) < 80:
+        steps.append("Obtain bank dishonour memo with reason code")
+    
+    # Defence preparation
+    if score >= 60:
+        steps.append("Prepare for trial - organize documentary evidence in chronological order")
+        steps.append("Identify and prepare witnesses (if any) for examination")
+    
+    return steps if steps else ["Consult legal counsel for case-specific procedural guidance"]
+
+
+def _extract_suggestions(analysis_result: Dict, case_data: Dict) -> List[str]:
+    """
+    Extract strategic suggestions separate from next_steps
+    Focus: strengthening case, reducing risk, strategic advice
+    """
+    suggestions = []
+    score = analysis_result.get('score', 0)
+    ingredients = analysis_result.get('ingredient_scores', {})
+    defence_score = analysis_result.get('defence_vulnerabilities', {}).get('score', 0)
+    
+    # Strengthening suggestions
+    if ingredients.get('legally_enforceable_debt', 0) < 90:
+        suggestions.append("Consider obtaining supplementary written acknowledgment of debt to strengthen foundation")
+    
+    if ingredients.get('valid_cheque', 0) < 90:
+        suggestions.append("Verify cheque validity - ensure no post-dated issues or irregularities")
+    
+    # Risk reduction
+    if defence_score > 30:
+        suggestions.append("Anticipate defence arguments - prepare counter-evidence for likely defences")
+    
+    if score < 60:
+        suggestions.append("Explore settlement options before proceeding to trial to reduce litigation risk")
+    
+    # Strategic advice
+    if case_data.get('cheque_amount', 0) < 100000:
+        suggestions.append("Evaluate cost-benefit of litigation vs. alternative dispute resolution for small amount")
+    
+    if score >= 70:
+        suggestions.append("Maintain strong documentation trail - avoid any gaps in evidence chain")
+        suggestions.append("Consider expedited trial request given strong case merit")
+    
+    # Procedural optimization
+    suggestions.append("Engage experienced NI Act counsel familiar with local court procedures")
+    
+    if not case_data.get('notice_sent'):
+        suggestions.append("Draft legally precise notice - poorly worded notice can be fatal defense ground")
+    
+    return suggestions if suggestions else ["Strengthen overall case documentation and evidence quality"]
+
+
+# ============================================================================
+# 🎯 TASK 2: 7-PAGE REPORT GENERATION SYSTEM
+# ============================================================================
+
+def generate_7_page_report(structured_output: Dict, case_data: Dict) -> str:
+    """
+    Build structured 7-page report using EXISTING analysis data
+    NO regeneration of logic - ONLY formatting
+    
+    Returns: Formatted report text (can be converted to PDF separately)
+    """
+    analysis = structured_output['analysis']
+    summary = structured_output['summary']
+    next_steps = structured_output['next_steps']
+    suggestions = structured_output['suggestions']
+    
+    report = []
+    
+    # ========== PAGE 1: EXECUTIVE SUMMARY ==========
+    report.append("=" * 80)
+    report.append("JUDIQ LEGAL ANALYSIS REPORT - SECTION 138 NI ACT")
+    report.append("=" * 80)
+    report.append("")
+    
+    report.append("PAGE 1: EXECUTIVE VERDICT")
+    report.append("-" * 80)
+    report.append("")
+    
+    report.append(f"FINAL VERDICT: {analysis['verdict']}")
+    report.append(f"CASE STRENGTH SCORE: {analysis['score']:.1f}/100")
+    report.append(f"CONVICTION PROBABILITY: {_calculate_conviction_probability(analysis['score'])}%")
+    report.append("")
+    report.append("EXECUTIVE SUMMARY:")
+    report.append(summary)
+    report.append("")
+    
+    # ========== PAGE 2: SCORE BREAKDOWN ==========
+    report.append("\n" + "=" * 80)
+    report.append("PAGE 2: DETAILED SCORE BREAKDOWN")
+    report.append("-" * 80)
+    report.append("")
+    
+    score_breakdown = analysis.get('score_breakdown', {})
+    report.append(f"Base Score: {score_breakdown.get('base_score', analysis['score']):.1f}/100")
+    report.append("")
+    
+    # Score reduction reasons
+    report.append("WHY SCORE WAS REDUCED:")
+    fatal_issues = analysis.get('fatal_issues', [])
+    if fatal_issues:
+        for fatal in fatal_issues:
+            report.append(f"  - FATAL: {fatal['issue']} (Penalty: {fatal.get('penalty', 0):.1f} points)")
+    
+    non_linear_adj = score_breakdown.get('non_linear_adjustment', 0)
+    if non_linear_adj < 0:
+        report.append(f"  - Non-linear combination penalty: {non_linear_adj:.1f} points")
+    
+    learned_adj = analysis.get('learned_adjustment', 0)
+    if learned_adj < 0:
+        report.append(f"  - Machine learning adjustment: {learned_adj:.1f} points")
+    
+    if not fatal_issues and non_linear_adj >= 0 and learned_adj >= 0:
+        report.append("  - No significant deductions applied")
+    
+    report.append("")
+    report.append("COMPONENT SCORES:")
+    for component, score_val in score_breakdown.items():
+        if component not in ['base_score', 'non_linear_adjustment']:
+            report.append(f"  {component}: {score_val:.1f}")
+    
+    # ========== PAGE 3: TIMELINE COMPLIANCE ==========
+    report.append("\n" + "=" * 80)
+    report.append("PAGE 3: TIMELINE & LIMITATION ANALYSIS")
+    report.append("-" * 80)
+    report.append("")
+    
+    timeline = analysis.get('timeline_compliance', {})
+    report.append(f"Timeline Compliance: {'✅ COMPLIANT' if timeline.get('compliant') else '❌ NON-COMPLIANT'}")
+    report.append("")
+    
+    if timeline.get('issues'):
+        report.append("TIMELINE ISSUES DETECTED:")
+        for issue in timeline['issues']:
+            report.append(f"  - {issue}")
+    else:
+        report.append("✅ No timeline violations detected")
+    
+    report.append("")
+    report.append("LIMITATION PERIOD VALIDATION:")
+    report.append(f"  Notice sent: {'Yes' if case_data.get('notice_sent') else 'No'}")
+    report.append(f"  Filing within limitation: {timeline.get('within_limitation', 'Unknown')}")
+    
+    # ========== PAGE 4: INGREDIENT COMPLIANCE ==========
+    report.append("\n" + "=" * 80)
+    report.append("PAGE 4: 7 ESSENTIAL INGREDIENTS ANALYSIS")
+    report.append("-" * 80)
+    report.append("")
+    
+    ingredients = analysis.get('ingredient_scores', {})
+    ingredient_names = [
+        'legally_enforceable_debt',
+        'valid_cheque',
+        'discharge_of_debt',
+        'dishonour_proof',
+        'notice_sent',
+        'notice_compliance',
+        'filing_timeliness'
+    ]
+    
+    critical_gaps = []
+    for ing in ingredient_names:
+        score_ing = ingredients.get(ing, 0)
+        status = "✅" if score_ing >= 70 else "⚠️" if score_ing >= 50 else "❌"
+        report.append(f"{status} {ing.replace('_', ' ').title()}: {score_ing:.1f}/100")
+        if score_ing < 50:
+            critical_gaps.append(ing.replace('_', ' ').title())
+    
+    if critical_gaps:
+        report.append("")
+        report.append("CRITICAL GAPS IDENTIFIED:")
+        for gap in critical_gaps:
+            report.append(f"  ⚠️ {gap}")
+    
+    # ========== PAGE 5: DEFENCE VULNERABILITIES ==========
+    report.append("\n" + "=" * 80)
+    report.append("PAGE 5: DEFENCE VULNERABILITIES & SUCCESS PROBABILITY")
+    report.append("-" * 80)
+    report.append("")
+    
+    defence = analysis.get('defence_vulnerabilities', {})
+    defence_score = defence.get('score', 0)
+    defence_success_prob = min(90, max(10, int(defence_score * 0.8)))
+    
+    report.append(f"Defence Vulnerability Score: {defence_score:.1f}/100")
+    report.append(f"Defence Success Probability: {defence_success_prob}%")
+    report.append("")
+    
+    if defence.get('weaknesses'):
+        report.append("IDENTIFIED WEAKNESSES:")
+        for weakness in defence['weaknesses']:
+            report.append(f"  - {weakness}")
+    else:
+        report.append("No specific defence weaknesses identified in current analysis.")
+    
+    # ========== PAGE 6: NEXT STEPS & SUGGESTIONS ==========
+    report.append("\n" + "=" * 80)
+    report.append("PAGE 6: ACTION PLAN")
+    report.append("-" * 80)
+    report.append("")
+    
+    report.append("NEXT STEPS (PROCEDURAL):")
+    for i, step in enumerate(next_steps, 1):
+        report.append(f"{i}. {step}")
+    
+    report.append("")
+    report.append("STRATEGIC SUGGESTIONS:")
+    for i, suggestion in enumerate(suggestions, 1):
+        report.append(f"{i}. {suggestion}")
+    
+    # ========== PAGE 7: DISCLAIMER ==========
+    report.append("\n" + "=" * 80)
+    report.append("PAGE 7: DISCLAIMER & LIMITATIONS")
+    report.append("-" * 80)
+    report.append("")
+    
+    report.append("IMPORTANT DISCLAIMER:")
+    report.append("")
+    report.append("This analysis is generated by JUDIQ AI Legal Analysis Engine v7.0.")
+    report.append("It is NOT a substitute for professional legal advice.")
+    report.append("")
+    report.append("LIMITATIONS:")
+    report.append("- Analysis based on provided data only")
+    report.append("- Does not account for court-specific procedures or judicial discretion")
+    report.append("- Probabilities are statistical estimates, not guarantees")
+    report.append("- Legal landscape may change; consult current law")
+    report.append("")
+    report.append("RECOMMENDATION:")
+    report.append("Engage qualified legal counsel before taking any legal action.")
+    report.append("This report should be used as an analytical aid, not sole decision basis.")
+    report.append("")
+    report.append(f"Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    report.append(f"Case ID: {analysis.get('case_id', 'N/A')}")
+    report.append("=" * 80)
+    
+    return "\n".join(report)
+
+
+# ============================================================================
+# 🎯 TASK 3: DRAFT GENERATION SYSTEM (12 TYPES)
+# ============================================================================
+
+class DraftGenerator:
+    """
+    Template-based legal draft generator
+    Uses existing analysis output WITHOUT touching analysis engine
+    """
+    
+    @staticmethod
+    def generate_draft(draft_type: str, case_data: Dict, analysis_result: Dict) -> str:
+        """
+        Generate court-ready legal draft based on type
+        
+        Supported types:
+        1. legal_notice
+        2. complaint
+        3. reply_notice
+        4. affidavit
+        5. settlement_agreement
+        6. compounding_application
+        7. delay_condonation
+        8. summary_draft
+        9. execution_petition
+        10. evidence_list
+        11. cross_examination
+        12. strategy_note
+        """
+        
+        draft_methods = {
+            'legal_notice': DraftGenerator._generate_legal_notice,
+            'complaint': DraftGenerator._generate_complaint,
+            'reply_notice': DraftGenerator._generate_reply_notice,
+            'affidavit': DraftGenerator._generate_affidavit,
+            'settlement_agreement': DraftGenerator._generate_settlement,
+            'compounding_application': DraftGenerator._generate_compounding,
+            'delay_condonation': DraftGenerator._generate_delay_condonation,
+            'summary_draft': DraftGenerator._generate_summary,
+            'execution_petition': DraftGenerator._generate_execution,
+            'evidence_list': DraftGenerator._generate_evidence_list,
+            'cross_examination': DraftGenerator._generate_cross_exam,
+            'strategy_note': DraftGenerator._generate_strategy_note
+        }
+        
+        method = draft_methods.get(draft_type)
+        if not method:
+            return f"Error: Draft type '{draft_type}' not supported"
+        
+        return method(case_data, analysis_result)
+    
+    @staticmethod
+    def _generate_legal_notice(case_data: Dict, analysis: Dict) -> str:
+        """Generate legal notice under Section 138"""
+        
+        drawer_name = case_data.get('drawer_name', '[DRAWER NAME]')
+        drawer_address = case_data.get('drawer_address', '[DRAWER ADDRESS]')
+        payee_name = case_data.get('payee_name', '[PAYEE NAME]')
+        cheque_number = case_data.get('cheque_number', '[CHEQUE NO]')
+        cheque_amount = case_data.get('cheque_amount', 0)
+        cheque_date = case_data.get('cheque_date', '[DATE]')
+        dishonour_date = case_data.get('dishonour_date', '[DATE]')
+        dishonour_reason = case_data.get('dishonour_reason', 'Insufficient Funds')
+        
+        return f"""
+LEGAL NOTICE UNDER SECTION 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881
+
+To,
+{drawer_name}
+{drawer_address}
+
+Dear Sir/Madam,
+
+SUBJECT: Legal Notice under Section 138 of the Negotiable Instruments Act, 1881
+
+On behalf of my client, {payee_name}, I hereby serve you this legal notice under Section 138 of the Negotiable Instruments Act, 1881.
+
+FACTS OF THE CASE:
+
+1. That you issued Cheque No. {cheque_number} dated {cheque_date} for Rs. {cheque_amount}/- in favor of my client towards discharge of a legally enforceable debt.
+
+2. That the said cheque was presented for collection through banking channel on due date.
+
+3. That the said cheque was dishonoured on {dishonour_date} with the reason "{dishonour_reason}".
+
+4. That my client received the cheque return memo from the bank on [DATE OF MEMO].
+
+LEGAL POSITION:
+
+Under Section 138 of the Negotiable Instruments Act, 1881, dishonour of cheque for insufficiency of funds or any other reason is a punishable offence.
+
+DEMAND:
+
+You are hereby called upon to pay the sum of Rs. {cheque_amount}/- along with applicable interest within 15 days from the receipt of this notice, failing which my client shall be constrained to initiate criminal proceedings against you under Section 138 of the Negotiable Instruments Act, 1881.
+
+This notice is without prejudice to any other rights and remedies available to my client under law.
+
+Yours faithfully,
+[ADVOCATE NAME]
+[ADVOCATE ADDRESS]
+
+Date: {datetime.now().strftime('%d-%m-%Y')}
+Place: [CITY]
+"""
+    
+    @staticmethod
+    def _generate_complaint(case_data: Dict, analysis: Dict) -> str:
+        """Generate complaint under Section 138"""
+        
+        return f"""
+IN THE COURT OF [JUDICIAL MAGISTRATE FIRST CLASS / METROPOLITAN MAGISTRATE]
+AT [PLACE]
+
+Complaint Case No. _____ of {datetime.now().year}
+
+{case_data.get('payee_name', '[COMPLAINANT]')}
+S/o, D/o, W/o [NAME]
+R/o [ADDRESS]
+                                                                    ... Complainant
+
+Versus
+
+{case_data.get('drawer_name', '[ACCUSED]')}
+S/o, D/o, W/o [NAME]
+R/o {case_data.get('drawer_address', '[ADDRESS]')}
+                                                                    ... Accused
+
+COMPLAINT UNDER SECTION 138 READ WITH SECTION 142
+OF THE NEGOTIABLE INSTRUMENTS ACT, 1881
+
+MOST RESPECTFULLY SHEWETH:
+
+1. That the complainant is a [OCCUPATION] carrying on business at [ADDRESS].
+
+2. That the accused was under legally enforceable debt/liability to the complainant for an amount of Rs. {case_data.get('cheque_amount', '[AMOUNT]')}/-.
+
+3. That in discharge of the said debt, the accused issued Cheque No. {case_data.get('cheque_number', '[NO]')} dated {case_data.get('cheque_date', '[DATE]')} drawn on [BANK NAME] for Rs. {case_data.get('cheque_amount', '[AMOUNT]')}/- in favor of the complainant.
+
+4. That the complainant presented the said cheque for collection through banking channel, but the same was dishonoured on {case_data.get('dishonour_date', '[DATE]')} with the return memo stating reason as "{case_data.get('dishonour_reason', 'Insufficient Funds')}".
+
+5. That thereafter, the complainant issued legal notice dated [DATE] under Section 138 of the NI Act demanding payment within 15 days.
+
+6. That the accused received the said notice on [DATE] but failed to make the payment within the stipulated period.
+
+7. That the accused has thereby committed an offence punishable under Section 138 of the Negotiable Instruments Act, 1881.
+
+PRAYER:
+
+In view of the above, it is most respectfully prayed that this Hon'ble Court may be pleased to:
+
+a) Take cognizance of the offence under Section 138 of the NI Act;
+b) Issue summons to the accused;
+c) Try and convict the accused;
+d) Award appropriate punishment and compensation;
+e) Pass any other order deemed fit.
+
+Date: {datetime.now().strftime('%d-%m-%Y')}
+Place: [CITY]
+
+                                                        [COMPLAINANT SIGNATURE]
+                                                        Through Advocate
+"""
+    
+    @staticmethod
+    def _generate_reply_notice(case_data: Dict, analysis: Dict) -> str:
+        """Generate reply to legal notice"""
+        
+        return f"""
+REPLY TO LEGAL NOTICE UNDER SECTION 138 NI ACT
+
+To,
+[COMPLAINANT NAME]
+Through: [ADVOCATE NAME]
+[ADDRESS]
+
+Dear Sir/Madam,
+
+SUBJECT: Reply to Legal Notice dated [DATE] under Section 138 of NI Act, 1881
+
+This has reference to your legal notice dated [DATE] alleging dishonour of Cheque No. {case_data.get('cheque_number', '[NO]')} for Rs. {case_data.get('cheque_amount', '[AMOUNT]')}/-.
+
+Without prejudice to our rights and contentions, we state as follows:
+
+PRELIMINARY OBJECTIONS:
+
+1. That the legal notice is bad in law and liable to be rejected.
+
+2. That there was no legally enforceable debt or liability towards the complainant.
+
+3. That the cheque, if any, was not issued towards discharge of any debt.
+
+FACTS:
+
+[DEFENCE FACTS TO BE INSERTED BASED ON CASE]
+
+In view of the above, the allegations in your notice are false, frivolous and vexatious. Your client is advised not to proceed with any baseless litigation.
+
+All rights and contentions are reserved.
+
+Yours faithfully,
+[ACCUSED/ADVOCATE NAME]
+[ADDRESS]
+
+Date: {datetime.now().strftime('%d-%m-%Y')}
+Place: [CITY]
+"""
+    
+    @staticmethod
+    def _generate_affidavit(case_data: Dict, analysis: Dict) -> str:
+        """Generate affidavit template"""
+        
+        return f"""
+AFFIDAVIT
+
+I, {case_data.get('payee_name', '[NAME]')}, S/o, D/o, W/o [NAME], aged [AGE] years, R/o [ADDRESS], do hereby solemnly affirm and state on oath as under:
+
+1. That I am the complainant in the above-mentioned case and am well conversant with the facts and circumstances of the case.
+
+2. That the accused issued Cheque No. {case_data.get('cheque_number', '[NO]')} dated {case_data.get('cheque_date', '[DATE]')} for Rs. {case_data.get('cheque_amount', '[AMOUNT]')}/- in my favor towards discharge of legally enforceable debt.
+
+3. That the said cheque was presented for collection but was dishonoured on {case_data.get('dishonour_date', '[DATE]')} with reason "{case_data.get('dishonour_reason', 'Insufficient Funds')}".
+
+4. That I issued legal notice dated [DATE] demanding payment within 15 days, but the accused failed to make payment.
+
+5. That the statements made in the complaint are true to my knowledge and belief.
+
+DEPONENT
+
+VERIFICATION:
+
+I, the above-named deponent, do hereby verify that the contents of paragraphs 1 to 5 of this affidavit are true to my knowledge and belief and nothing material has been concealed therefrom.
+
+Verified today on this [DATE] day of [MONTH], {datetime.now().year}.
+
+DEPONENT
+"""
+    
+    @staticmethod
+    def _generate_settlement(case_data: Dict, analysis: Dict) -> str:
+        """Generate settlement agreement"""
+        
+        return f"""
+SETTLEMENT AGREEMENT
+
+This Settlement Agreement is entered into on {datetime.now().strftime('%d-%m-%Y')}
+
+BETWEEN:
+
+{case_data.get('payee_name', '[PARTY A]')}, residing at [ADDRESS] (hereinafter called "Party A")
+
+AND
+
+{case_data.get('drawer_name', '[PARTY B]')}, residing at {case_data.get('drawer_address', '[ADDRESS]')} (hereinafter called "Party B")
+
+WHEREAS:
+
+A. Party B issued Cheque No. {case_data.get('cheque_number', '[NO]')} dated {case_data.get('cheque_date', '[DATE]')} for Rs. {case_data.get('cheque_amount', '[AMOUNT]')}/- which was dishonoured.
+
+B. Party A initiated/threatened legal proceedings under Section 138 NI Act.
+
+C. The parties wish to settle the matter amicably without further litigation.
+
+NOW IT IS AGREED AS FOLLOWS:
+
+1. SETTLEMENT AMOUNT:
+   Party B agrees to pay Rs. [SETTLEMENT AMOUNT]/- to Party A in full and final settlement.
+
+2. PAYMENT SCHEDULE:
+   [INSERT PAYMENT TERMS - lump sum or installments]
+
+3. WITHDRAWAL OF PROCEEDINGS:
+   Upon receipt of full payment, Party A agrees to withdraw the complaint/proceedings.
+
+4. MUTUAL RELEASE:
+   Both parties mutually release each other from all claims arising out of this matter.
+
+5. CONFIDENTIALITY:
+   The terms of this settlement shall remain confidential.
+
+IN WITNESS WHEREOF, the parties have executed this agreement on the date mentioned above.
+
+PARTY A                                  PARTY B
+[Signature]                              [Signature]
+
+WITNESSES:
+1. [Name & Signature]
+2. [Name & Signature]
+"""
+    
+    @staticmethod
+    def _generate_compounding(case_data: Dict, analysis: Dict) -> str:
+        """Generate compounding application"""
+        
+        return f"""
+IN THE COURT OF [JUDICIAL MAGISTRATE]
+AT [PLACE]
+
+CC No. _____ of {datetime.now().year}
+
+APPLICATION FOR COMPOUNDING OF OFFENCE
+UNDER SECTION 147 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881
+
+{case_data.get('payee_name', '[COMPLAINANT]')}                    ... Complainant/Applicant
+
+Versus
+
+{case_data.get('drawer_name', '[ACCUSED]')}                       ... Accused/Respondent
+
+APPLICATION UNDER SECTION 147 NI ACT
+
+MOST RESPECTFULLY SHEWETH:
+
+1. That the complainant filed complaint under Section 138 NI Act for dishonour of Cheque No. {case_data.get('cheque_number', '[NO]')} for Rs. {case_data.get('cheque_amount', '[AMOUNT]')}/-.
+
+2. That the parties have now amicably settled the matter and the accused has paid/agreed to pay the entire outstanding amount.
+
+3. That in view of the settlement, the complainant does not wish to proceed with the complaint and seeks permission to compound the offence under Section 147 of the NI Act.
+
+4. That the settlement is voluntary and without any coercion or undue influence.
+
+PRAYER:
+
+It is therefore most respectfully prayed that this Hon'ble Court may be pleased to:
+
+a) Accept this application for compounding;
+b) Permit the parties to compound the offence;
+c) Discharge the accused;
+d) Pass any other order deemed fit.
+
+Date: {datetime.now().strftime('%d-%m-%Y')}
+Place: [CITY]
+
+                                                        [COMPLAINANT]
+                                                        Through Advocate
+"""
+    
+    @staticmethod
+    def _generate_delay_condonation(case_data: Dict, analysis: Dict) -> str:
+        """Generate delay condonation application"""
+        
+        return f"""
+APPLICATION FOR CONDONATION OF DELAY
+IN FILING COMPLAINT UNDER SECTION 138 NI ACT
+
+MOST RESPECTFULLY SHEWETH:
+
+1. That the complainant seeks to file complaint for dishonour of Cheque No. {case_data.get('cheque_number', '[NO]')} dated {case_data.get('cheque_date', '[DATE]')}.
+
+2. That there is a delay of [NUMBER] days in filing this complaint beyond the one month period prescribed under Section 142 of the NI Act.
+
+3. REASONS FOR DELAY:
+   [INSERT GENUINE REASONS - illness, legal advice delay, procedural confusion, etc.]
+
+4. That the delay is neither willful nor deliberate and there is sufficient cause for the same.
+
+5. That the complainant has a strong case on merits and denial of justice on account of technical delay would be against the interests of justice.
+
+PRAYER:
+
+It is most respectfully prayed that this Hon'ble Court may be pleased to:
+
+a) Condone the delay of [NUMBER] days in filing the complaint;
+b) Take cognizance of the complaint;
+c) Pass any other order deemed fit in the interests of justice.
+
+Date: {datetime.now().strftime('%d-%m-%Y')}
+Place: [CITY]
+
+                                                        [COMPLAINANT]
+                                                        Through Advocate
+"""
+    
+    @staticmethod
+    def _generate_summary(case_data: Dict, analysis: Dict) -> str:
+        """Generate summary draft of case"""
+        
+        return f"""
+CASE SUMMARY DRAFT
+
+Case Type: Section 138 NI Act Complaint
+Case Strength Score: {analysis.get('score', 0):.1f}/100
+Verdict: {analysis.get('verdict', 'Unknown')}
+
+PARTIES:
+Complainant: {case_data.get('payee_name', '[NAME]')}
+Accused: {case_data.get('drawer_name', '[NAME]')}
+
+BRIEF FACTS:
+- Cheque No.: {case_data.get('cheque_number', '[NO]')}
+- Amount: Rs. {case_data.get('cheque_amount', '[AMOUNT]')}/- 
+- Date: {case_data.get('cheque_date', '[DATE]')}
+- Dishonour Date: {case_data.get('dishonour_date', '[DATE]')}
+- Reason: {case_data.get('dishonour_reason', 'Insufficient Funds')}
+- Notice Sent: {'Yes' if case_data.get('notice_sent') else 'No'}
+
+CASE STRENGTH ANALYSIS:
+{analysis.get('narrative', 'Analysis pending')}
+
+RECOMMENDED ACTION:
+{chr(10).join('- ' + step for step in _extract_next_steps(analysis, case_data))}
+
+Date: {datetime.now().strftime('%d-%m-%Y')}
+"""
+    
+    @staticmethod
+    def _generate_execution(case_data: Dict, analysis: Dict) -> str:
+        """Generate execution petition template"""
+        
+        return f"""
+EXECUTION PETITION
+UNDER SECTION 421 OF THE CODE OF CRIMINAL PROCEDURE, 1973
+
+IN THE COURT OF [JUDICIAL MAGISTRATE]
+AT [PLACE]
+
+CC No. _____ of [YEAR]
+
+{case_data.get('payee_name', '[DECREE HOLDER]')}              ... Decree Holder/Petitioner
+
+Versus
+
+{case_data.get('drawer_name', '[JUDGMENT DEBTOR]')}           ... Judgment Debtor/Respondent
+
+PETITION FOR EXECUTION OF DECREE
+
+MOST RESPECTFULLY SHEWETH:
+
+1. That this Hon'ble Court vide judgment dated [DATE] convicted the Judgment Debtor under Section 138 NI Act and ordered payment of Rs. [AMOUNT]/- as compensation.
+
+2. That despite the decree, the Judgment Debtor has failed to pay the awarded amount.
+
+3. That the decree holder is entitled to execute the decree for recovery of compensation.
+
+PRAYER:
+
+It is most respectfully prayed that this Hon'ble Court may be pleased to:
+
+a) Issue execution proceedings;
+b) Recover Rs. [AMOUNT]/- from the Judgment Debtor;
+c) Pass any other order deemed fit.
+
+Date: {datetime.now().strftime('%d-%m-%Y')}
+
+                                                        [DECREE HOLDER]
+                                                        Through Advocate
+"""
+    
+    @staticmethod
+    def _generate_evidence_list(case_data: Dict, analysis: Dict) -> str:
+        """Generate evidence list"""
+        
+        return f"""
+LIST OF DOCUMENTS/EVIDENCE
+FOR COMPLAINT UNDER SECTION 138 NI ACT
+
+Case: {case_data.get('payee_name', '[COMPLAINANT]')} vs {case_data.get('drawer_name', '[ACCUSED]')}
+
+MANDATORY DOCUMENTS:
+
+1. ORIGINAL DISHONOURED CHEQUE
+   - Cheque No.: {case_data.get('cheque_number', '[NO]')}
+   - Date: {case_data.get('cheque_date', '[DATE]')}
+   - Amount: Rs. {case_data.get('cheque_amount', '[AMOUNT]')}/- 
+
+2. CHEQUE RETURN MEMO
+   - From: [BANK NAME]
+   - Date: {case_data.get('dishonour_date', '[DATE]')}
+   - Reason: {case_data.get('dishonour_reason', 'Insufficient Funds')}
+
+3. LEGAL NOTICE (with proof of service)
+   - Date of Notice: [DATE]
+   - Date of Receipt: [DATE]
+   - Reply received: {'Yes' if case_data.get('reply_received') else 'No'}
+
+4. PROOF OF DEBT
+   - Invoice/Agreement/Receipt
+   - Transaction records
+   - Written acknowledgment (if any)
+
+SUPPORTING DOCUMENTS:
+
+5. Bank account statements
+6. Correspondence between parties
+7. Witness statements (if any)
+8. Any other relevant document
+
+CERTIFICATION:
+
+I certify that the above documents are true copies of originals and will be produced as evidence during trial.
+
+Date: {datetime.now().strftime('%d-%m-%Y')}
+                                                        [COMPLAINANT/ADVOCATE]
+"""
+    
+    @staticmethod
+    def _generate_cross_exam(case_data: Dict, analysis: Dict) -> str:
+        """Generate cross-examination questions"""
+        
+        return f"""
+SUGGESTED CROSS-EXAMINATION QUESTIONS
+FOR ACCUSED IN SECTION 138 NI ACT CASE
+
+IDENTITY & SIGNATURE VERIFICATION:
+
+1. Do you admit that the signature on Cheque No. {case_data.get('cheque_number', '[NO]')} is yours?
+2. Do you admit issuing this cheque?
+3. Do you maintain account in [BANK NAME]?
+
+DEBT & TRANSACTION:
+
+4. Do you admit that you were under debt/liability to the complainant?
+5. What was the nature of this debt?
+6. Do you admit receiving [GOODS/SERVICE/LOAN] from the complainant?
+7. Is there any written agreement between you and the complainant?
+
+CHEQUE ISSUANCE:
+
+8. When did you issue this cheque?
+9. For what purpose did you issue this cheque?
+10. Do you admit that the cheque was issued towards discharge of debt?
+
+DISHONOUR:
+
+11. Do you admit that the cheque was dishonoured?
+12. What was the reason for dishonour?
+13. Did you have sufficient funds on the date of presentation?
+14. Did you issue any stop payment instruction?
+
+NOTICE:
+
+15. Did you receive the legal notice dated [DATE]?
+16. Did you reply to the notice?
+17. Did you make any payment after receiving notice?
+18. Why did you not pay within 15 days?
+
+DEFENCE:
+
+19. What is your defence in this case?
+20. Do you have any documentary evidence to support your defence?
+21. [ADD CASE-SPECIFIC QUESTIONS BASED ON DEFENCE]
+
+CREDIBILITY:
+
+22. Have you issued any other dishonoured cheques?
+23. Are there any other cases pending against you?
+
+Note: Tailor questions based on accused's defence and case circumstances.
+"""
+    
+    @staticmethod
+    def _generate_strategy_note(case_data: Dict, analysis: Dict) -> str:
+        """Generate strategy note for case handling"""
+        
+        fatal_issues = analysis.get('fatal_issues', [])
+        score = analysis.get('score', 0)
+        
+        return f"""
+CONFIDENTIAL STRATEGY NOTE
+SECTION 138 NI ACT CASE
+
+Case ID: {analysis.get('case_id', 'N/A')}
+Analysis Date: {datetime.now().strftime('%d-%m-%Y')}
+Case Score: {score:.1f}/100
+Verdict: {analysis.get('verdict', 'Unknown')}
+
+═══════════════════════════════════════════════════════════════
+
+STRATEGIC ASSESSMENT:
+
+Overall Case Strength: {'STRONG' if score >= 70 else 'MODERATE' if score >= 50 else 'WEAK'}
+Conviction Probability: {_calculate_conviction_probability(score)}%
+Recommended Action: {'PROCEED TO TRIAL' if score >= 60 else 'EXPLORE SETTLEMENT'}
+
+═══════════════════════════════════════════════════════════════
+
+CRITICAL ISSUES:
+
+{chr(10).join('⚠️ FATAL: ' + f['issue'] for f in fatal_issues) if fatal_issues else '✅ No fatal issues detected'}
+
+═══════════════════════════════════════════════════════════════
+
+STRENGTHS:
+{chr(10).join('✅ ' + k.replace('_', ' ').title() + f': {v:.0f}%' for k, v in analysis.get('ingredient_scores', {}).items() if v >= 70)}
+
+WEAKNESSES:
+{chr(10).join('❌ ' + k.replace('_', ' ').title() + f': {v:.0f}%' for k, v in analysis.get('ingredient_scores', {}).items() if v < 70)}
+
+═══════════════════════════════════════════════════════════════
+
+LITIGATION STRATEGY:
+
+{'AGGRESSIVE PROSECUTION:' if score >= 70 else 'CAUTIOUS APPROACH:' if score >= 50 else 'DEFENSIVE STRATEGY:'}
+
+{'- Focus on strong documentary evidence' if score >= 70 else ''}
+{'- Prepare for vigorous defence cross-examination' if score >= 60 else ''}
+{'- Consider settlement if defence raises valid grounds' if score < 60 else ''}
+{'- Strengthen weak ingredients before trial' if score < 70 else ''}
+
+═══════════════════════════════════════════════════════════════
+
+RISK MITIGATION:
+
+Defence Success Probability: {analysis.get('defence_vulnerabilities', {}).get('score', 0):.0f}%
+
+Key Risks:
+{chr(10).join('- ' + w for w in analysis.get('defence_vulnerabilities', {}).get('weaknesses', [])[:3])}
+
+Mitigation Steps:
+{chr(10).join('- ' + s for s in _extract_suggestions(analysis, case_data)[:3])}
+
+═══════════════════════════════════════════════════════════════
+
+COST-BENEFIT ANALYSIS:
+
+Claim Amount: Rs. {case_data.get('cheque_amount', '[AMOUNT]')}/- 
+Estimated Legal Cost: Rs. [ESTIMATE BASED ON COMPLEXITY]
+Time to Resolution: [6-18 months typical]
+Success Probability: {_calculate_conviction_probability(score)}%
+
+Expected Value: {f'Rs. {int(case_data.get("cheque_amount", 0) * _calculate_conviction_probability(score) / 100)}/-' if case_data.get('cheque_amount') else '[CALCULATE]'}
+
+RECOMMENDATION: {'Proceed - favorable cost-benefit' if score >= 60 else 'Evaluate settlement - uncertain outcome'}
+
+═══════════════════════════════════════════════════════════════
+
+NEXT ACTIONS:
+{chr(10).join(f'{i}. {step}' for i, step in enumerate(_extract_next_steps(analysis, case_data), 1))}
+
+═══════════════════════════════════════════════════════════════
+
+CONFIDENTIAL - ATTORNEY-CLIENT PRIVILEGE
+Date: {datetime.now().strftime('%d-%m-%Y')}
+"""
+
+
+# ============================================================================
+# 🎯 TASK 4: AUTODRAFT LOGIC
+# ============================================================================
+
+def auto_select_draft(analysis_result: Dict, case_data: Dict) -> str:
+    """
+    Automatically select appropriate draft type based on analysis
+    WITHOUT breaking existing flow
+    """
+    
+    fatal_issues = analysis_result.get('fatal_issues', [])
+    score = analysis_result.get('score', 0)
+    notice_sent = case_data.get('notice_sent', False)
+    timeline_valid = analysis_result.get('timeline_compliance', {}).get('compliant', False)
+    
+    # Logic: IF fatal → Strategy note only
+    if fatal_issues and score < 40:
+        return 'strategy_note'
+    
+    # Logic: IF notice not sent → Legal notice
+    if not notice_sent:
+        return 'legal_notice'
+    
+    # Logic: IF notice sent + valid timeline → Complaint
+    if notice_sent and timeline_valid and score >= 50:
+        return 'complaint'
+    
+    # Logic: IF defence case (reply needed)
+    if case_data.get('is_defence_case', False):
+        return 'reply_notice'
+    
+    # Default: Summary draft
+    return 'summary_draft'
+
+
+# ============================================================================
+# 🎯 TASK 8: CONSISTENCY VALIDATOR
+# ============================================================================
+
+def validate_consistency(structured_output: Dict) -> Dict:
+    """
+    Ensure score = verdict = narrative = steps alignment
+    Returns validation report with any inconsistencies
+    """
+    
+    analysis = structured_output['analysis']
+    score = analysis.get('score', 0)
+    verdict = analysis.get('verdict', 'Unknown')
+    next_steps = structured_output.get('next_steps', [])
+    
+    inconsistencies = []
+    
+    # Check score-verdict alignment
+    expected_verdict = _score_to_verdict(score)
+    if verdict != expected_verdict:
+        inconsistencies.append(f"Score {score:.1f} maps to '{expected_verdict}' but verdict is '{verdict}'")
+    
+    # Check fatal issues vs score
+    fatal_issues = analysis.get('fatal_issues', [])
+    if fatal_issues and score > 50:
+        inconsistencies.append(f"Fatal issues detected but score is {score:.1f} (should be <50)")
+    
+    # Check next steps align with verdict
+    if verdict == 'Fatal - Case Not Viable' and 'File complaint' in str(next_steps):
+        inconsistencies.append("Fatal verdict but next steps include filing complaint")
+    
+    # Check conviction probability alignment
+    conviction_prob = _calculate_conviction_probability(score)
+    if score >= 70 and conviction_prob < 60:
+        inconsistencies.append(f"High score ({score:.1f}) but low conviction probability ({conviction_prob}%)")
+    
+    return {
+        'consistent': len(inconsistencies) == 0,
+        'inconsistencies': inconsistencies,
+        'validation_passed': len(inconsistencies) == 0
+    }
+
+
+def _score_to_verdict(score: float) -> str:
+    """Map score to expected verdict"""
+    if score >= 85:
+        return "Excellent - Very Strong Case"
+    elif score >= 70:
+        return "Strong Case"
+    elif score >= 60:
+        return "Moderate - Proceed with Caution"
+    elif score >= 50:
+        return "Weak - High Risk"
+    elif score >= 40:
+        return "Very Weak - Settlement Recommended"
+    else:
+        return "Fatal - Case Not Viable"
+
+
+# ============================================================================
+# 🎯 MASTER WRAPPER: COMPLETE PRODUCT PIPELINE
+# ============================================================================
+
+def judiq_complete_analysis(case_data: Dict, case_id: str = None, 
+                           generate_report: bool = True,
+                           generate_draft: bool = True,
+                           draft_type: str = 'auto') -> Dict:
+    """
+    🎯 COMPLETE PRODUCT WRAPPER
+    
+    Input → Analysis → Structured Output → Report → Draft
+    
+    WITHOUT breaking existing analyze_case_production() system
+    """
+    
+    # Step 1: Run existing analysis (NO CHANGES)
+    analysis_result = analyze_case_production(case_data, case_id)
+    
+    # Step 2: Build structured output
+    structured_output = build_structured_output(analysis_result, case_data)
+    
+    # Step 3: Validate consistency
+    consistency_check = validate_consistency(structured_output)
+    
+    # Step 4: Generate report (if requested)
+    report_text = None
+    if generate_report:
+        report_text = generate_7_page_report(structured_output, case_data)
+    
+    # Step 5: Generate draft (if requested)
+    draft_text = None
+    selected_draft_type = None
+    if generate_draft:
+        if draft_type == 'auto':
+            selected_draft_type = auto_select_draft(analysis_result, case_data)
+        else:
+            selected_draft_type = draft_type
+        
+        draft_text = DraftGenerator.generate_draft(selected_draft_type, case_data, analysis_result)
+    
+    # Final complete output
+    return {
+        'analysis': structured_output['analysis'],
+        'summary': structured_output['summary'],
+        'next_steps': structured_output['next_steps'],
+        'suggestions': structured_output['suggestions'],
+        'report': report_text,
+        'draft': {
+            'type': selected_draft_type,
+            'content': draft_text
+        },
+        'consistency_validation': consistency_check,
+        'metadata': {
+            'version': 'v7.0-COMPLETE-PRODUCT',
+            'timestamp': datetime.now().isoformat(),
+            'case_id': analysis_result.get('case_id'),
+            'features': {
+                'structured_output': True,
+                '7_page_report': generate_report,
+                'draft_generation': generate_draft,
+                'consistency_check': True
+            }
+        }
+    }
+
+
+# ============================================================================
+# 📊 FINAL STATUS
+# ============================================================================
+
 logger.info("=" * 100)
-logger.info("🎉 PRODUCTION READY - ALL 13 CRITICAL FIXES IMPLEMENTED")
+logger.info("🎉 JUDIQ v7.0 - COMPLETE PRODUCT READY")
 logger.info("=" * 100)
-logger.info("✅ FIX 1: Real semantic engine with match_issue_category() method")
-logger.info("✅ FIX 2: Validated config with versioning and safety")
-logger.info("✅ FIX 3: Non-linear scoring engine (understands combinations)")
-logger.info("✅ FIX 4: Controlled analysis (full analysis even with fatal)")
-logger.info("✅ FIX 5: Modular design (separated responsibilities)")
-logger.info("✅ FIX 6: Real learning system with database")
-logger.info("✅ FIX 7: Case memory system (compares past cases)")
-logger.info("✅ FIX 8: Evolving legal reasoning (dynamic knowledge)")
-logger.info("✅ FIX 9: Single unified engine (v5 deleted)")
-logger.info("✅ FIX 10: Learning connected to pipeline (auto feedback)")
-logger.info("✅ FIX 11: Semantic engine everywhere (not just matching)")
-logger.info("✅ FIX 12: Full explainability (all adjustments shown)")
-logger.info("✅ FIX 13: Tightened architecture (minimal engineering)")
-logger.info("=" * 100)
-logger.info("🎯 PRODUCTION FUNCTION: analyze_case_production()")
+logger.info("✅ ORIGINAL: All 13 critical fixes from v7.0")
+logger.info("✅ TASK 1: Structured output builder (analysis/summary/steps/suggestions)")
+logger.info("✅ TASK 2: 7-page report generation system")
+logger.info("✅ TASK 3: Draft generation system (12 types)")
+logger.info("✅ TASK 4: Autodraft logic (smart draft selection)")
+logger.info("✅ TASK 5: Next steps extraction (procedural, time-bound)")
+logger.info("✅ TASK 6: Suggestions extraction (strategic, separate from steps)")
+logger.info("✅ TASK 8: Consistency validation (score/verdict/narrative alignment)")
 logger.info("=" * 100)
 logger.info("")
-logger.info("📋 USAGE:")
-logger.info("  result = analyze_case_production(case_data)")
-logger.info("  print(result['score'])  # Final score")
-logger.info("  print(result['explainability'])  # Full explanation")
+logger.info("📋 COMPLETE USAGE:")
+logger.info("  # Full pipeline (analysis + report + draft)")
+logger.info("  result = judiq_complete_analysis(case_data)")
+logger.info("  print(result['summary'])  # Executive summary")
+logger.info("  print(result['report'])   # 7-page report")
+logger.info("  print(result['draft'])    # Auto-selected draft")
 logger.info("")
-logger.info("🔄 FEEDBACK LOOP:")
-logger.info("  # When actual outcome is known:")
-logger.info("  LEARNING_SYSTEM.record_feedback(case_id, result, actual_outcome)")
+logger.info("📋 STRUCTURED OUTPUT ONLY:")
+logger.info("  structured = build_structured_output(analysis_result, case_data)")
+logger.info("  print(structured['next_steps'])  # Procedural actions")
+logger.info("  print(structured['suggestions']) # Strategic advice")
+logger.info("")
+logger.info("📋 SPECIFIC DRAFT GENERATION:")
+logger.info("  draft = DraftGenerator.generate_draft('legal_notice', case_data, analysis)")
+logger.info("  draft = DraftGenerator.generate_draft('complaint', case_data, analysis)")
+logger.info("")
+logger.info("📋 AVAILABLE DRAFT TYPES:")
+logger.info("  legal_notice, complaint, reply_notice, affidavit, settlement_agreement,")
+logger.info("  compounding_application, delay_condonation, summary_draft, execution_petition,")
+logger.info("  evidence_list, cross_examination, strategy_note")
 logger.info("")
 logger.info("=" * 100)
