@@ -788,159 +788,164 @@ def apply_hard_overrides(base_score: float, case_data: Dict, legal_priority: Dic
 
 def final_decision_engine(case_data: Dict) -> Dict:
     """
-    🔥 FIX #6: THE SINGLE BRAIN - Controls entire decision flow
+    🔥 PRODUCTION-GRADE SINGLE BRAIN - Integrates all advanced systems
     
-    OLD PROBLEM: Many parts but no single controller
-    - fatal detection scattered
-    - scoring disconnected  
-    - overrides manual
-    - priority calculated but not controlling flow
-    
-    NEW SOLUTION: One function that orchestrates everything
+    NOW USES:
+    - LazyAnalysisEngine for performance (short-circuit on fatal)
+    - UnifiedResultBuilder for data consistency
+    - SemanticLegalMatcher for robust issue detection
+    - RealFeatureFlags for conditional execution
+    - validate_output_consistency for guaranteed synchronization
     
     FLOW:
-    1. Get priority (FATAL/HIGH_RISK/MEDIUM_RISK/LOW_RISK)
-    2. IF FATAL → return immediately (skip unnecessary work)
-    3. Detect contradictions → affect score directly
-    4. Calculate base score
-    5. Apply single override authority
-    6. Generate final verdict
-    
-    Returns: Complete decision package
-    {
-        'score': final_score,
-        'category': priority_category,
-        'fatal_issues': [...],
-        'contradictions': [...],
-        'final_verdict': "...",
-        'recommendation': "...",
-        'court_success_probability': "..."
-    }
+    1. Validate input (strict schema)
+    2. Use LazyAnalysisEngine (short-circuits if fatal detected)
+    3. Build UnifiedResult (single source of truth)
+    4. Apply semantic legal matching
+    5. Validate output consistency
+    6. Return synchronized result
     """
     
-    # STEP 1: Get Legal Priority (THE CONTROLLER)
+    # STEP 1: Input validation (if Pydantic available)
+    if PYDANTIC_AVAILABLE:
+        try:
+            validated_data = CaseInputSchema(**case_data)
+            case_data = validated_data.dict()
+        except Exception as e:
+            logger.error(f"Input validation failed: {e}")
+            # Continue with unvalidated data but log warning
+    
+    # STEP 2: Use LazyAnalysisEngine for performance optimization
+    required_modules = ['fatal', 'score', 'priority']
+    
+    # Add optional modules based on feature flags
+    if RealFeatureFlags.is_enabled('CONTRADICTION_DETECTION'):
+        required_modules.append('contradictions')
+    if RealFeatureFlags.is_enabled('ENHANCED_NARRATIVE'):
+        required_modules.append('narrative')
+    
+    # ⚡ LAZY EXECUTION with short-circuit
+    lazy_result = LazyAnalysisEngine.analyze_lazy(case_data, required_modules)
+    
+    # If short-circuited (fatal detected), return immediately
+    if lazy_result.get('short_circuited', False):
+        logger.info("⚡ Short-circuit: Fatal issue detected, returning early")
+        
+        # Build minimal response for fatal case
+        return {
+            'score': 0,
+            'category': 'FATAL',
+            'priority_category': 'CRITICAL',
+            'fatal_issues': lazy_result['fatal']['fatal_issues'],
+            'contradictions': [],
+            'final_verdict': 'NON_VIABLE',
+            'legal_reasoning': generate_legal_narrative(lazy_result),
+            'recommendation': 'Case has fatal defects - not viable for court',
+            'court_success_probability': '0-5%',
+            'viability_assessment': 'NON_VIABLE',
+            'short_circuited': True,
+            'performance_optimized': True
+        }
+    
+    # STEP 3: Build UnifiedResult for data consistency
+    result_builder = UnifiedResultBuilder(case_data)
+    canonical_result = result_builder.build_canonical_result()
+    
+    # STEP 4: Get detailed analysis from original system
     priority_data = get_legal_case_priority(case_data)
     priority_category = priority_data['priority_category']
     
-    # 🔥 FIX #2: PRIORITY NOW DOMINATES FLOW
-    # FATAL cases return immediately - no need to calculate detailed score
-    if priority_category == "FATAL":
-        return {
-            'score': priority_data['max_achievable_score'],
-            'category': 'FATAL',
-            'fatal_issues': priority_data['fatal_conditions'],
-            'contradictions': [],
-            'final_verdict': "Case has fatal flaws that prevent success",
-            'recommendation': priority_data['recommendation'],
-            'court_success_probability': priority_data['court_success_probability'],
-            'viability_assessment': priority_data['viability_assessment'],
-            'early_exit': True,  # Indicates we skipped full analysis
-            'reason': "Fatal conditions detected - detailed scoring unnecessary"
-        }
+    # Use semantic matcher for issue detection
+    issue_text = case_data.get('issue', '')
+    if issue_text:
+        semantic_categories = SemanticLegalMatcher.match_issue_category(issue_text)
+        legal_reasoning = SemanticLegalMatcher.get_legal_reasoning(issue_text)
+    else:
+        semantic_categories = []
+        legal_reasoning = {}
     
-    # STEP 2: Detect Contradictions (NOW AFFECTS SCORE)
-    contradictions, contradiction_penalty, contradiction_priority = detect_smart_contradictions(case_data)
+    # Detect contradictions (if flag enabled)
+    contradictions = []
+    contradiction_penalty = 0
+    if RealFeatureFlags.is_enabled('CONTRADICTION_DETECTION'):
+        contradictions, contradiction_penalty, _ = detect_smart_contradictions(case_data)
     
-    # 🔥 FIX #3: DYNAMIC PRIORITY ESCALATION
-    # Update priority if contradictions are severe - works for all levels
-    if contradiction_priority:
-        priority_levels = ["LOW_RISK", "MEDIUM_RISK", "HIGH_RISK", "FATAL"]
-        
-        # Get indices
-        try:
-            current_idx = priority_levels.index(priority_category)
-            contradiction_idx = priority_levels.index(contradiction_priority)
-            
-            # Escalate to higher priority
-            if contradiction_idx > current_idx:
-                priority_category = contradiction_priority
-                priority_data['priority_category'] = contradiction_priority
-                
-                # Adjust max achievable score based on new priority
-                if contradiction_priority == "FATAL":
-                    priority_data['max_achievable_score'] = 0
-                elif contradiction_priority == "HIGH_RISK":
-                    priority_data['max_achievable_score'] = min(priority_data['max_achievable_score'], 40)
-                elif contradiction_priority == "MEDIUM_RISK":
-                    priority_data['max_achievable_score'] = min(priority_data['max_achievable_score'], 60)
-        except ValueError:
-            # Fallback to old logic if priority level not found
-            if contradiction_priority == "HIGH_RISK":
-                if priority_category not in ["FATAL", "HIGH_RISK"]:
-                    priority_category = "HIGH_RISK"
-                    priority_data['priority_category'] = "HIGH_RISK"
-                    priority_data['max_achievable_score'] = min(priority_data['max_achievable_score'], 40)
-    
-    # STEP 3: Calculate Base Score with Breakdown (✅ EXPLAINABILITY)
+    # Calculate detailed score breakdown
     base_score, score_breakdown = calculate_base_strength_score(case_data)
     
     # Apply contradiction penalty
     base_score = max(0, base_score - contradiction_penalty)
     
-    # STEP 4: Apply Single Override Authority
+    # Apply overrides
     final_score, override_reasons = apply_hard_overrides(base_score, case_data, priority_data)
     
-    # 🔥 FIX #2: PRIORITY + SCORE CONSISTENCY
-    # Ensure HIGH_RISK cases don't have suspiciously high scores
-    if priority_category == "HIGH_RISK":
+    # Ensure consistency with priority
+    if priority_category == "FATAL":
+        final_score = min(final_score, 25)
+    elif priority_category == "HIGH_RISK":
         final_score = min(final_score, 50)
-        if final_score < base_score:
-            override_reasons.append("HIGH_RISK: Score capped at 50/100 for consistency")
+    elif priority_category == "MEDIUM_RISK":
+        final_score = min(final_score, 75)
     
-    # ✅ Log final decision
-    logger.info(f"[CASE DECISION] Score={final_score:.1f}, Priority={priority_category}, Contradictions={len(contradictions)}")
-    
-    # STEP 5: Generate Final Verdict
-    final_verdict = generate_verdict(
-        final_score, 
-        priority_category, 
-        priority_data['fatal_conditions'],
-        contradictions
-    )
-    
-    # 🔥 NEW STEP 6: Generate Legal Reasoning Narrative
-    # This is what makes the system speak like a lawyer
-    legal_narrative = generate_legal_reasoning_narrative(
-        decision={
-            'final_score': final_score,
-            'priority_category': priority_category,
-            'fatal_issues': priority_data['fatal_conditions'],
-            'high_risk_issues': priority_data.get('high_risk_issues', []),
-            'contradictions_detected': contradictions
-        },
-        case_data=case_data,
-        analysis={
-            'modules': {
-                'timeline_intelligence': {
-                    'limitation_risk': calculate_limitation_risk(case_data, delay_days)  # ✅ REAL calculation
-                },
-                'documentary_evidence': {
-                    'overall_strength': f"{score_breakdown.get('documentary_proof', {}).get('score', 0) * 5}%" 
-                },
-                'ingredient_compliance': {
-                    'overall_compliance': score_breakdown.get('core_ingredients', {}).get('score', 0) * 2.5
-                }
-            }
-        }
-    )
-    
-    # STEP 7: Return Complete Decision Package (✅ WITH EXPLAINABILITY + LEGAL NARRATIVE)
-    return {
+    # STEP 5: Build complete result
+    complete_result = {
         'score': round(final_score, 1),
-        'score_breakdown': score_breakdown,  # ✅ WHY this score
+        'score_breakdown': score_breakdown,
         'category': priority_category,
+        'priority_category': priority_category,  # Duplicate for compatibility
         'fatal_issues': priority_data['fatal_conditions'],
         'contradictions': contradictions,
         'contradiction_penalty': contradiction_penalty,
-        'final_verdict': final_verdict,
-        'legal_reasoning': legal_narrative,  # 🔥 NEW: Lawyer-like explanation
+        'final_verdict': result_builder.verdict,
+        'legal_reasoning': {
+            'narrative': result_builder.narrative,
+            'semantic_categories': semantic_categories,
+            'matched_reasoning': legal_reasoning,
+            'detailed_analysis': generate_legal_reasoning_narrative(
+                decision={
+                    'final_score': final_score,
+                    'priority_category': priority_category,
+                    'fatal_issues': priority_data['fatal_conditions'],
+                    'contradictions_detected': contradictions
+                },
+                case_data=case_data,
+                analysis={
+                    'modules': {
+                        'timeline_intelligence': {
+                            'limitation_risk': calculate_limitation_risk(
+                                case_data, 
+                                case_data.get('delay_days', 0)
+                            )
+                        },
+                        'documentary_evidence': {
+                            'overall_strength': f"{score_breakdown.get('documentary_proof', {}).get('score', 0) * 5}%"
+                        }
+                    }
+                }
+            )
+        },
         'recommendation': priority_data['recommendation'],
         'court_success_probability': priority_data['court_success_probability'],
         'viability_assessment': priority_data['viability_assessment'],
         'override_reasons': override_reasons,
         'base_score_before_override': round(base_score, 1),
-        'early_exit': False
+        'short_circuited': False,
+        'performance_optimized': True,
+        'advanced_systems_active': {
+            'lazy_execution': True,
+            'unified_result': True,
+            'semantic_matching': True,
+            'feature_flags': True
+        }
     }
+    
+    # STEP 6: Validate output consistency (ensure no contradictions)
+    complete_result = validate_output_consistency(complete_result)
+    
+    logger.info(f"[INTEGRATED ENGINE] Score={final_score:.1f}, Priority={priority_category}, "
+               f"Advanced={complete_result['advanced_systems_active']}")
+    
+    return complete_result
 
 
 def calculate_base_strength_score(case_data: Dict) -> Tuple[float, Dict]:
@@ -24575,428 +24580,16 @@ except ImportError:
 
 
 # ✅ DEPRECATED: Flask routes removed, using FastAPI
-def create_app():
-    """Create and configure Flask application"""
-    if not FLASK_AVAILABLE:
-        raise ImportError("Flask not installed. Run: pip install flask flask-cors")
-    
-    app = Flask(__name__)
-    CORS(app, resources={
-        r"/*": {
-            "origins": "*",
-            "methods": ["GET", "POST", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
-        }
-    })
-    
-    # Initialize Firebase
-    db = None
-    if FIREBASE_AVAILABLE:
-        try:
-            if not firebase_admin._apps:
-                service_account_path = os.environ.get('FIREBASE_SERVICE_ACCOUNT', 'firebase-service-account.json')
-                if os.path.exists(service_account_path):
-                    cred = credentials.Certificate(service_account_path)
-                    firebase_admin.initialize_app(cred)
-                    db = firestore.client()
-                    logger.info("Firebase initialized successfully")
-                else:
-                    logger.warning("Firebase service account not found - running without Firebase")
-        except Exception as e:
-            logger.error(f"Firebase initialization error: {e}")
-    
-    # ============================================================================
-    # API ENDPOINTS
-    # ============================================================================
-    
-    @app.route('/api/analyze', methods=['POST', 'OPTIONS'])
-    def analyze_case():
-        """Main analysis endpoint"""
-        if request.method == 'OPTIONS':
-            return '', 204
-        
-        try:
-            case_data = request.get_json()
-            if not case_data:
-                return jsonify({
-                    'success': False,
-                    'error': 'No case data provided',
-                    'user_friendly_message': 'Please provide case data for analysis'
-                }), 400
-            
-            # Run analysis
-            logger.info("Running enhanced analysis...")
-            analysis_result = run_enhanced_analysis(case_data)
-            
-            # Generate case ID
-            if 'case_id' not in analysis_result:
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                analysis_result['case_id'] = f"CASE_{timestamp}"
-            
-            # Save to Firebase if available
-            user_email = case_data.get('user_email')
-            if db and user_email:
-                try:
-                    # Save analysis
-                    doc_ref = db.collection('analyses').document(analysis_result['case_id'])
-                    doc_ref.set({
-                        'case_id': analysis_result['case_id'],
-                        'user_email': user_email,
-                        'timestamp': firestore.SERVER_TIMESTAMP,
-                        'case_data': case_data,
-                        'analysis': analysis_result,
-                        'score': analysis_result.get('modules', {}).get('risk_assessment', {}).get('overall_risk_score', 0),
-                        'is_fatal': analysis_result.get('fatal_flag', False)
-                    })
-                    
-                    # Update user stats
-                    user_ref = db.collection('users').document(user_email)
-                    user_ref.set({
-                        'email': user_email,
-                        'last_analysis': firestore.SERVER_TIMESTAMP,
-                        'total_analyses': firestore.Increment(1)
-                    }, merge=True)
-                    
-                    logger.info(f"Saved analysis to Firebase: {analysis_result['case_id']}")
-                except Exception as e:
-                    logger.error(f"Firebase save error: {e}")
-            
-            return jsonify({
-                'success': True,
-                'analysis': analysis_result,
-                'engine_version': ENGINE_VERSION,
-                'timestamp': datetime.now().isoformat()
-            }), 200
-            
-        except Exception as e:
-            logger.error(f"Analysis error: {e}")
-            logger.error(traceback.format_exc())
-            return jsonify({
-                'success': False,
-                'error': str(e),
-                'user_friendly_message': 'Analysis failed. Please check your input data and try again.'
-            }), 500
-    
-    @app.route('/api/user/case-history/<email>', methods=['GET', 'OPTIONS'])
-    def get_case_history(email):
-        """Get user's case history"""
-        if request.method == 'OPTIONS':
-            return '', 204
-        
-        if not db:
-            return jsonify({'success': False, 'error': 'Firebase not available'}), 503
-        
-        try:
-            # Query user's analyses
-            analyses_ref = db.collection('analyses').where('user_email', '==', email).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(50)
-            docs = analyses_ref.stream()
-            
-            history = []
-            for doc in docs:
-                data = doc.to_dict()
-                history.append({
-                    'case_id': data.get('case_id'),
-                    'date': data.get('timestamp'),
-                    'score': data.get('score', 0),
-                    'is_fatal': data.get('is_fatal', False),
-                    'case_type': data.get('case_data', {}).get('case_type', 'Section 138 NI Act'),
-                    'amount': data.get('case_data', {}).get('cheque_amount', 0),
-                    'key_issue': data.get('analysis', {}).get('decisive_verdict', '')[:100]
-                })
-            
-            return jsonify({
-                'success': True,
-                'history': history,
-                'count': len(history)
-            }), 200
-            
-        except Exception as e:
-            logger.error(f"History fetch error: {e}")
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            }), 500
-    
-    @app.route('/api/user/usage/<email>', methods=['GET', 'OPTIONS'])
-    def get_usage_quota(email):
-        """Get user's usage quota"""
-        if request.method == 'OPTIONS':
-            return '', 204
-        
-        if not db:
-            return jsonify({'success': False, 'error': 'Firebase not available'}), 503
-        
-        try:
-            user_ref = db.collection('users').document(email)
-            user_doc = user_ref.get()
-            
-            if user_doc.exists:
-                data = user_doc.to_dict()
-                return jsonify({
-                    'success': True,
-                    'total_analyses': data.get('total_analyses', 0),
-                    'quota_limit': 100,  # Default quota
-                    'remaining': 100 - data.get('total_analyses', 0)
-                }), 200
-            else:
-                return jsonify({
-                    'success': True,
-                    'total_analyses': 0,
-                    'quota_limit': 100,
-                    'remaining': 100
-                }), 200
-                
-        except Exception as e:
-            logger.error(f"Usage fetch error: {e}")
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            }), 500
-    
-    @app.route('/api/health', methods=['GET'])
-    def health_check():
-        """Health check endpoint"""
-        return jsonify({
-            'status': 'healthy',
-            'engine_version': ENGINE_VERSION,
-            'firebase_enabled': db is not None,
-            'enhanced_features': {
-                'case_strength_scoring': CASE_STRENGTH_SCORING,
-                'document_intelligence': DOCUMENT_INTELLIGENCE,
-                'director_liability': DIRECTOR_LIABILITY_ANALYSIS,
-                'payment_disputes': PAYMENT_DISPUTE_SYSTEM,
-                'defence_generator': DEFENCE_GENERATOR,
-                'strategy_engine': STRATEGY_ENGINE,
-                'outcome_prediction': OUTCOME_PREDICTION,
-                'time_cost_analysis': TIME_COST_ANALYSIS,
-                'recovery_intelligence': RECOVERY_INTELLIGENCE,
-                'multi_case_comparison': MULTI_CASE_COMPARISON,
-                'pdf_reports': PDF_REPORT_GENERATION
-            },
-            'timestamp': datetime.now().isoformat()
-        }), 200
-    
-    @app.route('/api/analyze/enhanced', methods=['POST', 'OPTIONS'])
-    def analyze_case_enhanced():
-        """Enhanced analysis endpoint with all new features"""
-        if request.method == 'OPTIONS':
-            return '', 204
-        
-        try:
-            case_data = request.get_json()
-            if not case_data:
-                return jsonify({
-                    'success': False,
-                    'error': 'No case data provided'
-                }), 400
-            
-            # Run enhanced analysis
-            logger.info("Running enhanced analysis...")
-            analysis_result = run_enhanced_analysis(case_data)
-            
-            # Generate case ID
-            if 'case_id' not in analysis_result:
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                analysis_result['case_id'] = f"CASE_{timestamp}"
-            
-            # Save to Firebase if available
-            user_email = case_data.get('user_email')
-            if db and user_email:
-                try:
-                    doc_ref = db.collection('enhanced_analyses').document(analysis_result['case_id'])
-                    doc_ref.set({
-                        'case_id': analysis_result['case_id'],
-                        'user_email': user_email,
-                        'timestamp': firestore.SERVER_TIMESTAMP,
-                        'case_data': case_data,
-                        'analysis': analysis_result,
-                        'score': analysis_result.get('case_strength_score', {}).get('overall_score', 0),
-                        'recovery_probability': analysis_result.get('recovery_intelligence', {}).get('recovery_probability', 0)
-                    })
-                    logger.info(f"Saved enhanced analysis to Firebase: {analysis_result['case_id']}")
-                except Exception as e:
-                    logger.error(f"Firebase save error: {e}")
-            
-            return jsonify({
-                'success': True,
-                'analysis': analysis_result,
-                'engine_version': ENGINE_VERSION,
-                'timestamp': datetime.now().isoformat()
-            }), 200
-            
-        except Exception as e:
-            logger.error(f"Enhanced analysis error: {e}")
-            logger.error(traceback.format_exc())
-            return jsonify({
-                'success': False,
-                'error': str(e),
-                'user_friendly_message': 'Enhanced analysis failed. Please check your input data.'
-            }), 500
-    
-    @app.route('/api/case/compare', methods=['POST', 'OPTIONS'])
-    def compare_cases():
-        """Compare multiple cases"""
-        if request.method == 'OPTIONS':
-            return '', 204
-        
-        try:
-            data = request.get_json()
-            case_ids = data.get('case_ids', [])
-            
-            if not case_ids:
-                return jsonify({
-                    'success': False,
-                    'error': 'No case IDs provided'
-                }), 400
-            
-            comparison = CASE_DB.compare_cases(case_ids)
-            
-            return jsonify({
-                'success': True,
-                'comparison': comparison
-            }), 200
-            
-        except Exception as e:
-            logger.error(f"Case comparison error: {e}")
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            }), 500
-    
-    @app.route('/api/user/dashboard/<email>', methods=['GET', 'OPTIONS'])
-    def get_user_dashboard(email):
-        """Get user dashboard with case statistics"""
-        if request.method == 'OPTIONS':
-            return '', 204
-        
-        try:
-            dashboard = CASE_DB.get_user_dashboard(email)
-            
-            return jsonify({
-                'success': True,
-                'dashboard': dashboard
-            }), 200
-            
-        except Exception as e:
-            logger.error(f"Dashboard error: {e}")
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            }), 500
-    
-    @app.route('/api/feedback', methods=['POST', 'OPTIONS'])
-    def submit_feedback():
-        """Submit feedback for a case analysis"""
-        if request.method == 'OPTIONS':
-            return '', 204
-        
-        try:
-            feedback_data = request.get_json()
-            case_id = feedback_data.get('case_id')
-            
-            if not case_id:
-                return jsonify({
-                    'success': False,
-                    'error': 'Case ID required'
-                }), 400
-            
-            result = FEEDBACK_SYSTEM.capture_feedback(case_id, feedback_data)
-            
-            return jsonify({
-                'success': True,
-                'result': result
-            }), 200
-            
-        except Exception as e:
-            logger.error(f"Feedback submission error: {e}")
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            }), 500
-    
-    @app.route('/api/feedback/patterns', methods=['GET', 'OPTIONS'])
-    def get_feedback_patterns():
-        """Get feedback patterns and improvement suggestions"""
-        if request.method == 'OPTIONS':
-            return '', 204
-        
-        try:
-            patterns = FEEDBACK_SYSTEM.detect_patterns()
-            suggestions = FEEDBACK_SYSTEM.get_improvement_suggestions()
-            
-            return jsonify({
-                'success': True,
-                'patterns': patterns,
-                'suggestions': suggestions
-            }), 200
-            
-        except Exception as e:
-            logger.error(f"Pattern detection error: {e}")
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            }), 500
-    
-    @app.route('/api/case/pdf-report/<case_id>', methods=['GET', 'OPTIONS'])
-    def download_pdf_report(case_id):
-        """Generate and download PDF report for a case"""
-        if request.method == 'OPTIONS':
-            return '', 204
-        
-        try:
-            # Validate case_id
-            if not case_id:
-                return jsonify({
-                    'success': False,
-                    'error': 'Case ID is required'
-                }), 400
-            
-            case = CASE_DB.get_case(case_id)
-            if not case:
-                return jsonify({
-                    'success': False,
-                    'error': 'Case not found'
-                }), 404
-            
-            if not REPORTLAB_AVAILABLE and not FPDF_AVAILABLE:
-                return jsonify({
-                    'success': False,
-                    'error': 'PDF generation not available - installing fpdf library recommended',
-                    'fallback': 'HTML report will be generated instead'
-                }), 503
-            
-            # Ensure output directory exists
-            Config.PDF_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-            
-            pdf_path = generate_pdf_report(
-                case['case_data'],
-                case['analysis'],
-                f"/mnt/user-data/outputs/case_report_{case_id}.pdf"
-            )
-            
-            # Verify PDF was created
-            if not os.path.exists(pdf_path):
-                return jsonify({
-                    'success': False,
-                    'error': 'PDF generation failed - file not created'
-                }), 500
-            
-            return jsonify({
-                'success': True,
-                'pdf_path': pdf_path,
-                'message': 'PDF report generated successfully',
-                'file_size': os.path.getsize(pdf_path)
-            }), 200    
-        except Exception as e:
-            logger.error(f"PDF generation error: {e}", exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': str(e),
-                'message': 'Failed to generate PDF report'
-            }), 500
-    return app
 # ============================================================================
-# FASTAPI APPLICATION - ADD THIS AFTER LINE 24342 (after "return app")
+# FLASK CODE REMOVED - USING ONLY FASTAPI
+# ============================================================================
+# Flask create_app() function has been completely removed to avoid conflicts.
+# All API endpoints are now handled by FastAPI (see below).
+# This eliminates the dual-framework issue.
+# ============================================================================
+
+# ============================================================================
+# FASTAPI APPLICATION - PRODUCTION READY
 # ============================================================================
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -25248,8 +24841,9 @@ async def analyze_case(request: CaseAnalysisRequest):
             details = case_data.pop('case_details')
             case_data.update(details)
         
-        # Run analysis using existing engine
-        analysis_result = run_enhanced_analysis(case_data)
+        # ✅ INTEGRATED: Use final_decision_engine with all advanced systems
+        logger.info("[ENGINE] Using integrated final_decision_engine with advanced systems")
+        analysis_result = final_decision_engine(case_data)
         
         # Generate case ID if not present
         if 'case_id' not in analysis_result:
