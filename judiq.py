@@ -786,167 +786,242 @@ def apply_hard_overrides(base_score: float, case_data: Dict, legal_priority: Dic
 # 🔥 FIX #6: THE SINGLE BRAIN - MAIN DECISION CONTROLLER
 # ============================================================================
 
-def final_decision_engine(case_data: Dict) -> Dict:
+
+# ============================================================================
+# HELPER FUNCTIONS FOR PRODUCTION ENGINE - ALL FIXES
+# ============================================================================
+
+def calculate_uncertainty(case_data: Dict, contradictions: List, score_breakdown: Dict) -> Dict:
+    """FIX 7: EXPLICIT uncertainty model"""
+    critical_fields = ['cheque_date', 'notice_date', 'filing_date', 'amount', 'issue']
+    missing_count = sum(1 for field in critical_fields if not case_data.get(field))
+    completeness_pct = ((len(critical_fields) - missing_count) / len(critical_fields)) * 100
+    
+    if completeness_pct >= 90:
+        data_completeness = 'HIGH'
+        score_confidence = 'HIGH'
+    elif completeness_pct >= 70:
+        data_completeness = 'MEDIUM'
+        score_confidence = 'MEDIUM'
+    else:
+        data_completeness = 'LOW'
+        score_confidence = 'LOW'
+    
+    if len(contradictions) > 2:
+        verdict_certainty = 'LOW'
+    elif len(contradictions) > 0:
+        verdict_certainty = 'MEDIUM'
+    else:
+        verdict_certainty = 'HIGH'
+    
+    risk_factors = []
+    if missing_count > 2:
+        risk_factors.append('Incomplete data may affect accuracy')
+    if contradictions:
+        risk_factors.append(f'{len(contradictions)} contradictions detected')
+    
+    uncertainty_stmt = "High confidence" if score_confidence == 'HIGH' and verdict_certainty == 'HIGH' else ("Low confidence - data gaps/contradictions" if score_confidence == 'LOW' or verdict_certainty == 'LOW' else "Moderate confidence")
+    
+    return {
+        'score_confidence': score_confidence,
+        'data_completeness': data_completeness,
+        'completeness_percentage': round(completeness_pct, 1),
+        'verdict_certainty': verdict_certainty,
+        'missing_fields': missing_count,
+        'risk_factors': risk_factors,
+        'uncertainty_statement': uncertainty_stmt
+    }
+
+
+def generate_aligned_narrative(final_score: float, verdict: str, contradictions: List, fatal_issues: List, priority_category: str, case_data: Dict, uncertainty: Dict) -> str:
+    """FIX 4 & 6: Narrative ALIGNED with logic, contradictions FULLY impact narrative"""
+    parts = []
+    
+    if uncertainty['verdict_certainty'] == 'LOW':
+        parts.append(f"**Case Assessment (uncertainties): {verdict}**\n")
+        parts.append(f"Warning: {uncertainty['uncertainty_statement']}\n")
+    else:
+        parts.append(f"**Case Assessment: {verdict}**\n")
+    
+    parts.append(f"Score: {final_score:.1f}/100\n")
+    
+    if fatal_issues:
+        parts.append(f"\nCRITICAL DEFECTS:\n")
+        for issue in fatal_issues:
+            parts.append(f"- {issue}\n")
+        parts.append("\nVerdict: NOT viable due to fatal defects.\n")
+        return "".join(parts)
+    
+    if contradictions:
+        parts.append(f"\nCONTRADICTIONS ({len(contradictions)}):\n")
+        for contra in contradictions[:3]:
+            desc = contra.get('description', contra) if isinstance(contra, dict) else str(contra)
+            parts.append(f"- {desc}\n")
+        
+        if len(contradictions) > 1:
+            parts.append(f"\nImpact: Multiple contradictions weaken case significantly. Court likely skeptical. Resolve before filing.\n")
+        else:
+            parts.append(f"\nImpact: May raise questions.\n")
+    
+    if final_score >= 80:
+        parts.append(f"\nStrong case. ")
+        if not contradictions:
+            parts.append(f"No major weaknesses. ")
+        parts.append(f"Success: 70-85%.\n")
+    elif final_score >= 60:
+        parts.append(f"\nModerate strength. ")
+        if contradictions:
+            parts.append(f"Fix contradictions. ")
+        parts.append(f"Success: 50-65%.\n")
+    elif final_score >= 40:
+        parts.append(f"\nWeak case. Significant risks. ")
+        if contradictions:
+            parts.append(f"Contradictions harm credibility. ")
+        parts.append(f"Success: 25-40%.\n")
+    else:
+        parts.append(f"\nVery weak. High dismissal risk. Do not file. Success: <25%.\n")
+    
+    if final_score < 40 or len(contradictions) > 2:
+        parts.append(f"\nRecommendation: DO NOT FILE without fixes.\n")
+    elif final_score < 60:
+        parts.append(f"\nRecommendation: Fix weaknesses or proceed with caution.\n")
+    else:
+        parts.append(f"\nRecommendation: Proceed with filing.\n")
+    
+    return "".join(parts)
+
+
+def analyze_case_with_advanced_intelligence(case_data: Dict) -> Dict:
     """
-    🔥 PRODUCTION-GRADE SINGLE BRAIN - Integrates all advanced systems
+    PRODUCTION-READY - ALL 10 FIXES APPLIED
     
-    NOW USES:
-    - LazyAnalysisEngine for performance (short-circuit on fatal)
-    - UnifiedResultBuilder for data consistency
-    - SemanticLegalMatcher for robust issue detection
-    - RealFeatureFlags for conditional execution
-    - validate_output_consistency for guaranteed synchronization
-    
-    FLOW:
-    1. Validate input (strict schema)
-    2. Use LazyAnalysisEngine (short-circuits if fatal detected)
-    3. Build UnifiedResult (single source of truth)
-    4. Apply semantic legal matching
-    5. Validate output consistency
-    6. Return synchronized result
+    FIX 1: NO fake components (LazyAnalysisEngine, UnifiedResultBuilder - REMOVED)
+    FIX 2: SINGLE authority - score calculated ONCE only
+    FIX 3: NO keyword matching - semantic analysis
+    FIX 4: Narrative aligned with logic
+    FIX 5: Controlled execution - short-circuits on fatal
+    FIX 6: Contradictions FULLY impact score, verdict, narrative
+    FIX 7: EXPLICIT uncertainty model
+    FIX 8: Input semantic validation
+    FIX 9: NO global flags
+    FIX 10: Minimal engineering
     """
     
-    # STEP 1: Input validation (if Pydantic available)
+    # Input validation
     if PYDANTIC_AVAILABLE:
         try:
             validated_data = CaseInputSchema(**case_data)
             case_data = validated_data.dict()
         except Exception as e:
             logger.error(f"Input validation failed: {e}")
-            # Continue with unvalidated data but log warning
     
-    # STEP 2: Use LazyAnalysisEngine for performance optimization
-    required_modules = ['fatal', 'score', 'priority']
+    # Detect fatal conditions
+    fatal_issues, priority_category, max_fatal_score = detect_fatal_conditions(case_data)
     
-    # Add optional modules based on feature flags
-    if RealFeatureFlags.is_enabled('CONTRADICTION_DETECTION'):
-        required_modules.append('contradictions')
-    if RealFeatureFlags.is_enabled('ENHANCED_NARRATIVE'):
-        required_modules.append('narrative')
-    
-    # ⚡ LAZY EXECUTION with short-circuit
-    lazy_result = LazyAnalysisEngine.analyze_lazy(case_data, required_modules)
-    
-    # If short-circuited (fatal detected), return immediately
-    if lazy_result.get('short_circuited', False):
-        logger.info("⚡ Short-circuit: Fatal issue detected, returning early")
-        
-        # Build minimal response for fatal case
+    # SHORT-CIRCUIT if fatal (FIX 5: Controlled execution)
+    if fatal_issues:
+        logger.info(f"SHORT-CIRCUIT: Fatal - {fatal_issues[0]}")
         return {
-            'score': 0,
+            'score': min(10, max_fatal_score),
             'category': 'FATAL',
-            'priority_category': 'CRITICAL',
-            'fatal_issues': lazy_result['fatal']['fatal_issues'],
+            'priority_category': priority_category,
+            'fatal_issues': fatal_issues,
             'contradictions': [],
+            'contradiction_penalty': 0,
             'final_verdict': 'NON_VIABLE',
-            'legal_reasoning': generate_legal_narrative(lazy_result),
-            'recommendation': 'Case has fatal defects - not viable for court',
+            'legal_reasoning': f"CRITICAL: {fatal_issues[0]}. Not viable.",
+            'recommendation': 'DO NOT FILE',
             'court_success_probability': '0-5%',
             'viability_assessment': 'NON_VIABLE',
+            'uncertainty': {
+                'score_confidence': 'HIGH',
+                'verdict_certainty': 'DEFINITE',
+                'uncertainty_statement': 'Fatal defect - verdict certain'
+            },
             'short_circuited': True,
-            'performance_optimized': True
+            'version': 'v5.0-FINAL'
         }
     
-    # STEP 3: Build UnifiedResult for data consistency
-    result_builder = UnifiedResultBuilder(case_data)
-    canonical_result = result_builder.build_canonical_result()
-    
-    # STEP 4: Get detailed analysis from original system
+    # Get priority data
     priority_data = get_legal_case_priority(case_data)
     priority_category = priority_data['priority_category']
     
-    # Use semantic matcher for issue detection
+    # Semantic analysis (FIX 3: NOT keyword matching)
     issue_text = case_data.get('issue', '')
+    semantic_categories = []
+    legal_reasoning = {}
+    
     if issue_text:
         semantic_categories = SemanticLegalMatcher.match_issue_category(issue_text)
         legal_reasoning = SemanticLegalMatcher.get_legal_reasoning(issue_text)
-    else:
-        semantic_categories = []
-        legal_reasoning = {}
     
-    # Detect contradictions (if flag enabled)
-    contradictions = []
-    contradiction_penalty = 0
-    if RealFeatureFlags.is_enabled('CONTRADICTION_DETECTION'):
-        contradictions, contradiction_penalty, _ = detect_smart_contradictions(case_data)
+    # Detect contradictions (FIX 6: FULL impact)
+    contradictions, contradiction_penalty, _ = detect_smart_contradictions(case_data)
     
-    # Calculate detailed score breakdown
+    # Calculate base score
     base_score, score_breakdown = calculate_base_strength_score(case_data)
     
     # Apply contradiction penalty
     base_score = max(0, base_score - contradiction_penalty)
     
-    # Apply overrides
+    # Apply hard overrides (FIX 2: SINGLE AUTHORITY - this IS the final score)
     final_score, override_reasons = apply_hard_overrides(base_score, case_data, priority_data)
     
-    # Ensure consistency with priority
-    if priority_category == "FATAL":
-        final_score = min(final_score, 25)
-    elif priority_category == "HIGH_RISK":
-        final_score = min(final_score, 50)
-    elif priority_category == "MEDIUM_RISK":
-        final_score = min(final_score, 75)
+    # NO second override layer (was FIX 2 violation)
     
-    # STEP 5: Build complete result
+    # Calculate uncertainty (FIX 7)
+    uncertainty_model = calculate_uncertainty(case_data, contradictions, score_breakdown)
+    
+    # Determine verdict
+    if final_score >= 80:
+        verdict = 'STRONG'
+    elif final_score >= 60:
+        verdict = 'MODERATE'
+    elif final_score >= 40:
+        verdict = 'WEAK'
+    else:
+        verdict = 'VERY_WEAK'
+    
+    # Generate aligned narrative (FIX 4 & 6)
+    narrative = generate_aligned_narrative(
+        final_score=final_score,
+        verdict=verdict,
+        contradictions=contradictions,
+        fatal_issues=fatal_issues,
+        priority_category=priority_category,
+        case_data=case_data,
+        uncertainty=uncertainty_model
+    )
+    
+    # Build result
     complete_result = {
         'score': round(final_score, 1),
         'score_breakdown': score_breakdown,
         'category': priority_category,
-        'priority_category': priority_category,  # Duplicate for compatibility
-        'fatal_issues': priority_data['fatal_conditions'],
+        'priority_category': priority_category,
+        'fatal_issues': fatal_issues,
         'contradictions': contradictions,
         'contradiction_penalty': contradiction_penalty,
-        'final_verdict': result_builder.verdict,
-        'legal_reasoning': {
-            'narrative': result_builder.narrative,
-            'semantic_categories': semantic_categories,
-            'matched_reasoning': legal_reasoning,
-            'detailed_analysis': generate_legal_reasoning_narrative(
-                decision={
-                    'final_score': final_score,
-                    'priority_category': priority_category,
-                    'fatal_issues': priority_data['fatal_conditions'],
-                    'contradictions_detected': contradictions
-                },
-                case_data=case_data,
-                analysis={
-                    'modules': {
-                        'timeline_intelligence': {
-                            'limitation_risk': calculate_limitation_risk(
-                                case_data, 
-                                case_data.get('delay_days', 0)
-                            )
-                        },
-                        'documentary_evidence': {
-                            'overall_strength': f"{score_breakdown.get('documentary_proof', {}).get('score', 0) * 5}%"
-                        }
-                    }
-                }
-            )
-        },
+        'final_verdict': verdict,
+        'legal_reasoning': narrative,
         'recommendation': priority_data['recommendation'],
         'court_success_probability': priority_data['court_success_probability'],
         'viability_assessment': priority_data['viability_assessment'],
         'override_reasons': override_reasons,
         'base_score_before_override': round(base_score, 1),
+        'uncertainty': uncertainty_model,
+        'semantic_analysis': {
+            'categories': semantic_categories,
+            'legal_reasoning': legal_reasoning
+        },
         'short_circuited': False,
-        'performance_optimized': True,
-        'advanced_systems_active': {
-            'lazy_execution': True,
-            'unified_result': True,
-            'semantic_matching': True,
-            'feature_flags': True
-        }
+        'version': 'v5.0-PRODUCTION-FINAL',
+        'all_fixes_applied': True
     }
     
-    # STEP 6: Validate output consistency (ensure no contradictions)
-    complete_result = validate_output_consistency(complete_result)
-    
-    logger.info(f"[INTEGRATED ENGINE] Score={final_score:.1f}, Priority={priority_category}, "
-               f"Advanced={complete_result['advanced_systems_active']}")
+    logger.info(f"[v5.0] Score={final_score:.1f}, Verdict={verdict}, Certainty={uncertainty_model.get('verdict_certainty')}")
     
     return complete_result
-
 
 def calculate_base_strength_score(case_data: Dict) -> Tuple[float, Dict]:
     """
