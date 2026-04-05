@@ -33213,8 +33213,7 @@ class CentralCaseState:
             'is_viable': self.is_viable,
             'filing_recommended': self.filing_recommended,
             'defence_risk': self.defence_risk,  # ✅ NEW v11
-            'top_defences': [d.get('defence', '') for d in self.top_3_defences]  # ✅ NEW v11
-        }
+            'top_defences': [d.get('defence', '') for d in self.top_3_defences],  # ✅ NEW v11
             'recommendation': self.get_recommendation(),
             'draft_advisability': self.get_draft_advisability(),
             'confidence_level': self.get_confidence_level()
