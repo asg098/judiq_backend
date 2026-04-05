@@ -31945,21 +31945,26 @@ def judiq_complete_analysis(case_data: Dict, case_id: str = None,
           to avoid shadowing the module-level generate_draft() function.
     """
     
-    # Step 1: Run core analysis via v6 engine then promote through production wrapper
+    # Step 1: Run core analysis via production wrapper
     analysis_result = analyze_case_production(case_data, case_id)
-    
+
     # Step 2: Build structured output
     structured_output = build_structured_output(analysis_result, case_data)
-    
-    # Step 3: Validate consistency
+
+    # Step 3: Generate legal reasoning narrative
+    # generate_legal_reasoning_narrative expects (decision, case_data, analysis)
+    # analysis_result doubles as both decision and analysis here
+    narrative = generate_legal_reasoning_narrative(analysis_result, case_data, analysis_result)
+
+    # Step 4: Validate consistency
     consistency_check = validate_consistency(structured_output)
-    
-    # Step 4: Generate report (if requested)
+
+    # Step 5: Generate report (if requested)
     report_text = None
     if generate_report:
         report_text = generate_7_page_report(structured_output, case_data)
-    
-    # Step 5: Auto-select and generate draft
+
+    # Step 6: Auto-select and generate draft
     draft_text = None
     selected_draft_type = None
     if generate_draft_doc:
@@ -31967,21 +31972,21 @@ def judiq_complete_analysis(case_data: Dict, case_id: str = None,
             selected_draft_type = get_default_draft_type(analysis_result, case_data)
         else:
             selected_draft_type = draft_type
-        
+
         # Use standalone generate_draft wrapper (not DraftGenerator directly)
         draft_text = generate_draft(selected_draft_type, case_data, analysis_result)
-    
-    # Final combined output
+
+    # Final combined output — spec-compliant return shape
     return {
-        'analysis': structured_output['analysis'],
+        'analysis': analysis_result,
         'summary': structured_output['summary'],
         'next_steps': structured_output['next_steps'],
         'suggestions': structured_output['suggestions'],
+        'draft_type': selected_draft_type,
+        'draft': draft_text,
+        'narrative': narrative,
+        # Extended fields retained for backward compatibility
         'report': report_text,
-        'draft': {
-            'type': selected_draft_type,
-            'content': draft_text
-        },
         'consistency_validation': consistency_check,
         'metadata': {
             'version': 'v7.0-COMPLETE-PRODUCT',
@@ -31990,8 +31995,9 @@ def judiq_complete_analysis(case_data: Dict, case_id: str = None,
             'features': {
                 'structured_output': True,
                 '7_page_report': generate_report,
-                'draft_generation': generate_draft,
-                'consistency_check': True
+                'draft_generation': generate_draft_doc,
+                'consistency_check': True,
+                'narrative': True,
             }
         }
     }
