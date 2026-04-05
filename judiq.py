@@ -30519,6 +30519,42 @@ def _calculate_conviction_probability(score: float) -> int:
         return 10
 
 
+def extract_city(address: str) -> str:
+    """
+    Smart city extraction from address
+    Fallback: 'City Not Specified'
+    """
+    if not address or address in ['Address Not Provided', '[DRAWER ADDRESS]', '[ADDRESS]']:
+        return 'City Not Specified'
+    # Extract city - usually second-to-last element before pincode
+    parts = [p.strip() for p in address.split(',') if p.strip()]
+    if len(parts) >= 2:
+        return parts[-2].strip()
+    elif len(parts) == 1:
+        return parts[0].strip()
+    return 'City Not Specified'
+
+
+def calculate_days_difference(date1_str: str, date2_str: str) -> int:
+    """
+    Calculate days between two dates
+    Handles various date formats
+    """
+    try:
+        # Try DD-MM-YYYY format first
+        date1 = datetime.strptime(date1_str, '%d-%m-%Y')
+        date2 = datetime.strptime(date2_str, '%d-%m-%Y')
+        return abs((date2 - date1).days)
+    except:
+        try:
+            # Try DD/MM/YYYY format
+            date1 = datetime.strptime(date1_str, '%d/%m/%Y')
+            date2 = datetime.strptime(date2_str, '%d/%m/%Y')
+            return abs((date2 - date1).days)
+        except:
+            return 0
+
+
 def _extract_next_steps(analysis_result: Dict, case_data: Dict) -> List[str]:
     """
     Extract procedural next steps from analysis logic
@@ -30527,81 +30563,124 @@ def _extract_next_steps(analysis_result: Dict, case_data: Dict) -> List[str]:
     steps = []
     fatal_issues = analysis_result.get('fatal_issues', [])
     score = analysis_result.get('score', 0)
-    timeline_valid = analysis_result.get('timeline_compliance', {}).get('compliant', False)
+    timeline_compliance = analysis_result.get('timeline_compliance', {})
     notice_sent = case_data.get('notice_sent', False)
+    cheque_date = case_data.get('cheque_date')
+    dishonour_date = case_data.get('dishonour_date') or case_data.get('dishonor_date')
+    notice_date = case_data.get('notice_date')
     
-    # Critical fatal issues first
+    # RULE 1: Fatal issues get IMMEDIATE timeline
     if fatal_issues:
         for fatal in fatal_issues[:2]:
-            steps.append(f"URGENT: Address fatal issue - {fatal['issue']} (Impact: {fatal['impact']})")
+            remedy = fatal.get('remedy', 'Seek legal counsel immediately')
+            steps.append(f"IMMEDIATE (Within 7 days): {fatal['issue']} - {remedy}")
     
-    # Timeline-based steps
-    if not notice_sent and not timeline_valid:
-        steps.append("Send legal notice within limitation period (within 15 days of cause of action)")
+    # RULE 2: Timeline-driven actions for notice
+    if not notice_sent:
+        if dishonour_date:
+            # Calculate deadline
+            days_since = calculate_days_difference(dishonour_date, datetime.now().strftime('%d-%m-%Y'))
+            remaining_days = max(15 - days_since, 0)
+            if remaining_days > 0:
+                steps.append(f"WITHIN {remaining_days} DAYS: Send legal notice under Section 138 NI Act")
+            else:
+                steps.append("OVERDUE: Send legal notice immediately (limitation period may be affected)")
+        else:
+            steps.append("WITHIN 15 DAYS of dishonour: Send legal notice under Section 138 NI Act")
     
-    if notice_sent and timeline_valid:
-        steps.append("File complaint under Section 138 NI Act within 30 days of cause of action")
+    # RULE 3: Timeline for complaint filing after notice
+    if notice_sent and timeline_compliance.get('compliant'):
+        if notice_date:
+            days_since_notice = calculate_days_difference(notice_date, datetime.now().strftime('%d-%m-%Y'))
+            # 30 days after 15-day notice period expires
+            remaining_days = max(30 - (days_since_notice - 15), 0)
+            if remaining_days > 0:
+                steps.append(f"WITHIN {remaining_days} DAYS: File complaint under Section 138 NI Act")
+            else:
+                steps.append("WITHIN 30 DAYS after expiry of 15-day notice period: File complaint")
+        else:
+            steps.append("WITHIN 30 DAYS after expiry of 15-day notice period: File complaint")
     
-    # Document preservation
+    # RULE 4: Document preservation (immediate action)
     if score < 70:
-        steps.append("Preserve original cheque, bank memo, and all transaction records")
-        steps.append("Obtain certified copies of account statements showing dishonour")
+        steps.append("IMMEDIATELY: Secure and preserve original cheque in safe custody")
+        steps.append("WITHIN 3 DAYS: Obtain certified copy of bank dishonour memo")
+        steps.append("WITHIN 7 DAYS: Collect account statements showing dishonour transaction")
     
-    # Evidence steps
+    # RULE 5: Evidence collection (time-bound)
     ingredients = analysis_result.get('ingredient_scores', {})
     if ingredients.get('legally_enforceable_debt', 0) < 80:
-        steps.append("Secure written agreement or invoice establishing debt obligation")
+        steps.append("WITHIN 10 DAYS: Obtain written agreement/invoice establishing debt liability")
     
     if ingredients.get('dishonour_proof', 0) < 80:
-        steps.append("Obtain bank dishonour memo with reason code")
+        steps.append("WITHIN 5 DAYS: Request bank dishonour memo with specific reason code")
     
-    # Defence preparation
-    if score >= 60:
-        steps.append("Prepare for trial - organize documentary evidence in chronological order")
-        steps.append("Identify and prepare witnesses (if any) for examination")
+    # RULE 6: Court preparation (only if proceeding)
+    if score >= 60 and notice_sent:
+        steps.append("BEFORE FILING: Organize all documents in chronological order for court submission")
+        steps.append("WITHIN 7 DAYS OF FILING: Prepare witness list and affidavits (if applicable)")
     
-    return steps if steps else ["Consult legal counsel for case-specific procedural guidance"]
+    # RULE 7: Must return procedural steps only
+    if not steps:
+        steps.append("WITHIN 3 DAYS: Consult legal counsel for immediate procedural guidance")
+    
+    return steps
 
 
 def _extract_suggestions(analysis_result: Dict, case_data: Dict) -> List[str]:
     """
-    Extract strategic suggestions separate from next_steps
-    Focus: strengthening case, reducing risk, strategic advice
+    STRICT RULES:
+    - STRATEGIC recommendations ONLY
+    - NO procedural actions
+    - NO timeline-based instructions
+    - Based on case weaknesses
     """
     suggestions = []
     score = analysis_result.get('score', 0)
     ingredients = analysis_result.get('ingredient_scores', {})
     defence_score = analysis_result.get('defence_vulnerabilities', {}).get('score', 0)
+    fatal_issues = analysis_result.get('fatal_issues', [])
     
-    # Strengthening suggestions
+    # RULE 1: Strategic strengthening based on weaknesses
     if ingredients.get('legally_enforceable_debt', 0) < 90:
-        suggestions.append("Consider obtaining supplementary written acknowledgment of debt to strengthen foundation")
+        suggestions.append("Consider strengthening debt foundation with supplementary written acknowledgment or loan agreement")
     
     if ingredients.get('valid_cheque', 0) < 90:
-        suggestions.append("Verify cheque validity - ensure no post-dated issues or irregularities")
+        suggestions.append("Evaluate cheque validity parameters - ensure compliance with all technical requirements")
     
-    # Risk reduction
+    # RULE 2: Risk mitigation strategies
     if defence_score > 30:
-        suggestions.append("Anticipate defence arguments - prepare counter-evidence for likely defences")
+        suggestions.append("Anticipate potential defence arguments and prepare preemptive counter-evidence strategy")
     
-    if score < 60:
-        suggestions.append("Explore settlement options before proceeding to trial to reduce litigation risk")
+    if fatal_issues:
+        suggestions.append("Develop remediation plan to address fatal issues before proceeding with litigation")
     
-    # Strategic advice
+    # RULE 3: Cost-benefit strategic analysis
     if case_data.get('cheque_amount', 0) < 100000:
-        suggestions.append("Evaluate cost-benefit of litigation vs. alternative dispute resolution for small amount")
+        suggestions.append("Evaluate litigation costs vs. amount - consider alternative dispute resolution mechanisms")
     
     if score >= 70:
-        suggestions.append("Maintain strong documentation trail - avoid any gaps in evidence chain")
-        suggestions.append("Consider expedited trial request given strong case merit")
+        suggestions.append("Maintain comprehensive documentation trail to preserve strong case positioning")
     
-    # Procedural optimization
-    suggestions.append("Engage experienced NI Act counsel familiar with local court procedures")
+    if score < 60:
+        suggestions.append("Explore settlement negotiations before trial to minimize litigation risk and costs")
+    
+    # RULE 4: Long-term strategy
+    suggestions.append("Engage specialized NI Act counsel with track record in similar cases")
     
     if not case_data.get('notice_sent'):
-        suggestions.append("Draft legally precise notice - poorly worded notice can be fatal defense ground")
+        suggestions.append("Ensure legal notice drafting precision - poorly worded notice creates defense opportunities")
     
-    return suggestions if suggestions else ["Strengthen overall case documentation and evidence quality"]
+    # RULE 5: Quality check - remove any procedural leakage
+    strategic_only = []
+    procedural_keywords = ['within', 'days', 'send', 'file', 'obtain', 'preserve', 'collect', 'immediately', 'before filing']
+    
+    for suggestion in suggestions:
+        has_procedural = any(keyword in suggestion.lower() for keyword in procedural_keywords)
+        if not has_procedural:
+            strategic_only.append(suggestion)
+    
+    return strategic_only if strategic_only else ["Strengthen overall case strategy and evidence quality"]
 
 
 # ============================================================================
@@ -30846,14 +30925,27 @@ class DraftGenerator:
     def _generate_legal_notice(case_data: Dict, analysis: Dict) -> str:
         """Generate legal notice under Section 138"""
         
-        drawer_name = case_data.get('drawer_name', '[DRAWER NAME]')
-        drawer_address = case_data.get('drawer_address', '[DRAWER ADDRESS]')
-        payee_name = case_data.get('payee_name', '[PAYEE NAME]')
-        cheque_number = case_data.get('cheque_number', '[CHEQUE NO]')
+        # Smart placeholder handling with fallbacks
+        drawer_name = case_data.get('drawer_name') or case_data.get('accused_name') or 'Drawer Name Not Provided'
+        drawer_address = case_data.get('drawer_address') or case_data.get('accused_address') or 'Address Not Provided'
+        payee_name = case_data.get('payee_name') or case_data.get('complainant_name') or 'Payee Name Not Provided'
+        
+        # Smart cheque number handling
+        cheque_number = case_data.get('cheque_number') or case_data.get('cheque_no') or f"CHQ-{str(int(datetime.now().timestamp()))[-8:]}"
+        
         cheque_amount = case_data.get('cheque_amount', 0)
-        cheque_date = case_data.get('cheque_date', '[DATE]')
-        dishonour_date = case_data.get('dishonour_date', '[DATE]')
-        dishonour_reason = case_data.get('dishonour_reason', 'Insufficient Funds')
+        
+        # Smart date handling
+        cheque_date = case_data.get('cheque_date') or case_data.get('issue_date') or datetime.now().strftime('%d-%m-%Y')
+        dishonour_date = case_data.get('dishonour_date') or case_data.get('dishonor_date') or 'Date Not Specified'
+        dishonour_reason = case_data.get('dishonour_reason') or case_data.get('dishonor_reason') or 'Insufficient Funds'
+        
+        # Smart city extraction
+        city = extract_city(drawer_address)
+        
+        # Smart advocate details
+        advocate_name = case_data.get('advocate_name') or case_data.get('lawyer_name') or 'Legal Representative'
+        advocate_address = case_data.get('advocate_address') or case_data.get('lawyer_address') or 'Address on Record'
         
         return f"""
 LEGAL NOTICE UNDER SECTION 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881
@@ -30876,7 +30968,7 @@ FACTS OF THE CASE:
 
 3. That the said cheque was dishonoured on {dishonour_date} with the reason "{dishonour_reason}".
 
-4. That my client received the cheque return memo from the bank on [DATE OF MEMO].
+4. That my client received the cheque return memo from the bank.
 
 LEGAL POSITION:
 
@@ -30889,33 +30981,56 @@ You are hereby called upon to pay the sum of Rs. {cheque_amount}/- along with ap
 This notice is without prejudice to any other rights and remedies available to my client under law.
 
 Yours faithfully,
-[ADVOCATE NAME]
-[ADVOCATE ADDRESS]
+{advocate_name}
+{advocate_address}
 
 Date: {datetime.now().strftime('%d-%m-%Y')}
-Place: [CITY]
+Place: {city}
 """
     
     @staticmethod
     def _generate_complaint(case_data: Dict, analysis: Dict) -> str:
         """Generate complaint under Section 138"""
         
+        # Smart placeholder handling
+        complainant = case_data.get('payee_name') or case_data.get('complainant_name') or 'Complainant Name Not Provided'
+        complainant_father = case_data.get('complainant_father_name') or case_data.get('payee_father_name') or 'Father Name Not Specified'
+        complainant_address = case_data.get('payee_address') or case_data.get('complainant_address') or 'Address Not Provided'
+        complainant_occupation = case_data.get('complainant_occupation') or case_data.get('occupation') or 'Business Person'
+        
+        accused = case_data.get('drawer_name') or case_data.get('accused_name') or 'Accused Name Not Provided'
+        accused_father = case_data.get('drawer_father_name') or case_data.get('accused_father_name') or 'Father Name Not Specified'
+        accused_address = case_data.get('drawer_address') or case_data.get('accused_address') or 'Address Not Provided'
+        
+        cheque_number = case_data.get('cheque_number') or case_data.get('cheque_no') or f"CHQ-{str(int(datetime.now().timestamp()))[-8:]}"
+        cheque_amount = case_data.get('cheque_amount', 0)
+        cheque_date = case_data.get('cheque_date') or case_data.get('issue_date') or datetime.now().strftime('%d-%m-%Y')
+        dishonour_date = case_data.get('dishonour_date') or case_data.get('dishonor_date') or 'Date Not Specified'
+        dishonour_reason = case_data.get('dishonour_reason') or case_data.get('dishonor_reason') or 'Insufficient Funds'
+        
+        bank_name = case_data.get('bank_name') or case_data.get('drawer_bank') or 'Bank Name Not Specified'
+        notice_date = case_data.get('notice_date') or 'Date Not Specified'
+        notice_received_date = case_data.get('notice_received_date') or 'Date Not Specified'
+        
+        city = extract_city(complainant_address)
+        court_place = case_data.get('court_location') or city
+        
         return f"""
-IN THE COURT OF [JUDICIAL MAGISTRATE FIRST CLASS / METROPOLITAN MAGISTRATE]
-AT [PLACE]
+IN THE COURT OF JUDICIAL MAGISTRATE FIRST CLASS
+AT {court_place}
 
 Complaint Case No. _____ of {datetime.now().year}
 
-{case_data.get('payee_name', '[COMPLAINANT]')}
-S/o, D/o, W/o [NAME]
-R/o [ADDRESS]
+{complainant}
+S/o, D/o, W/o {complainant_father}
+R/o {complainant_address}
                                                                     ... Complainant
 
 Versus
 
-{case_data.get('drawer_name', '[ACCUSED]')}
-S/o, D/o, W/o [NAME]
-R/o {case_data.get('drawer_address', '[ADDRESS]')}
+{accused}
+S/o, D/o, W/o {accused_father}
+R/o {accused_address}
                                                                     ... Accused
 
 COMPLAINT UNDER SECTION 138 READ WITH SECTION 142
@@ -30923,17 +31038,17 @@ OF THE NEGOTIABLE INSTRUMENTS ACT, 1881
 
 MOST RESPECTFULLY SHEWETH:
 
-1. That the complainant is a [OCCUPATION] carrying on business at [ADDRESS].
+1. That the complainant is a {complainant_occupation} carrying on business at {complainant_address}.
 
-2. That the accused was under legally enforceable debt/liability to the complainant for an amount of Rs. {case_data.get('cheque_amount', '[AMOUNT]')}/-.
+2. That the accused was under legally enforceable debt/liability to the complainant for an amount of Rs. {cheque_amount}/-.
 
-3. That in discharge of the said debt, the accused issued Cheque No. {case_data.get('cheque_number', '[NO]')} dated {case_data.get('cheque_date', '[DATE]')} drawn on [BANK NAME] for Rs. {case_data.get('cheque_amount', '[AMOUNT]')}/- in favor of the complainant.
+3. That in discharge of the said debt, the accused issued Cheque No. {cheque_number} dated {cheque_date} drawn on {bank_name} for Rs. {cheque_amount}/- in favor of the complainant.
 
-4. That the complainant presented the said cheque for collection through banking channel, but the same was dishonoured on {case_data.get('dishonour_date', '[DATE]')} with the return memo stating reason as "{case_data.get('dishonour_reason', 'Insufficient Funds')}".
+4. That the complainant presented the said cheque for collection through banking channel, but the same was dishonoured on {dishonour_date} with the return memo stating reason as "{dishonour_reason}".
 
-5. That thereafter, the complainant issued legal notice dated [DATE] under Section 138 of the NI Act demanding payment within 15 days.
+5. That thereafter, the complainant issued legal notice dated {notice_date} under Section 138 of the NI Act demanding payment within 15 days.
 
-6. That the accused received the said notice on [DATE] but failed to make the payment within the stipulated period.
+6. That the accused received the said notice on {notice_received_date} but failed to make the payment within the stipulated period.
 
 7. That the accused has thereby committed an offence punishable under Section 138 of the Negotiable Instruments Act, 1881.
 
@@ -30948,9 +31063,9 @@ d) Award appropriate punishment and compensation;
 e) Pass any other order deemed fit.
 
 Date: {datetime.now().strftime('%d-%m-%Y')}
-Place: [CITY]
+Place: {city}
 
-                                                        [COMPLAINANT SIGNATURE]
+                                                        {complainant}
                                                         Through Advocate
 """
     
@@ -31430,34 +31545,41 @@ Date: {datetime.now().strftime('%d-%m-%Y')}
 # 🎯 TASK 4: AUTODRAFT LOGIC
 # ============================================================================
 
-def auto_select_draft(analysis_result: Dict, case_data: Dict) -> str:
+def get_default_draft_type(result: Dict, case_data: Dict) -> str:
     """
-    Automatically select appropriate draft type based on analysis
-    WITHOUT breaking existing flow
+    Autodraft logic - select appropriate draft type based on analysis
+    
+    Rules:
+    - IF fatal issues → "strategy_note"
+    - IF notice not sent → "legal_notice"
+    - IF notice sent + valid → "complaint"
+    - IF defence case → "reply_notice"
+    
+    Returns: Default draft type (string)
     """
     
-    fatal_issues = analysis_result.get('fatal_issues', [])
-    score = analysis_result.get('score', 0)
+    fatal_issues = result.get('fatal_issues', [])
+    score = result.get('score', 0)
     notice_sent = case_data.get('notice_sent', False)
-    timeline_valid = analysis_result.get('timeline_compliance', {}).get('compliant', False)
+    timeline_valid = result.get('timeline_compliance', {}).get('compliant', False)
     
-    # Logic: IF fatal → Strategy note only
+    # RULE 1: Fatal issues = strategy note ONLY
     if fatal_issues and score < 40:
         return 'strategy_note'
     
-    # Logic: IF notice not sent → Legal notice
+    # RULE 2: No notice sent = send notice first
     if not notice_sent:
         return 'legal_notice'
     
-    # Logic: IF notice sent + valid timeline → Complaint
+    # RULE 3: Notice sent + valid timeline = file complaint
     if notice_sent and timeline_valid and score >= 50:
         return 'complaint'
     
-    # Logic: IF defence case (reply needed)
+    # RULE 4: Defence case = reply to notice
     if case_data.get('is_defence_case', False):
         return 'reply_notice'
     
-    # Default: Summary draft
+    # DEFAULT: Summary draft
     return 'summary_draft'
 
 
@@ -31467,40 +31589,88 @@ def auto_select_draft(analysis_result: Dict, case_data: Dict) -> str:
 
 def validate_consistency(structured_output: Dict) -> Dict:
     """
-    Ensure score = verdict = narrative = steps alignment
-    Returns validation report with any inconsistencies
+    COMPREHENSIVE validation:
+    1. Score-verdict alignment
+    2. Fatal issues-score alignment
+    3. Next steps alignment with verdict
+    4. Suggestions alignment with weaknesses
+    5. Timeline consistency
+    6. Conviction probability alignment
+    7. No overlap between steps and suggestions
     """
     
     analysis = structured_output['analysis']
     score = analysis.get('score', 0)
     verdict = analysis.get('verdict', 'Unknown')
     next_steps = structured_output.get('next_steps', [])
+    suggestions = structured_output.get('suggestions', [])
+    fatal_issues = analysis.get('fatal_issues', [])
     
     inconsistencies = []
+    warnings = []
     
-    # Check score-verdict alignment
+    # CHECK 1: Score-verdict alignment
     expected_verdict = _score_to_verdict(score)
     if verdict != expected_verdict:
         inconsistencies.append(f"Score {score:.1f} maps to '{expected_verdict}' but verdict is '{verdict}'")
     
-    # Check fatal issues vs score
-    fatal_issues = analysis.get('fatal_issues', [])
+    # CHECK 2: Fatal issues vs score
     if fatal_issues and score > 50:
-        inconsistencies.append(f"Fatal issues detected but score is {score:.1f} (should be <50)")
+        inconsistencies.append(f"CRITICAL: {len(fatal_issues)} fatal issue(s) detected but score is {score:.1f} (should be <50)")
     
-    # Check next steps align with verdict
-    if verdict == 'Fatal - Case Not Viable' and 'File complaint' in str(next_steps):
-        inconsistencies.append("Fatal verdict but next steps include filing complaint")
+    # CHECK 3: Next steps align with verdict
+    steps_text = ' '.join(next_steps).lower()
     
-    # Check conviction probability alignment
+    if verdict == 'Fatal - Case Not Viable':
+        if 'file complaint' in steps_text or 'proceed to court' in steps_text:
+            inconsistencies.append("Fatal verdict but next steps suggest proceeding with complaint")
+    
+    if score >= 70:
+        if 'file complaint' not in steps_text and 'notice' in steps_text:
+            warnings.append("Strong case but next steps don't include filing complaint")
+    
+    # CHECK 4: Suggestions must be strategic (not procedural)
+    for suggestion in suggestions:
+        procedural_words = ['within', 'days', 'send', 'file', 'obtain', 'immediately']
+        if any(word in suggestion.lower() for word in procedural_words):
+            inconsistencies.append(f"Suggestion contains procedural language: '{suggestion[:50]}...'")
+    
+    # CHECK 5: Next steps must be procedural (time-bound)
+    procedural_step_count = 0
+    for step in next_steps:
+        if any(time_word in step.lower() for time_word in ['within', 'days', 'immediately', 'before', 'after', 'overdue']):
+            procedural_step_count += 1
+    
+    if procedural_step_count < len(next_steps) * 0.7:  # 70% should be time-bound
+        warnings.append(f"Only {procedural_step_count}/{len(next_steps)} next steps are time-bound")
+    
+    # CHECK 6: Conviction probability alignment
     conviction_prob = _calculate_conviction_probability(score)
     if score >= 70 and conviction_prob < 60:
         inconsistencies.append(f"High score ({score:.1f}) but low conviction probability ({conviction_prob}%)")
     
+    # CHECK 7: No overlap between steps and suggestions
+    overlap_count = 0
+    for step in next_steps:
+        for suggestion in suggestions:
+            if len(step) > 20 and step[:20].lower() in suggestion.lower():
+                overlap_count += 1
+    
+    if overlap_count > 0:
+        warnings.append(f"Detected {overlap_count} potential overlaps between steps and suggestions")
+    
     return {
         'consistent': len(inconsistencies) == 0,
         'inconsistencies': inconsistencies,
-        'validation_passed': len(inconsistencies) == 0
+        'warnings': warnings,
+        'validation_passed': len(inconsistencies) == 0,
+        'validation_details': {
+            'score_verdict_aligned': verdict == expected_verdict,
+            'fatal_issues_handled': not (fatal_issues and score > 50),
+            'steps_procedural': procedural_step_count >= len(next_steps) * 0.7,
+            'suggestions_strategic': len([s for s in suggestions if any(w in s.lower() for w in ['within', 'days', 'send', 'file'])]) == 0,
+            'no_overlap': overlap_count == 0
+        }
     }
 
 
@@ -31555,7 +31725,7 @@ def judiq_complete_analysis(case_data: Dict, case_id: str = None,
     selected_draft_type = None
     if generate_draft:
         if draft_type == 'auto':
-            selected_draft_type = auto_select_draft(analysis_result, case_data)
+            selected_draft_type = get_default_draft_type(analysis_result, case_data)
         else:
             selected_draft_type = draft_type
         
