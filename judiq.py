@@ -27066,50 +27066,8 @@ def compute_unified_timeline(case_data: Dict[str, Any]) -> Dict[str, Any]:
             'gaps_identified': ['Timeline analysis failed']
         }
 
-def perform_comprehensive_analysis(case_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Perform comprehensive case analysis using unified decision engine
-    
-    This wraps final_decision_engine and adds module structure
-    """
-    
-    try:
-        # Use the proven final_decision_engine
-        decision = perform_comprehensive_analysis(case_data)
-        
-        # Wrap in module structure for backward compatibility
-        return {
-            'modules': {
-                'risk_assessment': {
-                    'final_score': decision.get('score', 0),
-                    'category_scores': decision.get('score_breakdown', {}),
-                    'fatal_reason': '; '.join(decision.get('fatal_issues', [])) if decision.get('fatal_issues') else None
-                },
-                'timeline_intelligence': compute_unified_timeline(case_data),
-                'ingredient_compliance': {
-                    'overall_compliance': decision.get('score', 0)
-                },
-                'documentary_strength': {
-                    'overall_strength': decision.get('score', 0) * 0.8
-                }
-            },
-            '_result': decision,
-            'decision_trace': [
-                'Input validated',
-                'Timeline analyzed',
-                'Risk assessed',
-                f'Priority: {decision.get("category")}',
-                f'Score: {decision.get("score")}'
-            ]
-        }
-        
-    except Exception as e:
-        logger.error(f"Comprehensive analysis error: {e}", exc_info=True)
-        return {
-            'error': True,
-            'error_message': str(e),
-            'modules': {}
-        }
+# REMOVED: Duplicate perform_comprehensive_analysis that caused circular reference
+# The original function at line 16127 is the correct implementation
 
 def generate_pdf_report(case_data: Dict[str, Any], analysis: Dict[str, Any], 
                        output_path: str = None) -> Optional[str]:
