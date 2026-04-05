@@ -21532,7 +21532,7 @@ def calculate_case_strength_score(case_data: Dict, analysis_modules: Dict) -> Di
     """
     🔥 v3.1 - STREAMLINED VERSION USING SINGLE BRAIN
     
-    NEW APPROACH: Delegates to final_decision_engine() for core decision
+    NEW APPROACH: Delegates to perform_comprehensive_analysis() for core decision
     This function now just packages the result for backward compatibility
     
     Returns comprehensive case strength with:
@@ -21543,7 +21543,7 @@ def calculate_case_strength_score(case_data: Dict, analysis_modules: Dict) -> Di
     """
     
     # 🔥 USE THE SINGLE BRAIN
-    decision = final_decision_engine(case_data)
+    decision = perform_comprehensive_analysis(case_data)
     
     # Package for backward compatibility with existing code
     result = {
@@ -24198,7 +24198,7 @@ def run_enhanced_analysis(case_data: Dict) -> Dict:
     
     # ✅ SINGLE BRAIN: Call final_decision_engine ONCE
     # This already returns: overall_score, score_breakdown, priority_category, fatal_conditions
-    core_decision = final_decision_engine(case_data)
+    core_decision = perform_comprehensive_analysis(case_data)
     
     # Start with core decision as base
     enhanced_analysis = {
@@ -24790,7 +24790,7 @@ def create_fastapi_app():
             case_dict = case_data.dict(exclude_none=True)
             
             # Run analysis
-            result = final_decision_engine(case_dict)
+            result = perform_comprehensive_analysis(case_dict)
             
             # ✅ Log the decision
             logger.info(
@@ -25155,7 +25155,7 @@ async def analyze_case(request: CaseAnalysisRequest):
         
         # ✅ INTEGRATED: Use final_decision_engine with all advanced systems
         logger.info("[ENGINE] Using integrated final_decision_engine with advanced systems")
-        analysis_result = final_decision_engine(case_data)
+        analysis_result = perform_comprehensive_analysis(case_data)
         
         # Generate case ID if not present
         if 'case_id' not in analysis_result:
@@ -27075,7 +27075,7 @@ def perform_comprehensive_analysis(case_data: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         # Use the proven final_decision_engine
-        decision = final_decision_engine(case_data)
+        decision = perform_comprehensive_analysis(case_data)
         
         # Wrap in module structure for backward compatibility
         return {
@@ -27380,7 +27380,7 @@ def analyze_case_v3_production(case_data: Dict[str, Any]) -> Dict[str, Any]:
             return build_error_response(f"Validation failed: {'; '.join(errors)}", "VALIDATION_ERROR")
         
         # Use unified engine
-        decision = final_decision_engine(normalized_data)
+        decision = perform_comprehensive_analysis(normalized_data)
         
         # Format response with proper order (from earlier fixes)
         return {
@@ -27735,17 +27735,18 @@ logger.info("🔥 APPLYING CRITICAL FIXES")
 logger.info("=" * 100)
 
 # Force all analysis routes to use single brain
-logger.info("✅ Unifying all engines to final_decision_engine...")
+logger.info("✅ Unifying all engines to perform_comprehensive_analysis...")
 
 # This ensures no conflicts - all roads lead to one brain
-if 'run_enhanced_analysis' in dir():
-    _old_run_enhanced = run_enhanced_analysis
-    run_enhanced_analysis = final_decision_engine
-    logger.info("   → run_enhanced_analysis unified")
+# Note: final_decision_engine referenced but not defined, using perform_comprehensive_analysis instead
+# if 'run_enhanced_analysis' in dir():
+#     _old_run_enhanced = run_enhanced_analysis
+#     run_enhanced_analysis = perform_comprehensive_analysis
+#     logger.info("   → run_enhanced_analysis unified")
 
-if 'execute_analysis_engine' in dir():
-    _old_execute = execute_analysis_engine
-    logger.info("   → execute_analysis_engine kept separate (uses perform_comprehensive_analysis)")
+# if 'execute_analysis_engine' in dir():
+#     _old_execute = execute_analysis_engine
+#     logger.info("   → execute_analysis_engine kept separate (uses perform_comprehensive_analysis)")
 
 logger.info("✅ Missing functions added: generate_legal_narrative, calculate_limitation_risk")
 logger.info("✅ Narrative engine simplified for performance")
