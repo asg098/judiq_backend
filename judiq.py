@@ -30451,7 +30451,22 @@ def analyze_case_production(case_data: Dict, case_id: str = None) -> Dict:
     
     # ✅ FIX 7: Store case in memory
     CASE_MEMORY.store_case(case_id, case_data, final_result)
-    
+
+    # ✅ SAFE INTEGRATION: Attach structured output and draft type to result
+    # NOTE: build_structured_output and get_default_draft_type are defined below;
+    # they are called here only after final_result is fully assembled.
+    try:
+        final_result["structured"] = build_structured_output(final_result, case_data)
+    except Exception as _se:
+        logger.warning(f"⚠️ structured output generation failed: {_se}")
+        final_result["structured"] = {}
+
+    try:
+        final_result["draft_type"] = get_default_draft_type(final_result, case_data)
+    except Exception as _de:
+        logger.warning(f"⚠️ draft type selection failed: {_de}")
+        final_result["draft_type"] = "strategy_note"
+
     logger.info(f"✅ Analysis complete: Score={final_result['score']:.1f}, "
                f"Verdict={final_result['verdict']}")
     logger.info("="*80)
@@ -31723,6 +31738,41 @@ Date: {datetime.now().strftime('%d-%m-%Y')}
 
 
 # ============================================================================
+# 🔗 DRAFT CONNECTOR: Thin wrapper that maps to DraftGenerator
+# ============================================================================
+
+def generate_draft(draft_type: str, case_data: Dict, result: Dict) -> str:
+    """
+    Standalone wrapper — connects the pipeline to DraftGenerator.
+    Maps draft_type → correct DraftGenerator method.
+    
+    Accepted draft_type values (12 types):
+        legal_notice, complaint, reply_notice, affidavit,
+        settlement_agreement, compounding_application,
+        delay_condonation, summary_draft, execution_petition,
+        evidence_list, cross_examination, strategy_note
+    
+    Falls back to 'summary_draft' for unknown types.
+    """
+    # Validate draft type; fall back gracefully
+    valid_types = {
+        'legal_notice', 'complaint', 'reply_notice', 'affidavit',
+        'settlement_agreement', 'compounding_application',
+        'delay_condonation', 'summary_draft', 'execution_petition',
+        'evidence_list', 'cross_examination', 'strategy_note'
+    }
+    safe_type = draft_type if draft_type in valid_types else 'summary_draft'
+    if safe_type != draft_type:
+        logger.warning(f"⚠️ Unknown draft_type '{draft_type}' — falling back to 'summary_draft'")
+
+    try:
+        return DraftGenerator.generate_draft(safe_type, case_data, result)
+    except Exception as e:
+        logger.error(f"❌ generate_draft failed for type '{safe_type}': {e}")
+        return f"[Draft generation failed: {e}]"
+
+
+# ============================================================================
 # 🎯 TASK 4: AUTODRAFT LOGIC
 # ============================================================================
 
@@ -31877,17 +31927,25 @@ def _score_to_verdict(score: float) -> str:
 
 def judiq_complete_analysis(case_data: Dict, case_id: str = None, 
                            generate_report: bool = True,
-                           generate_draft: bool = True,
+                           generate_draft_doc: bool = True,
                            draft_type: str = 'auto') -> Dict:
     """
     🎯 COMPLETE PRODUCT WRAPPER
     
-    Input → Analysis → Structured Output → Report → Draft
-    
-    WITHOUT breaking existing analyze_case_production() system
+    Flow:
+    1. analyze_case_v6_ALL_FIXED  → raw analysis
+    2. build_structured_output    → structured dict
+    3. get_default_draft_type     → auto-select draft
+    4. generate_draft             → render draft text
+    5. validate_consistency       → sanity check
+    6. generate_7_page_report     → full report (optional)
+
+    Returns all combined output in one dict.
+    Note: parameter renamed generate_draft_doc (was generate_draft)
+          to avoid shadowing the module-level generate_draft() function.
     """
     
-    # Step 1: Run existing analysis (NO CHANGES)
+    # Step 1: Run core analysis via v6 engine then promote through production wrapper
     analysis_result = analyze_case_production(case_data, case_id)
     
     # Step 2: Build structured output
@@ -31901,18 +31959,19 @@ def judiq_complete_analysis(case_data: Dict, case_id: str = None,
     if generate_report:
         report_text = generate_7_page_report(structured_output, case_data)
     
-    # Step 5: Generate draft (if requested)
+    # Step 5: Auto-select and generate draft
     draft_text = None
     selected_draft_type = None
-    if generate_draft:
+    if generate_draft_doc:
         if draft_type == 'auto':
             selected_draft_type = get_default_draft_type(analysis_result, case_data)
         else:
             selected_draft_type = draft_type
         
-        draft_text = DraftGenerator.generate_draft(selected_draft_type, case_data, analysis_result)
+        # Use standalone generate_draft wrapper (not DraftGenerator directly)
+        draft_text = generate_draft(selected_draft_type, case_data, analysis_result)
     
-    # Final complete output
+    # Final combined output
     return {
         'analysis': structured_output['analysis'],
         'summary': structured_output['summary'],
