@@ -1,87 +1,3 @@
-"""
-════════════════════════════════════════════════════════════════════════════════
-🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v11.0 (LITIGATION DECISION SYSTEM)
-════════════════════════════════════════════════════════════════════════════════
-
-STATUS: ✅ LITIGATION DECISION SYSTEM READY - v11.0 UPGRADED
-
-UPGRADE FROM v10.0:
-═══════════════════════════════════════════════════════════════════════════════
-✅ PRESERVED: All v10.0 + v9.0 + v8.0 + v7.0 functionality
-✅ UPGRADED v11: CentralCaseState now includes defence_risk (true single source)
-✅ UPGRADED v11: Draft engine uses central_state for fatal blocking (no recalculation)
-✅ UPGRADED v11: Defence rebuttal section in complaint draft (court-argument level)
-✅ UPGRADED v11: Contradiction explanation paragraph (IF contradictions > 2)
-✅ UPGRADED v11: Defence-aware narrative generation
-✅ REMOVED v11: Duplicate scoring/fatal checks - everything uses central_state
-
-v10.0 FEATURES (ALL PRESERVED):
-═══════════════════════════════════════════════════════════════════════════════
-✅ Defence Simulation Engine - predicts opponent's strategies
-✅ Central Case State - unified output alignment
-✅ Court-Grade Draft Engine - 8-part structured format
-✅ Defence-aware anticipatory paragraphs in drafting
-✅ Performance optimization with caching
-
-v9.0 FEATURES (ALL PRESERVED):
-═══════════════════════════════════════════════════════════════════════════════
-✅ Court-Ready DraftEngine with fatal-issue blocking & tone adaptation
-✅ Execution-Ready ActionEngine with impact/deadline/legal significance
-✅ ReportBuilder with draft_advisability & confidence_level
-✅ Stronger analysis→draft link (fatal issues prevent drafting)
-✅ Defense-aware drafting with condition-based paragraph rewriting
-
-v7.0 FEATURES (ALL PRESERVED):
-═══════════════════════════════════════════════════════════════════════════════
-✅ Single unified analysis engine
-✅ Semantic analysis integrated throughout
-✅ Fatal issue detection with non-linear scoring
-✅ Contradiction detection system
-✅ Learning system with database persistence
-✅ Full explainability at every step
-✅ Legal reasoning narrative generation
-
-NEW v11.0 ARCHITECTURE:
-═══════════════════════════════════════════════════════════════════════════════
-
-LITIGATION DECISION FLOW:
-  1. Core Analysis (v7.0 engine)
-  2. Issue Prioritization
-  3. Defence Simulation (predicts opponent moves)
-  4. → Central Case State Creation (SINGLE SOURCE OF TRUTH with defence)
-  5. All modules use ONLY central_state (no independent recalculation)
-  6. Draft = Fact + Law + Argument + Defence Rebuttal
-  7. Narrative includes defence awareness
-  8. Report aligned via central_state
-
-KEY v11.0 INTELLIGENCE INJECTIONS:
-═══════════════════════════════════════════════════════════════════════════════
-🧠 Central state includes defence_risk, top_defences
-⚔️ Draft auto-adds defence rebuttal section for top 3 likely defences
-📝 Contradiction explanation added if contradictions > 2
-🔗 Fatal blocking uses central_state only (no duplicate logic)
-📊 Narrative mentions likely defence strategy
-
-MAIN FUNCTION (v11):
-═══════════════════════════════════════════════════════════════════════════════
-result = run_full_analysis(case_data, case_id="CASE_001")
-
-OUTPUT STRUCTURE (v11 enhanced):
-{
-  "executive_decision": {
-    "verdict": "Strong Case",
-    "score": 78.5,
-    "defence_risk": "Medium",  # ✅ NEW v11
-    "top_defences": ["...", "..."]  # ✅ NEW v11
-  },
-  "draft": "Court-ready complaint with DEFENCE REBUTTAL SECTION...",  # ✅ UPGRADED v11
-  "legal_analysis": "Narrative with defence awareness...",  # ✅ UPGRADED v11
-  "defence_simulation": { ... }
-}
-
-════════════════════════════════════════════════════════════════════════════════
-"""
-
 import hashlib
 import json
 import logging
@@ -96,10 +12,6 @@ from dateutil.relativedelta import relativedelta
 from typing import List, Dict, Optional, Tuple, Any
 from pathlib import Path
 from collections import defaultdict
-
-# ============================================================================
-# 🔥 FIX 5: INPUT VALIDATION IMPORTS
-# ============================================================================
 try:
     from pydantic import BaseModel, validator, Field
     PYDANTIC_AVAILABLE = True
