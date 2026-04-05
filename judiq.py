@@ -1,18 +1,18 @@
 """
 ════════════════════════════════════════════════════════════════════════════════
-🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v8.0 (REFACTORED + EXTENDED)
+🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v9.0 (COURT-GRADE)
 ════════════════════════════════════════════════════════════════════════════════
 
-STATUS: ✅ PRODUCTION READY - v7.0 PRESERVED + NEW MODULAR ARCHITECTURE
+STATUS: ✅ COURT-GRADE PRODUCTION READY - v8.0 ENHANCED
 
-UPGRADE FROM v7.0:
+UPGRADE FROM v8.0:
 ═══════════════════════════════════════════════════════════════════════════════
-✅ PRESERVED: All v7.0 functionality (semantic analysis, learning, scoring, contradictions)
-✅ NEW: Issue Prioritization Layer (CRITICAL → HIGH → MEDIUM)
-✅ NEW: ActionEngine - Convert issues into actionable lawyer steps
-✅ NEW: Enhanced DraftEngine - Condition-based legal complaint generation
-✅ NEW: ReportBuilder - Structured API-ready output
-✅ NEW: Pipeline Orchestrator - Full end-to-end workflow
+✅ PRESERVED: All v8.0 + v7.0 functionality (semantic analysis, learning, scoring)
+✅ UPGRADED: Court-Ready DraftEngine with fatal-issue blocking & tone adaptation
+✅ UPGRADED: Execution-Ready ActionEngine with impact/deadline/legal significance
+✅ UPGRADED: ReportBuilder with draft_advisability & confidence_level
+✅ ENHANCED: Stronger analysis→draft link (fatal issues prevent drafting)
+✅ IMPROVED: Defense-aware drafting with condition-based paragraph rewriting
 
 v7.0 FEATURES (ALL PRESERVED):
 ═══════════════════════════════════════════════════════════════════════════════
@@ -141,7 +141,7 @@ TORCH_AVAILABLE = False
 logger = logging.getLogger(__name__)
 PHI2_AVAILABLE = False
 
-ENGINE_VERSION = "v8.0.0-PRODUCTION-REFACTORED"
+ENGINE_VERSION = "v9.0.0-COURT-GRADE"
 ARCHITECTURE_VERSION = "Modular-Class-Based-Non-Monolithic"
 SCORING_MODEL_VERSION = "11.0-FULLY-EXPLAINABLE"
 TIMELINE_MATH_VERSION = "CALENDAR_MONTHS"
@@ -32242,15 +32242,18 @@ class ActionEngine:
         """
         Generate specific, actionable steps from prioritized issues
         
+        ✅ v9.0 UPGRADED: Now includes impact_if_ignored and legal_significance
+        
         Returns list of actions:
         [
             {
                 "priority": "CRITICAL",
                 "action": "Obtain bank dishonour memo",
-                "deadline": "Before filing",
+                "deadline": "Within 7 days",
+                "impact_if_ignored": "Case dismissal risk",
+                "legal_significance": "Essential proof under Section 138",
                 "responsible": "Lawyer/Client",
-                "estimated_time": "2-3 days",
-                "cost_implication": "₹500-1000"
+                "estimated_time": "2-3 days"
             },
             ...
         ]
@@ -32269,6 +32272,8 @@ class ActionEngine:
                     'priority': 'CRITICAL',
                     'action': 'DO NOT FILE COMPLAINT - Case is time-barred and will be dismissed',
                     'deadline': 'IMMEDIATE',
+                    'impact_if_ignored': 'Automatic case dismissal; wasted court fees and legal costs',
+                    'legal_significance': 'Mandatory compliance with Article 138 Limitation Act',
                     'responsible': 'Lawyer decision',
                     'estimated_time': 'N/A',
                     'cost_implication': 'Avoid filing costs',
@@ -32280,6 +32285,8 @@ class ActionEngine:
                     'priority': 'CRITICAL',
                     'action': 'Send legal notice via RPAD/courier immediately (if within 30 days of dishonour)',
                     'deadline': 'Within 30 days of cheque dishonour',
+                    'impact_if_ignored': 'Case cannot proceed - notice is mandatory condition precedent',
+                    'legal_significance': 'Section 138(b) NI Act requires notice before filing complaint',
                     'responsible': 'Lawyer (urgent)',
                     'estimated_time': '1 day',
                     'cost_implication': '₹2,000-5,000 (notice drafting + dispatch)',
@@ -32291,6 +32298,8 @@ class ActionEngine:
                     'priority': 'CRITICAL',
                     'action': 'Verify cheque signature authenticity - if disputed, do not file complaint',
                     'deadline': 'Before filing',
+                    'impact_if_ignored': 'Accused may raise forgery defense; case may collapse',
+                    'legal_significance': 'Burden of proof shifts if signature is disputed (Bir Singh v. Mukesh Kumar 2019 SC)',
                     'responsible': 'Lawyer + Client verification',
                     'estimated_time': '2-3 days',
                     'cost_implication': 'Forensic expert (if needed): ₹15,000-25,000',
@@ -32302,6 +32311,8 @@ class ActionEngine:
                     'priority': 'CRITICAL',
                     'action': 'Prepare detailed affidavit explaining reason for delayed presentation of cheque',
                     'deadline': 'Before filing complaint',
+                    'impact_if_ignored': 'Accused may argue cheque given for security; weakens entire case',
+                    'legal_significance': 'Delayed presentation raises doubts about genuineness of transaction',
                     'responsible': 'Client (affidavit) + Lawyer (drafting)',
                     'estimated_time': '2-3 days',
                     'cost_implication': '₹1,000-2,000',
@@ -32317,6 +32328,8 @@ class ActionEngine:
                     'priority': 'HIGH',
                     'action': 'Collect documentary proof of debt: loan agreement, ledger entries, emails, invoices',
                     'deadline': 'Before filing complaint',
+                    'impact_if_ignored': 'Accused may claim cheque was for security; burden of proof becomes difficult',
+                    'legal_significance': 'Proving underlying debt is essential (Krishna Janardhan Bhat v. Dattatraya 2008 SC)',
                     'responsible': 'Client (collect docs) + Lawyer (review)',
                     'estimated_time': '3-7 days',
                     'cost_implication': 'No cost (client documents)',
@@ -32327,7 +32340,9 @@ class ActionEngine:
                 actions.append({
                     'priority': 'HIGH',
                     'action': 'Obtain bank dishonour memo/return memo from bank branch',
-                    'deadline': 'Before filing',
+                    'deadline': 'Within 7 days',
+                    'impact_if_ignored': 'Weakens proof of dishonour; accused may challenge dishonour itself',
+                    'legal_significance': 'Primary evidence of dishonour - highly persuasive in court',
                     'responsible': 'Client (visit bank)',
                     'estimated_time': '2-5 days',
                     'cost_implication': '₹500-1,000 (bank charges)',
@@ -32339,6 +32354,8 @@ class ActionEngine:
                     'priority': 'HIGH',
                     'action': 'Obtain proof of notice delivery: RPAD receipt, courier acknowledgment, or affidavit of service',
                     'deadline': 'Before filing complaint',
+                    'impact_if_ignored': 'Accused may claim notice never received; case may be dismissed',
+                    'legal_significance': 'Proof of service is mandatory - courts examine this closely',
                     'responsible': 'Lawyer (courier company) or Client (collect receipt)',
                     'estimated_time': '2-3 days',
                     'cost_implication': '₹500-1,000',
@@ -32351,6 +32368,8 @@ class ActionEngine:
                 'priority': 'MEDIUM',
                 'action': f"Resolve contradiction: {medium['issue'][:100]}",
                 'deadline': 'Before finalizing complaint',
+                'impact_if_ignored': 'Internal inconsistencies may undermine credibility in court',
+                'legal_significance': 'Consistent facts strengthen complainant credibility',
                 'responsible': 'Lawyer + Client discussion',
                 'estimated_time': '1-2 days',
                 'cost_implication': 'No cost',
@@ -32363,6 +32382,8 @@ class ActionEngine:
                 'priority': 'MEDIUM',
                 'action': 'File complaint under Section 138 NI Act in jurisdictional Magistrate Court',
                 'deadline': 'Within 1 month of notice expiry date',
+                'impact_if_ignored': 'Case becomes time-barred after 1 month from notice expiry',
+                'legal_significance': 'Mandatory time limit under Section 142 NI Act',
                 'responsible': 'Lawyer (court filing)',
                 'estimated_time': '1-2 days',
                 'cost_implication': '₹5,000-10,000 (court fees + filing)',
@@ -32373,6 +32394,8 @@ class ActionEngine:
                 'priority': 'MEDIUM',
                 'action': 'File affidavit of complainant along with complaint',
                 'deadline': 'Same day as complaint filing',
+                'impact_if_ignored': 'Complaint may be rejected for incompleteness',
+                'legal_significance': 'Mandatory requirement for complaint under Section 200 CrPC',
                 'responsible': 'Client (affidavit) + Lawyer (notarization)',
                 'estimated_time': '1 day',
                 'cost_implication': '₹500-1,000',
@@ -32385,6 +32408,8 @@ class ActionEngine:
                 'priority': 'HIGH',
                 'action': 'Explore settlement negotiation before filing - case has significant weaknesses',
                 'deadline': 'Before finalizing complaint decision',
+                'impact_if_ignored': 'Risk of losing case and incurring litigation costs without recovery',
+                'legal_significance': 'Strategic recommendation to minimize loss exposure',
                 'responsible': 'Lawyer (advise) + Client (decision)',
                 'estimated_time': '7-15 days',
                 'cost_implication': 'Potential settlement amount',
@@ -32404,10 +32429,13 @@ class ActionEngine:
 
 class EnhancedDraftEngine:
     """
-    ✅ NEW v8.0 MODULE
+    ✅ v9.0 UPGRADED - COURT-GRADE
     
-    Generates court-ready legal complaints with condition-based paragraphs.
-    Adapts wording based on case weaknesses and strengths.
+    Generates court-ready legal complaints with:
+    - Fatal issue blocking (won't draft if case has fatal defects)
+    - Condition-based paragraph rewriting (not just insertion)
+    - Defense-aware tone adaptation
+    - Weakness-specific language adjustments
     
     Features:
     - Conditional paragraph inclusion based on evidence availability
@@ -32421,7 +32449,13 @@ class EnhancedDraftEngine:
                                 analysis_result: Dict,
                                 prioritized_issues: Dict) -> str:
         """
-        Generate condition-aware legal complaint
+        ✅ v9.0 UPGRADED: Generate condition-aware legal complaint with fatal-issue blocking
+        
+        NEW v9.0 LOGIC:
+        - If FATAL issues exist → Return warning instead of draft
+        - If NO written agreement → Rewrite debt paragraph (not just insert)
+        - If weak documentary proof → Add justification paragraphs
+        - If contradictions exist → Add clarification paragraphs
         
         Adapts based on:
         - Missing evidence → justify absence or use alternative language
@@ -32429,6 +32463,47 @@ class EnhancedDraftEngine:
         - Timeline issues → address proactively
         - Missing documents → work around gaps
         """
+        
+        # ✅ v9.0 NEW: FATAL ISSUE CHECK - Block drafting if fatal defects exist
+        critical_issues = prioritized_issues.get('critical', [])
+        fatal_keywords = ['time-barred', 'limitation', 'notice not sent', 'forged', 'signature disputed']
+        
+        has_fatal_defect = False
+        fatal_reason = []
+        
+        for issue in critical_issues:
+            issue_text = issue.get('issue', '').lower()
+            for keyword in fatal_keywords:
+                if keyword in issue_text:
+                    has_fatal_defect = True
+                    fatal_reason.append(issue.get('issue', ''))
+                    break
+        
+        # If fatal defect exists, return warning instead of draft
+        if has_fatal_defect:
+            warning = []
+            warning.append("=" * 70)
+            warning.append("⚠️ DRAFT NOT ADVISABLE - FATAL DEFECTS DETECTED")
+            warning.append("=" * 70)
+            warning.append("")
+            warning.append("This case has critical defects that make filing inadvisable:")
+            warning.append("")
+            for idx, reason in enumerate(fatal_reason, 1):
+                warning.append(f"{idx}. {reason}")
+            warning.append("")
+            warning.append("RECOMMENDATION:")
+            warning.append("")
+            warning.append("DO NOT file complaint until these fatal issues are resolved.")
+            warning.append("Consult with client about:")
+            warning.append("- Settlement options")
+            warning.append("- Alternative remedies")
+            warning.append("- Case abandonment if issues cannot be fixed")
+            warning.append("")
+            warning.append("Filing this complaint as-is will likely result in dismissal")
+            warning.append("and waste court fees and legal costs.")
+            warning.append("")
+            warning.append("=" * 70)
+            return "\n".join(warning)
         
         # Extract case details
         complainant_name = case_data.get('complainant_name', '[Complainant Name]')
@@ -32445,8 +32520,7 @@ class EnhancedDraftEngine:
         has_written_agreement = case_data.get('written_agreement', False)
         has_dishonour_memo = case_data.get('dishonour_memo', False)
         has_debt_proof = case_data.get('debt_proof', False)
-        
-        critical_issues_exist = len(prioritized_issues.get('critical', [])) > 0
+        has_contradictions = len(prioritized_issues.get('medium', [])) > 0
         
         # Start building complaint
         complaint = []
@@ -32482,36 +32556,59 @@ class EnhancedDraftEngine:
                         "The Accused is known to the Complainant and is engaged in [business/profession].")
         complaint.append("")
         
-        # PARA 2: Transaction details (condition-based)
+        # PARA 2: Transaction details (✅ v9.0 ENHANCED - CONDITION-BASED PARAGRAPH REWRITING)
         if has_written_agreement:
+            # Strong case - written agreement exists
             complaint.append(f"2. That in pursuance of a written agreement dated {case_data.get('agreement_date', '[Date]')}, "
                            f"the Complainant advanced a sum of ₹{cheque_amount:,.2f} to the Accused as a loan/business transaction. "
                            "The said agreement clearly stipulates the terms of repayment and the Accused acknowledged the debt in writing.")
         else:
-            # NO WRITTEN AGREEMENT - Use softer language but emphasize other evidence
+            # ✅ v9.0 NEW: NO WRITTEN AGREEMENT - COMPLETELY REWRITE PARAGRAPH (not just add sentence)
             complaint.append(f"2. That the Complainant advanced a sum of ₹{cheque_amount:,.2f} to the Accused "
-                           "in pursuance of a legitimate business/loan transaction. While the transaction was based on mutual trust "
-                           "and conducted in good faith, the Accused has consistently acknowledged the debt through various communications, "
-                           "correspondence, and the issuance of the subject cheque.")
+                           "pursuant to a legitimate business/loan transaction. Although no formal written agreement was executed "
+                           "due to the relationship of trust between the parties, the transaction is supported by: "
+                           "(a) contemporaneous records and communications between the parties; "
+                           "(b) the conduct of the parties demonstrating acknowledgment of the debt; "
+                           "(c) the issuance of the subject cheque itself as acknowledgment of liability; and "
+                           "(d) subsequent correspondence from the Accused acknowledging the debt obligation.")
         complaint.append("")
+        
+        # ✅ v9.0 NEW: WEAK DEBT PROOF - ADD JUSTIFICATION PARAGRAPH
+        if not has_debt_proof and not has_written_agreement:
+            complaint.append("2A. That while the transaction was conducted on the basis of mutual trust and confidence, "
+                           "the Complainant has maintained meticulous records of all communications, including emails, messages, "
+                           "and verbal acknowledgments from the Accused. The very fact that the Accused issued a cheque for the exact "
+                           "sum of ₹{:,.2f} is itself compelling evidence of the underlying debt, as cheques under Section 139 "
+                           "of the Negotiable Instruments Act carry a statutory presumption of consideration.".format(cheque_amount))
+            complaint.append("")
         
         # PARA 3: Cheque issuance
         complaint.append(f"3. That in acknowledgment and discharge of the said debt, the Accused issued Cheque No. {cheque_no} "
                        f"dated {cheque_date} drawn on {bank_name}, for an amount of ₹{cheque_amount:,.2f} in favor of the Complainant.")
         complaint.append("")
         
-        # PARA 4: Presentment and dishonour (condition-based on memo availability)
+        # PARA 4: Presentment and dishonour (✅ v9.0 ENHANCED - CONDITION-BASED REWRITING)
         if has_dishonour_memo:
             complaint.append(f"4. That the Complainant presented the said cheque to his/her bank for collection on {case_data.get('presentation_date', '[Date]')}. "
                            f"However, the cheque was dishonoured on {dishonour_date} with the reason stated as '{dishonour_reason}'. "
                            "The bank has issued a dishonour memo/return memo confirming the same, which is filed herewith as evidence.")
         else:
-            # NO DISHONOUR MEMO - Acknowledge and explain
+            # ✅ v9.0 UPGRADED: NO DISHONOUR MEMO - DEFENSIVE LANGUAGE
             complaint.append(f"4. That the Complainant presented the said cheque to his/her bank for collection on {case_data.get('presentation_date', '[Date]')}. "
-                           f"However, the cheque was dishonoured on {dishonour_date} with the reason stated as '{dishonour_reason}'. "
-                           "The Complainant's bank has informed the Complainant of the dishonour through its internal records and statements, "
-                           "and the Complainant is in the process of obtaining a formal dishonour memo from the drawee bank.")
+                           f"However, the cheque was dishonoured on {dishonour_date} with the reason stated as '{dishonour_reason}', "
+                           "as confirmed by the Complainant's bank through its internal records and account statements. "
+                           "The Complainant is in the process of obtaining a formal dishonour memo from the drawee bank for additional corroboration, "
+                           "though the dishonour is independently verifiable through banking records.")
         complaint.append("")
+        
+        # ✅ v9.0 NEW: CONTRADICTIONS - ADD CLARIFICATION PARAGRAPH
+        if has_contradictions:
+            complaint.append("4A. That the Complainant wishes to clarify that certain dates and details mentioned herein "
+                           "have been verified and cross-checked with available records. Any minor discrepancies, if any, "
+                           "are inadvertent and do not affect the core facts of the case: that a debt existed, a cheque was issued, "
+                           "the cheque was dishonoured, and notice was served. The Complainant is prepared to provide additional "
+                           "clarification on any aspect if required by this Hon'ble Court.")
+            complaint.append("")
         
         # PARA 5: Legal notice
         complaint.append(f"5. That upon dishonour of the cheque, the Complainant caused a legal demand notice dated {notice_date} "
@@ -32536,7 +32633,7 @@ class EnhancedDraftEngine:
                        "and is liable to be tried and punished in accordance with law.")
         complaint.append("")
         
-        # PARA 9: Prayer (condition-based on case strength)
+        # PARA 9: Prayer
         complaint.append("PRAYER:")
         complaint.append("")
         complaint.append("In light of the above facts and circumstances, it is most respectfully prayed that this Hon'ble Court may be pleased to:")
@@ -32608,14 +32705,25 @@ class EnhancedDraftEngine:
 
 class ReportBuilder:
     """
-    ✅ NEW v8.0 MODULE
+    ✅ v9.0 UPGRADED - COURT-GRADE
     
     Builds structured, API-ready output from analysis results.
     Designed for frontend consumption and backend integration.
     
+    NEW v9.0 FEATURES:
+    - draft_advisability field (Proceed / Fix before filing / Not advisable)
+    - Enhanced confidence_level (High / Medium / Low)
+    - All sections aligned with decision, actions, and draft
+    
     Output format matches specification:
     {
-        "executive_decision": {...},
+        "executive_decision": {
+            "verdict": "...",
+            "score": 78.5,
+            "recommendation": "...",
+            "confidence_level": "High",  # v9.0
+            "draft_advisability": "Proceed"  # v9.0
+        },
         "critical_issues": [...],
         "action_plan": [...],
         "risk_breakdown": {...},
@@ -32633,7 +32741,7 @@ class ReportBuilder:
                     draft_text: str,
                     case_data: Dict) -> Dict:
         """
-        Build comprehensive structured report
+        ✅ v9.0 UPGRADED: Build comprehensive structured report with draft advisability
         """
         
         score = analysis_result.get('final_score', 0)
@@ -32642,30 +32750,48 @@ class ReportBuilder:
         high_risks = analysis_result.get('high_risk_issues', [])
         contradictions = analysis_result.get('contradictions_detected', [])
         
+        # ✅ v9.0 NEW: Determine draft advisability based on fatal issues and score
+        critical_count = len(prioritized_issues.get('critical', []))
+        
+        if draft_text.startswith("=" * 70 + "\n⚠️ DRAFT NOT ADVISABLE"):
+            draft_advisability = "Not advisable - fatal defects"
+            confidence_level = "High"  # High confidence it should NOT be filed
+        elif critical_count > 0:
+            draft_advisability = "Fix critical issues before filing"
+            confidence_level = "Medium"
+        elif score < 50:
+            draft_advisability = "Not advisable - weak case"
+            confidence_level = "Medium"
+        elif score < 60:
+            draft_advisability = "Fix before filing"
+            confidence_level = "Medium"
+        elif score < 70:
+            draft_advisability = "Proceed with caution"
+            confidence_level = "Medium"
+        else:
+            draft_advisability = "Proceed to file"
+            confidence_level = "High"
+        
         # EXECUTIVE DECISION
         if score < 40:
             recommendation = "DO NOT FILE - Case is not viable"
-            confidence = "High confidence in rejection"
         elif score < 50:
             recommendation = "Explore settlement - Filing is high risk"
-            confidence = "Moderate confidence - case has significant gaps"
         elif score < 60:
             recommendation = "Proceed with caution - Strengthen evidence first"
-            confidence = "Moderate confidence - gaps exist but fixable"
         elif score < 70:
             recommendation = "Proceed to file - Case meets basic requirements"
-            confidence = "Good confidence - some minor improvements recommended"
         else:
             recommendation = "Proceed to file - Strong case"
-            confidence = "High confidence in success"
         
         executive_decision = {
             'verdict': verdict,
             'score': round(score, 2),
             'recommendation': recommendation,
-            'confidence_level': confidence,
+            'confidence_level': confidence_level,  # ✅ v9.0 ENHANCED
+            'draft_advisability': draft_advisability,  # ✅ v9.0 NEW
             'case_viable': score >= 40,
-            'filing_recommended': score >= 60,
+            'filing_recommended': score >= 60 and critical_count == 0,
             'conviction_probability': ReportBuilder._calculate_conviction_probability(score)
         }
         
@@ -32936,38 +33062,36 @@ def run_full_analysis(case_data: Dict, case_id: str = None) -> Dict:
 # ============================================================================
 
 logger.info("=" * 100)
-logger.info("🎉 JUDIQ v8.0 - REFACTORED PRODUCTION BACKEND READY")
+logger.info("🎉 JUDIQ v9.0 - COURT-GRADE PRODUCTION BACKEND READY")
 logger.info("=" * 100)
-logger.info("✅ v7.0 PRESERVED: All 13 critical fixes + semantic analysis + learning system")
-logger.info("✅ v8.0 NEW: Issue Prioritization Layer (CRITICAL → HIGH → MEDIUM)")
-logger.info("✅ v8.0 NEW: ActionEngine - Converts issues → actionable lawyer steps")
-logger.info("✅ v8.0 NEW: EnhancedDraftEngine - Condition-based legal complaint drafting")
-logger.info("✅ v8.0 NEW: ReportBuilder - Structured API-ready output")
-logger.info("✅ v8.0 NEW: Pipeline Orchestrator - Complete end-to-end workflow")
+logger.info("✅ v8.0+v7.0 PRESERVED: All fixes + semantic analysis + learning system")
+logger.info("✅ v9.0 UPGRADED: Court-ready DraftEngine with fatal-issue blocking")
+logger.info("✅ v9.0 UPGRADED: Execution-ready ActionEngine with impacts & significance")
+logger.info("✅ v9.0 UPGRADED: ReportBuilder with draft_advisability & confidence_level")
+logger.info("✅ v9.0 ENHANCED: Stronger analysis→draft link (fatal issues prevent drafting)")
+logger.info("✅ v9.0 ENHANCED: Defense-aware drafting with condition-based rewriting")
 logger.info("=" * 100)
 logger.info("")
-logger.info("📋 v8.0 USAGE (RECOMMENDED):")
-logger.info("  # Complete pipeline with all new features")
+logger.info("📋 v9.0 USAGE (RECOMMENDED):")
+logger.info("  # Complete court-grade pipeline")
 logger.info("  result = run_full_analysis(case_data, case_id='CASE_001')")
 logger.info("")
 logger.info("  # Access structured outputs")
-logger.info("  print(result['executive_decision'])  # Score, verdict, recommendation")
+logger.info("  print(result['executive_decision'])  # Score, verdict, confidence, draft_advisability")
 logger.info("  print(result['critical_issues'])     # Prioritized issue list")
-logger.info("  print(result['action_plan'])         # Specific lawyer actions with deadlines")
-logger.info("  print(result['draft'])               # Court-ready complaint draft")
+logger.info("  print(result['action_plan'])         # Actions with impact_if_ignored & legal_significance")
+logger.info("  print(result['draft'])               # Court-ready draft (or warning if fatal issues)")
 logger.info("  print(result['risk_breakdown'])      # Fatal/High/Medium risks")
 logger.info("  print(result['legal_analysis'])      # Lawyer-style narrative")
 logger.info("")
-logger.info("📋 v7.0 USAGE (BACKWARD COMPATIBLE):")
-logger.info("  # Original v7.0 function still works")
-logger.info("  result = analyze_case_production(case_data)")
-logger.info("  result = judiq_complete_analysis(case_data)")
+logger.info("📋 BACKWARD COMPATIBLE:")
+logger.info("  result = analyze_case_production(case_data)  # v7.0 function still works")
 logger.info("")
 logger.info("=" * 100)
 logger.info("")
 logger.info("🏗️ ARCHITECTURE:")
-logger.info("  Non-monolithic class-based design")
-logger.info("  Clear separation of concerns")
+logger.info("  Court-grade single-file architecture")
+logger.info("  Clear logical sections")
 logger.info("  API-ready structured outputs")
 logger.info("  Production-grade backend system")
 logger.info("")
