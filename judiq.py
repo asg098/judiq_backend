@@ -35329,7 +35329,6 @@ metadata = result['metadata']
 print(f"\n⚡ PERFORMANCE:")
 print(f"   Processing Time: {metadata['processing_time_ms']}ms")
 print(f"   Modules Used: {len(metadata['modules_used'])}")
-"""
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -35599,6 +35598,7 @@ A production-grade legal decision engine that:
 '''
 
 print(UPGRADE_SUMMARY_V12)
+"""
 
 if __name__ == "__main__":
     print("\n" + "=" * 80)
@@ -35610,3 +35610,33 @@ if __name__ == "__main__":
     print("  - run_full_analysis()      → v11.0 pipeline (backward compatible)")
     print("  - analyze_case_production() → v7.0 core engine (backward compatible)")
     print("\n" + "=" * 80)
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# ✅ Allow frontend requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # later restrict
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ✅ MAIN API ROUTE
+@app.post("/analyze")
+async def analyze_case(data: dict):
+    try:
+        result = run_full_analysis_v12(data, case_id="API_CASE")
+
+        return {
+            "success": True,
+            "data": result
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
