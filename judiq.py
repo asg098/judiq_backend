@@ -1,4 +1,4 @@
-\"""
+"""
 ════════════════════════════════════════════════════════════════════════════════
 🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v12.0 (INTELLIGENCE-GRADE SYSTEM)
 ════════════════════════════════════════════════════════════════════════════════
@@ -35329,6 +35329,7 @@ metadata = result['metadata']
 print(f"\n⚡ PERFORMANCE:")
 print(f"   Processing Time: {metadata['processing_time_ms']}ms")
 print(f"   Modules Used: {len(metadata['modules_used'])}")
+"""
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -35598,7 +35599,6 @@ A production-grade legal decision engine that:
 '''
 
 print(UPGRADE_SUMMARY_V12)
-"""
 
 if __name__ == "__main__":
     print("\n" + "=" * 80)
