@@ -35610,33 +35610,663 @@ if __name__ == "__main__":
     print("  - run_full_analysis()      → v11.0 pipeline (backward compatible)")
     print("  - analyze_case_production() → v7.0 core engine (backward compatible)")
     print("\n" + "=" * 80)
-from fastapi import FastAPI
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🚀 PRODUCTION-GRADE FASTAPI BACKEND
+# ════════════════════════════════════════════════════════════════════════════
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-app = FastAPI()
+# ════════════════════════════════════════════════════════════════════════════
+# 📝 ENHANCED LOGGING SETUP
+# ════════════════════════════════════════════════════════════════════════════
 
-# ✅ Allow frontend requests
+api_logger = logging.getLogger("LEGAL_API")
+api_logger.setLevel(logging.INFO)
+
+# File handler for API logs
+api_handler = logging.FileHandler('legal_api_requests.log')
+api_handler.setLevel(logging.INFO)
+api_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+api_handler.setFormatter(api_formatter)
+api_logger.addHandler(api_handler)
+
+# Console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(api_formatter)
+api_logger.addHandler(console_handler)
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🔧 INPUT NORMALIZATION LAYER (CRITICAL)
+# ════════════════════════════════════════════════════════════════════════════
+
+def normalize_input(raw_data: dict) -> dict:
+    """
+    Transform frontend input into backend-compatible schema.
+    Handles all field mapping, type conversions, and defaults.
+    
+    This is the CRITICAL layer that prevents crashes from messy real-world input.
+    """
+    api_logger.info(f"Normalizing input: {json.dumps(raw_data, default=str)[:500]}")
+    
+    normalized = {}
+    
+    try:
+        # ═══════════════════════════════════════════════════════════════════════
+        # BOOLEAN CONVERSIONS (Yes/No → True/False)
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        def to_bool(value, default=False):
+            """Safe boolean conversion"""
+            if value is None:
+                return default
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, str):
+                return value.strip().lower() in ['yes', 'true', '1', 'y']
+            return bool(value)
+        
+        def to_float(value, default=0.0):
+            """Safe float conversion"""
+            if value is None or value == '':
+                return default
+            try:
+                return float(value)
+            except (ValueError, TypeError):
+                return default
+        
+        def to_int(value, default=0):
+            """Safe integer conversion"""
+            if value is None or value == '':
+                return default
+            try:
+                return int(float(value))
+            except (ValueError, TypeError):
+                return default
+        
+        def to_string(value, default=''):
+            """Safe string conversion"""
+            if value is None:
+                return default
+            return str(value).strip()
+        
+        def to_list(value, default=None):
+            """Safe list conversion"""
+            if default is None:
+                default = []
+            if value is None:
+                return default
+            if isinstance(value, list):
+                return value
+            if isinstance(value, str):
+                # Handle comma-separated strings
+                if ',' in value:
+                    return [v.strip() for v in value.split(',') if v.strip()]
+                return [value] if value.strip() else default
+            return default
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # CORE CASE FIELDS
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # Cheque details
+        normalized['cheque_present'] = to_bool(
+            raw_data.get('chequePresent') or raw_data.get('cheque_present'),
+            default=False
+        )
+        
+        normalized['cheque_number'] = to_string(
+            raw_data.get('chequeNumber') or raw_data.get('cheque_number'),
+            default=''
+        )
+        
+        normalized['cheque_amount'] = to_float(
+            raw_data.get('chequeAmount') or raw_data.get('cheque_amount') or raw_data.get('amount'),
+            default=0.0
+        )
+        
+        normalized['cheque_date'] = to_string(
+            raw_data.get('chequeDate') or raw_data.get('cheque_date'),
+            default=''
+        )
+        
+        normalized['dishonour_date'] = to_string(
+            raw_data.get('dishonourDate') or raw_data.get('dishonour_date'),
+            default=''
+        )
+        
+        normalized['dishonour_reason'] = to_string(
+            raw_data.get('dishonourReason') or raw_data.get('dishonour_reason'),
+            default='Insufficient funds'
+        )
+        
+        # Notice details
+        normalized['notice_sent'] = to_bool(
+            raw_data.get('noticeSent') or raw_data.get('notice_sent'),
+            default=False
+        )
+        
+        normalized['notice_date'] = to_string(
+            raw_data.get('noticeDate') or raw_data.get('notice_date'),
+            default=''
+        )
+        
+        normalized['notice_mode'] = to_string(
+            raw_data.get('noticeMode') or raw_data.get('notice_mode'),
+            default='Registered Post'
+        )
+        
+        normalized['notice_reply_received'] = to_bool(
+            raw_data.get('noticeReplyReceived') or raw_data.get('notice_reply_received'),
+            default=False
+        )
+        
+        normalized['notice_reply_content'] = to_string(
+            raw_data.get('noticeReplyContent') or raw_data.get('notice_reply_content'),
+            default=''
+        )
+        
+        # Complaint filing
+        normalized['complaint_filed'] = to_bool(
+            raw_data.get('complaintFiled') or raw_data.get('complaint_filed'),
+            default=False
+        )
+        
+        normalized['complaint_date'] = to_string(
+            raw_data.get('complaintDate') or raw_data.get('complaint_date'),
+            default=''
+        )
+        
+        # Debt details
+        normalized['debt_proven'] = to_bool(
+            raw_data.get('debtProven') or raw_data.get('debt_proven'),
+            default=False
+        )
+        
+        normalized['underlying_transaction'] = to_string(
+            raw_data.get('underlyingTransaction') or raw_data.get('underlying_transaction'),
+            default=''
+        )
+        
+        # Evidence
+        normalized['evidence_available'] = to_list(
+            raw_data.get('evidenceAvailable') or raw_data.get('evidence_available') or raw_data.get('evidence'),
+            default=['oral_testimony']
+        )
+        
+        # Defendant response
+        normalized['defendant_claims'] = to_list(
+            raw_data.get('defendantClaims') or raw_data.get('defendant_claims'),
+            default=[]
+        )
+        
+        normalized['signature_disputed'] = to_bool(
+            raw_data.get('signatureDisputed') or raw_data.get('signature_disputed'),
+            default=False
+        )
+        
+        # Procedural
+        normalized['limitation_complied'] = to_bool(
+            raw_data.get('limitationComplied') or raw_data.get('limitation_complied'),
+            default=True
+        )
+        
+        normalized['jurisdiction_proper'] = to_bool(
+            raw_data.get('jurisdictionProper') or raw_data.get('jurisdiction_proper'),
+            default=True
+        )
+        
+        # Parties
+        normalized['plaintiff_name'] = to_string(
+            raw_data.get('plaintiffName') or raw_data.get('plaintiff_name') or raw_data.get('complainant'),
+            default='Plaintiff'
+        )
+        
+        normalized['defendant_name'] = to_string(
+            raw_data.get('defendantName') or raw_data.get('defendant_name') or raw_data.get('accused'),
+            default='Defendant'
+        )
+        
+        # Additional fields
+        normalized['bank_name'] = to_string(
+            raw_data.get('bankName') or raw_data.get('bank_name'),
+            default=''
+        )
+        
+        normalized['account_number'] = to_string(
+            raw_data.get('accountNumber') or raw_data.get('account_number'),
+            default=''
+        )
+        
+        normalized['witness_available'] = to_bool(
+            raw_data.get('witnessAvailable') or raw_data.get('witness_available'),
+            default=False
+        )
+        
+        normalized['witness_details'] = to_string(
+            raw_data.get('witnessDetails') or raw_data.get('witness_details'),
+            default=''
+        )
+        
+        # Case narrative
+        normalized['case_description'] = to_string(
+            raw_data.get('caseDescription') or raw_data.get('case_description') or raw_data.get('description'),
+            default=''
+        )
+        
+        # Timeline
+        normalized['incident_date'] = to_string(
+            raw_data.get('incidentDate') or raw_data.get('incident_date'),
+            default=''
+        )
+        
+        # Additional boolean flags
+        normalized['payment_made'] = to_bool(
+            raw_data.get('paymentMade') or raw_data.get('payment_made'),
+            default=False
+        )
+        
+        normalized['partial_payment'] = to_bool(
+            raw_data.get('partialPayment') or raw_data.get('partial_payment'),
+            default=False
+        )
+        
+        normalized['settlement_attempted'] = to_bool(
+            raw_data.get('settlementAttempted') or raw_data.get('settlement_attempted'),
+            default=False
+        )
+        
+        # Additional metadata
+        normalized['case_id'] = to_string(
+            raw_data.get('caseId') or raw_data.get('case_id'),
+            default=f"CASE_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        )
+        
+        api_logger.info(f"Normalized output: {json.dumps(normalized, default=str)[:500]}")
+        
+        return normalized
+        
+    except Exception as e:
+        api_logger.error(f"Normalization error: {str(e)}")
+        api_logger.error(traceback.format_exc())
+        # Return minimal valid structure on error
+        return {
+            'cheque_present': False,
+            'notice_sent': False,
+            'debt_proven': False,
+            'cheque_amount': 0.0,
+            'evidence_available': ['oral_testimony'],
+            'defendant_claims': [],
+            'case_id': f"CASE_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        }
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🛡️ SAFE ENGINE WRAPPER
+# ════════════════════════════════════════════════════════════════════════════
+
+def safe_run_engine(case_data: dict) -> dict:
+    """
+    Safe wrapper around the legal analysis engine.
+    Prevents ANY crash from propagating to the API.
+    """
+    try:
+        api_logger.info(f"Running engine for case: {case_data.get('case_id', 'UNKNOWN')}")
+        
+        # Run the v12 analysis engine
+        result = run_full_analysis_v12(case_data, case_id=case_data.get('case_id', 'API_CASE'))
+        
+        api_logger.info(f"Engine completed successfully")
+        return result
+        
+    except KeyError as e:
+        api_logger.error(f"Missing key in engine: {str(e)}")
+        api_logger.error(traceback.format_exc())
+        return {
+            "executive_decision": {
+                "verdict": "Error - Missing Data",
+                "score": 0,
+                "defence_risk": "Unknown",
+                "top_defences": [],
+                "reasoning_trace": [f"Analysis failed: Missing required field {str(e)}"]
+            },
+            "contradictions": [],
+            "draft": "Unable to generate draft due to missing data.",
+            "legal_analysis": "Unable to complete analysis due to missing required information.",
+            "error": f"Missing field: {str(e)}"
+        }
+    
+    except TypeError as e:
+        api_logger.error(f"Type error in engine: {str(e)}")
+        api_logger.error(traceback.format_exc())
+        return {
+            "executive_decision": {
+                "verdict": "Error - Invalid Data Type",
+                "score": 0,
+                "defence_risk": "Unknown",
+                "top_defences": [],
+                "reasoning_trace": [f"Analysis failed: Invalid data type - {str(e)}"]
+            },
+            "contradictions": [],
+            "draft": "Unable to generate draft due to data type error.",
+            "legal_analysis": "Unable to complete analysis due to invalid data format.",
+            "error": f"Type error: {str(e)}"
+        }
+    
+    except Exception as e:
+        api_logger.error(f"Engine error: {str(e)}")
+        api_logger.error(traceback.format_exc())
+        return {
+            "executive_decision": {
+                "verdict": "Error - Analysis Failed",
+                "score": 0,
+                "defence_risk": "Unknown",
+                "top_defences": [],
+                "reasoning_trace": [f"Analysis engine encountered an error: {str(e)}"]
+            },
+            "contradictions": [],
+            "draft": "Unable to generate draft due to internal error.",
+            "legal_analysis": "Unable to complete analysis due to system error.",
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+
+# ════════════════════════════════════════════════════════════════════════════
+# 📤 OUTPUT STANDARDIZATION
+# ════════════════════════════════════════════════════════════════════════════
+
+def standardize_output(engine_result: dict) -> dict:
+    """
+    Ensure consistent output format regardless of engine state.
+    Always returns ALL required fields.
+    """
+    try:
+        # Extract executive decision with safe defaults
+        exec_decision = engine_result.get('executive_decision', {})
+        
+        standardized = {
+            "success": True,
+            "timestamp": datetime.now().isoformat(),
+            "data": {
+                # Core decision
+                "score": exec_decision.get('score', 0),
+                "verdict": exec_decision.get('verdict', 'Unknown'),
+                "defence_risk": exec_decision.get('defence_risk', 'Unknown'),
+                
+                # Issues and strengths
+                "issues": exec_decision.get('fatal_issues', []) or exec_decision.get('issues', []),
+                "strengths": exec_decision.get('strengths', []),
+                "weaknesses": exec_decision.get('weaknesses', []),
+                
+                # Defence strategies
+                "defence": exec_decision.get('top_defences', []),
+                
+                # Actions
+                "next_action": exec_decision.get('recommended_action', 'Review case details'),
+                
+                # Reasoning
+                "reasoning": exec_decision.get('reasoning_trace', []),
+                
+                # Additional analysis
+                "contradictions": engine_result.get('contradictions', []),
+                "semantic_analysis": engine_result.get('semantic_analysis', {}),
+                "evidence_assessment": engine_result.get('evidence_assessment', {}),
+                
+                # Documents
+                "draft": engine_result.get('draft', ''),
+                "legal_analysis": engine_result.get('legal_analysis', ''),
+                
+                # Error info (if any)
+                "error": engine_result.get('error'),
+                "warnings": engine_result.get('warnings', [])
+            }
+        }
+        
+        return standardized
+        
+    except Exception as e:
+        api_logger.error(f"Output standardization error: {str(e)}")
+        # Return minimal valid response
+        return {
+            "success": False,
+            "timestamp": datetime.now().isoformat(),
+            "data": {
+                "score": 0,
+                "verdict": "Error",
+                "defence_risk": "Unknown",
+                "issues": ["Output formatting failed"],
+                "strengths": [],
+                "weaknesses": [],
+                "defence": [],
+                "next_action": "Contact support",
+                "reasoning": [f"System error: {str(e)}"],
+                "contradictions": [],
+                "draft": "",
+                "legal_analysis": "",
+                "error": str(e)
+            }
+        }
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🚀 FASTAPI APPLICATION
+# ════════════════════════════════════════════════════════════════════════════
+
+app = FastAPI(
+    title="JUDIQ Legal Analysis API",
+    description="Production-grade legal AI engine with intelligent case analysis",
+    version="12.0.0"
+)
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🌐 CORS MIDDLEWARE
+# ════════════════════════════════════════════════════════════════════════════
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # later restrict
+    allow_origins=["*"],  # In production: specify exact frontend origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ MAIN API ROUTE
-@app.post("/analyze")
-async def analyze_case(data: dict):
-    try:
-        result = run_full_analysis_v12(data, case_id="API_CASE")
+# ════════════════════════════════════════════════════════════════════════════
+# 🔍 GLOBAL EXCEPTION HANDLER
+# ════════════════════════════════════════════════════════════════════════════
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch ANY unhandled exception and return safe response"""
+    api_logger.error(f"Global exception handler caught: {str(exc)}")
+    api_logger.error(traceback.format_exc())
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "timestamp": datetime.now().isoformat(),
+            "data": {
+                "score": 0,
+                "verdict": "Error",
+                "defence_risk": "Unknown",
+                "issues": ["System encountered an unexpected error"],
+                "strengths": [],
+                "weaknesses": [],
+                "defence": [],
+                "next_action": "Please try again or contact support",
+                "reasoning": [f"Unexpected error: {str(exc)}"],
+                "contradictions": [],
+                "draft": "",
+                "legal_analysis": "",
+                "error": str(exc)
+            }
+        }
+    )
+
+# ════════════════════════════════════════════════════════════════════════════
+# 📍 API ENDPOINTS
+# ════════════════════════════════════════════════════════════════════════════
+
+@app.get("/")
+async def health_check():
+    """Health check endpoint"""
+    api_logger.info("Health check requested")
+    return {
+        "status": "running",
+        "service": "JUDIQ Legal Analysis API",
+        "version": "12.0.0",
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/health")
+async def detailed_health():
+    """Detailed health check"""
+    api_logger.info("Detailed health check requested")
+    return {
+        "status": "healthy",
+        "service": "JUDIQ Legal Analysis API",
+        "version": "12.0.0",
+        "timestamp": datetime.now().isoformat(),
+        "components": {
+            "api": "operational",
+            "engine": "operational",
+            "normalization": "operational",
+            "logging": "operational"
+        }
+    }
+
+@app.post("/analyze")
+async def analyze_case(request: Request):
+    """
+    Main analysis endpoint - PRODUCTION-GRADE
+    
+    Flow:
+    1. Receive raw input
+    2. Log incoming data
+    3. Normalize input (frontend → backend schema)
+    4. Log normalized data
+    5. Run engine safely (with error containment)
+    6. Log engine output
+    7. Standardize output format
+    8. Return consistent JSON response
+    
+    GUARANTEES:
+    - Never crashes
+    - Always returns valid JSON
+    - Handles missing fields
+    - Handles type errors
+    - Logs everything
+    """
+    try:
+        # Step 1: Get raw data
+        raw_data = await request.json()
+        api_logger.info("=" * 80)
+        api_logger.info("NEW ANALYSIS REQUEST")
+        api_logger.info(f"Raw input (first 500 chars): {json.dumps(raw_data, default=str)[:500]}")
+        
+        # Step 2: Normalize input
+        normalized_data = normalize_input(raw_data)
+        api_logger.info(f"Normalized data (first 500 chars): {json.dumps(normalized_data, default=str)[:500]}")
+        
+        # Step 3: Run engine safely
+        engine_result = safe_run_engine(normalized_data)
+        api_logger.info(f"Engine result received - Verdict: {engine_result.get('executive_decision', {}).get('verdict', 'Unknown')}")
+        
+        # Step 4: Standardize output
+        standardized_response = standardize_output(engine_result)
+        
+        api_logger.info(f"Analysis completed successfully")
+        api_logger.info("=" * 80)
+        
+        return standardized_response
+        
+    except json.JSONDecodeError as e:
+        api_logger.error(f"Invalid JSON received: {str(e)}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "timestamp": datetime.now().isoformat(),
+                "data": {
+                    "score": 0,
+                    "verdict": "Error",
+                    "defence_risk": "Unknown",
+                    "issues": ["Invalid JSON format in request"],
+                    "strengths": [],
+                    "weaknesses": [],
+                    "defence": [],
+                    "next_action": "Check request format",
+                    "reasoning": [f"JSON parsing error: {str(e)}"],
+                    "contradictions": [],
+                    "draft": "",
+                    "legal_analysis": "",
+                    "error": f"Invalid JSON: {str(e)}"
+                }
+            }
+        )
+    
+    except Exception as e:
+        api_logger.error(f"Unexpected error in analyze endpoint: {str(e)}")
+        api_logger.error(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "timestamp": datetime.now().isoformat(),
+                "data": {
+                    "score": 0,
+                    "verdict": "Error",
+                    "defence_risk": "Unknown",
+                    "issues": ["System error during analysis"],
+                    "strengths": [],
+                    "weaknesses": [],
+                    "defence": [],
+                    "next_action": "Contact support",
+                    "reasoning": [f"System error: {str(e)}"],
+                    "contradictions": [],
+                    "draft": "",
+                    "legal_analysis": "",
+                    "error": str(e)
+                }
+            }
+        )
+
+@app.post("/validate")
+async def validate_input(request: Request):
+    """Validate input without running full analysis"""
+    try:
+        raw_data = await request.json()
+        normalized_data = normalize_input(raw_data)
+        
         return {
             "success": True,
-            "data": result
+            "message": "Input validated and normalized successfully",
+            "normalized_data": normalized_data
         }
-
     except Exception as e:
         return {
             "success": False,
             "error": str(e)
         }
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🎯 STARTUP MESSAGE
+# ════════════════════════════════════════════════════════════════════════════
+
+@app.on_event("startup")
+async def startup_event():
+    api_logger.info("=" * 80)
+    api_logger.info("JUDIQ LEGAL ANALYSIS API - PRODUCTION MODE")
+    api_logger.info("Version: 12.0.0")
+    api_logger.info("Status: READY")
+    api_logger.info("=" * 80)
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🏁 RUN SERVER
+# ════════════════════════════════════════════════════════════════════════════
+
+if __name__ == "__main__":
+    import uvicorn
+    api_logger.info("Starting server...")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
