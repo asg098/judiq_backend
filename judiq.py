@@ -36724,3 +36724,46 @@ if __name__ == "__main__":
     import uvicorn
     api_logger.info("Starting server...")
     uvicorn.run(app, host="0.0.0.0", port=8000)
+    from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+fastapi_app = FastAPI()
+
+# ✅ CORS
+fastapi_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ✅ ROOT (already working)
+@fastapi_app.get("/")
+def root():
+    return {"status": "running"}
+
+# ✅ 🔥 MAIN FIX — ADD THIS
+@fastapi_app.post("/analyze")
+async def analyze_case(data: dict):
+    try:
+        print("RAW INPUT:", data)
+
+        result = run_full_analysis_v12(data, case_id="API_CASE")
+
+        print("RESULT:", result)
+
+        return {
+            "success": True,
+            "data": result
+        }
+
+    except Exception as e:
+        import traceback
+        print("ERROR:", str(e))
+        print(traceback.format_exc())
+
+        return {
+            "success": False,
+            "error": str(e)
+        }
