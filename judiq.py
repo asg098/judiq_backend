@@ -426,6 +426,59 @@ SCORING_MODEL_VERSION = "12.0-EVIDENCE-WEIGHTED-EXPLAINABLE"
 TIMELINE_MATH_VERSION = "CALENDAR_MONTHS"
 
 # ============================================================================
+# 🔥 GLOBAL SAFETY HELPERS - BULLETPROOF TYPE HANDLING
+# ============================================================================
+
+def ensure_list(x):
+    """Safely convert any value to a list"""
+    if x is None:
+        return []
+    if isinstance(x, list):
+        return x
+    if isinstance(x, (tuple, set)):
+        return list(x)
+    return [x]
+
+def ensure_dict(x):
+    """Safely convert any value to a dict"""
+    if x is None:
+        return {}
+    if isinstance(x, dict):
+        return x
+    return {}
+
+def ensure_number(x, default=0):
+    """Safely convert any value to a number"""
+    if x is None:
+        return default
+    try:
+        return float(x)
+    except (ValueError, TypeError):
+        return default
+
+def ensure_string(x, default=""):
+    """Safely convert any value to a string"""
+    if x is None:
+        return default
+    try:
+        return str(x)
+    except Exception:
+        return default
+
+def ensure_bool(x, default=False):
+    """Safely convert any value to a boolean"""
+    if x is None:
+        return default
+    if isinstance(x, bool):
+        return x
+    if isinstance(x, str):
+        return x.lower() in ('true', '1', 'yes', 'on')
+    try:
+        return bool(x)
+    except Exception:
+        return default
+
+# ============================================================================
 # 🆕 v12.0 PRODUCTION-GRADE MODULES
 # ============================================================================
 
@@ -31230,10 +31283,42 @@ class ControlledAnalysisEngine:
                 'step_3_contradictions': f"Contradiction penalty: -{contradiction_penalty:.1f}",
                 'step_4_adjusted': f"Score after contradictions: {adjusted_score:.1f}/100",
                 'step_5_fatal_cap': f"Fatal cap applied: {final_score:.1f}/100" if fatal_issues else "No fatal cap",
-                'detailed_adjustments': [f"{adj['reason']}: {adj['value']:+.1f}" for adj in adjustments] if adjustments else [],
+                'detailed_adjustments': self._safe_format_adjustments(adjustments),
                 'final_formula': f"{base_score:.1f} (base) → {non_linear_score:.1f} (non-linear) - {contradiction_penalty:.1f} (contradictions) = {final_score:.1f}"
             }
         }
+    
+    @staticmethod
+    def _safe_format_adjustments(adjustments):
+        """Safely format adjustments list - BULLETPROOF VERSION"""
+        safe_adjustments = []
+        
+        # Handle None
+        if adjustments is None:
+            return []
+        
+        # Handle non-list types
+        if not isinstance(adjustments, list):
+            print(f"⚠️ ADJUSTMENTS TYPE WARNING: Expected list, got {type(adjustments).__name__}")
+            return []
+        
+        # Process each adjustment safely
+        for idx, adj in enumerate(adjustments):
+            try:
+                if isinstance(adj, dict):
+                    reason = ensure_string(adj.get("reason", "Unknown"), "Unknown")
+                    value = ensure_number(adj.get("value", 0), 0)
+                    safe_adjustments.append(f"{reason}: {value:+.1f}")
+                elif isinstance(adj, str):
+                    safe_adjustments.append(adj)
+                else:
+                    # Fallback for unexpected types
+                    safe_adjustments.append(f"Adjustment {idx + 1}: {str(adj)}")
+            except Exception as e:
+                print(f"⚠️ ERROR formatting adjustment {idx}: {e}")
+                safe_adjustments.append(f"Adjustment {idx + 1}: [error]")
+        
+        return safe_adjustments
     
     @staticmethod
     def _determine_verdict(score: float) -> str:
@@ -33936,10 +34021,15 @@ class DefenceSimulationEngine:
         
         # Generate preparation actions
         preparation_actions = []
-        for defence in defences:
-            if defence['probability'] in ['High', 'Medium']:
+        # 🔥 SAFE: Ensure defences is a list
+        for defence in ensure_list(defences):
+            if not isinstance(defence, dict):
+                continue
+            if defence.get('probability') in ['High', 'Medium']:
+                defence_text = ensure_string(defence.get('defence', ''), 'Unknown defence')
+                counter = ensure_string(defence.get('counter_strategy', ''), 'No counter strategy')
                 preparation_actions.append(
-                    f"Counter {defence['defence'].split('-')[0].strip()}: {defence['counter_strategy'][:100]}..."
+                    f"Counter {defence_text.split('-')[0].strip()}: {counter[:100]}..."
                 )
         
         return {
@@ -35125,6 +35215,25 @@ def run_full_analysis_v12(case_data: Dict, case_id: str = None, fast_mode: bool 
         }
     """
     
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🔥 CRITICAL: INPUT SAFETY - BULLETPROOF TYPE ENFORCEMENT
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    # Ensure case_data is a dict
+    case_data = ensure_dict(case_data)
+    
+    # Ensure critical fields have safe defaults
+    if not case_data:
+        case_data = {
+            'cheque_present': False,
+            'notice_sent': False,
+            'debt_proven': False,
+            'case_id': 'EMPTY_CASE'
+        }
+    
+    # Debug logging for diagnostics
+    print(f"DEBUG: run_full_analysis_v12 received case_data type: {type(case_data).__name__}")
+    
     start_time = time.time()
     logger.info("=" * 80)
     logger.info("🚀 JUDIQ v12.0 PRODUCTION INTELLIGENCE PIPELINE STARTED")
@@ -36130,9 +36239,14 @@ def safe_run_engine(case_data: dict) -> dict:
     """
     Safe wrapper around the legal analysis engine.
     Prevents ANY crash from propagating to the API.
+    BULLETPROOF VERSION - Enhanced with type diagnostics
     """
     try:
+        # 🔥 CRITICAL: Validate input type
+        case_data = ensure_dict(case_data)
+        
         api_logger.info(f"Running engine for case: {case_data.get('case_id', 'UNKNOWN')}")
+        api_logger.info(f"Input type validated: {type(case_data).__name__}")
         
         # Run the v12 analysis engine
         result = run_full_analysis_v12(case_data, case_id=case_data.get('case_id', 'API_CASE'))
@@ -36160,6 +36274,8 @@ def safe_run_engine(case_data: dict) -> dict:
     except TypeError as e:
         api_logger.error(f"Type error in engine: {str(e)}")
         api_logger.error(traceback.format_exc())
+        print(f"🔥 TYPE ERROR DEBUG: {str(e)}")
+        print(f"🔥 Case data type: {type(case_data).__name__}")
         return {
             "executive_decision": {
                 "verdict": "Error - Invalid Data Type",
@@ -36177,6 +36293,8 @@ def safe_run_engine(case_data: dict) -> dict:
     except Exception as e:
         api_logger.error(f"Engine error: {str(e)}")
         api_logger.error(traceback.format_exc())
+        print(f"🔥 UNEXPECTED ERROR: {str(e)}")
+        print(f"🔥 Error type: {type(e).__name__}")
         return {
             "executive_decision": {
                 "verdict": "Error - Analysis Failed",
