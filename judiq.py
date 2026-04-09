@@ -10836,7 +10836,7 @@ def analyze_notice_delivery_status(case_data: Dict) -> Dict:
             'service_proof': {
                 'strength': unified_result['proof_strength'],
                 'method': unified_result['delivery_method'],
-                'score': unified_ensure_number(ensure_dict(result).get('score'))
+                'score': ensure_number(ensure_dict(unified_result).get('score'))
             },
             'recommendations': []
         }
@@ -29428,7 +29428,7 @@ class AnalysisOrchestrator:
         # Step 4: Combine (no internal logic, just assembly)
         return {
             'fatal': fatal_result,
-            'score': score_ensure_number(ensure_dict(result).get('score')),
+            'score': ensure_number(ensure_dict(score_result).get('score')),
             'priority': priority,
             'modules_decoupled': True
         }
@@ -30221,7 +30221,7 @@ class PresentationLayer:
         This is the ONLY place where formatting happens
         """
         return {
-            'displayScore': PresentationLayer.format_score(canonical_ensure_number(ensure_dict(result).get('score'))),
+            'displayScore': PresentationLayer.format_score(ensure_number(ensure_dict(canonical_result).get('score'))),
             'displayPriority': PresentationLayer.format_priority(canonical_result['priority']),
             'displayVerdict': PresentationLayer.format_verdict(canonical_result.get('verdict', 'Unknown')),
             'rawData': canonical_result  # Always include raw data
@@ -31053,7 +31053,7 @@ def analyze_case_production_safe(case_data: Dict, case_id: str = None) -> Dict:
         unified_result['learned_adjustments'] = learned_adjustments
         
         # FIX #7: Borderline scenario handling
-        borderline_info = EdgeCaseHandler.handle_borderline_scenarios(unified_ensure_number(ensure_dict(result).get('score')))
+        borderline_info = EdgeCaseHandler.handle_borderline_scenarios(ensure_number(ensure_dict(unified_result).get('score')))
         unified_result['borderline_analysis'] = borderline_info
         
         # FIX #8: Generate and verify aligned narrative
@@ -31083,8 +31083,8 @@ def analyze_case_production_safe(case_data: Dict, case_id: str = None) -> Dict:
             'confidence_modeling': True
         }
         
-        logger.info(f"✅ Analysis complete: Score={unified_ensure_number(ensure_dict(result).get('score'))}, "
-                   f"Verdict={unified_ensure_dict(result).get('verdict', 'Unknown')}, "
+        logger.info(f"✅ Analysis complete: Score={ensure_number(ensure_dict(unified_result).get('score'))}, "
+                   f"Verdict={ensure_dict(unified_result).get('verdict', 'Unknown')}, "
                    f"Confidence={unified_result.get('confidence', 'N/A')}")
         logger.info("="*80)
         
@@ -31904,11 +31904,11 @@ def analyze_case_production(case_data: Dict, case_id: str = None) -> Dict:
     # ✅ FIX 2 (FINAL): Apply learned adjustments WITH FEEDBACK LOOP
     learned_adjustment = LEARNING_SYSTEM.get_learned_adjustment(case_data)
     if learned_adjustment != 0:
-        original_score = ensure_number(ensure_dict(result).get('score'))
-        result['score'] = original_score + learned_adjustment
+        original_score = ensure_number(ensure_dict(analysis_result).get('score'))
+        analysis_result['score'] = original_score + learned_adjustment
         analysis_result['learned_adjustment'] = learned_adjustment
         analysis_result['score_before_learning'] = original_score
-        logger.info(f"🧠 Applied learned adjustment: {original_score:.1f} → {ensure_number(ensure_dict(result).get('score')):.1f} ({learned_adjustment:+.1f})")
+        logger.info(f"🧠 Applied learned adjustment: {original_score:.1f} → {ensure_number(ensure_dict(analysis_result).get('score')):.1f} ({learned_adjustment:+.1f})")
     
     # ✅ NEW: Automatic feedback trigger (ready for real outcomes)
     # When actual outcome is known, call: LEARNING_SYSTEM.record_feedback(case_id, analysis_result, actual_outcome)
@@ -31925,8 +31925,8 @@ def analyze_case_production(case_data: Dict, case_id: str = None) -> Dict:
     
     # ✅ FIX 5: Modular narrative generation
     narrative = NarrativeModule.generate_narrative(
-        score=ensure_number(ensure_dict(result).get('score')),
-        verdict=analysis_ensure_dict(result).get('verdict', 'Unknown'),
+        score=ensure_number(ensure_dict(analysis_result).get('score')),
+        verdict=ensure_dict(analysis_result).get('verdict', 'Unknown'),
         fatal_issues=analysis_result.get('fatal_issues', []),
         contradictions=analysis_result.get('contradictions', []),
         case_data=case_data
@@ -31960,7 +31960,7 @@ def analyze_case_production(case_data: Dict, case_id: str = None) -> Dict:
                 'confidence': semantic_result.get('confidence', 0),
                 'explanation': f"Issue categorized as '{semantic_result.get('primary_category')}' with {semantic_result.get('confidence', 0)*100:.0f}% confidence"
             },
-            'verdict_reasoning': f"Score {final_ensure_number(ensure_dict(result).get('score')):.1f}/100 → Verdict: {final_ensure_dict(result).get('verdict', 'Unknown')}"
+            'verdict_reasoning': f"Score {ensure_number(ensure_dict(analysis_result).get('score')):.1f}/100 → Verdict: {ensure_dict(analysis_result).get('verdict', 'Unknown')}"
         },
         'fixes_applied': {
             'fix_1_real_semantic': True,
@@ -31998,8 +31998,8 @@ def analyze_case_production(case_data: Dict, case_id: str = None) -> Dict:
         logger.warning(f"⚠️ draft type selection failed: {_de}")
         final_result["draft_type"] = "strategy_note"
 
-    logger.info(f"✅ Analysis complete: Score={final_ensure_number(ensure_dict(result).get('score')):.1f}, "
-               f"Verdict={final_ensure_dict(result).get('verdict', 'Unknown')}")
+    logger.info(f"✅ Analysis complete: Score={ensure_number(ensure_dict(analysis_result).get('score')):.1f}, "
+               f"Verdict={ensure_dict(analysis_result).get('verdict', 'Unknown')}")
     logger.info("="*80)
     
     return final_result
