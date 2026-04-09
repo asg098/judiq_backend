@@ -31336,7 +31336,7 @@ class ControlledAnalysisEngine:
                 'step_3_contradictions': f"Contradiction penalty: -{contradiction_penalty:.1f}",
                 'step_4_adjusted': f"Score after contradictions: {adjusted_score:.1f}/100",
                 'step_5_fatal_cap': f"Fatal cap applied: {final_score:.1f}/100" if fatal_issues else "No fatal cap",
-                'detailed_adjustments': self._safe_format_adjustments(adjustments),
+                'detailed_adjustments': ControlledAnalysisEngine._safe_format_adjustments(adjustments),
                 'final_formula': f"{base_score:.1f} (base) → {non_linear_score:.1f} (non-linear) - {contradiction_penalty:.1f} (contradictions) = {final_score:.1f}"
             }
         }
@@ -36274,6 +36274,145 @@ def normalize_input(raw_data: dict) -> dict:
             default=f"CASE_{datetime.now().strftime('%Y%m%d%H%M%S')}"
         )
         
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 TASK 2: NESTED JSON SUPPORT (CRITICAL FOR FRONTEND COMPATIBILITY)
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # Handle nested "transaction" object
+        if "transaction" in raw_data and isinstance(raw_data["transaction"], dict):
+            tx = raw_data["transaction"]
+            api_logger.info(f"Processing nested transaction object: {tx}")
+            
+            # Extract financial data from transaction
+            if tx.get("debt_amount"):
+                normalized["cheque_amount"] = to_float(tx.get("debt_amount"), 0.0)
+                if normalized["cheque_amount"] > 0:
+                    normalized["debt_proven"] = True
+            
+            if tx.get("transaction_date"):
+                normalized["cheque_date"] = to_string(tx.get("transaction_date"), '')
+            
+            if tx.get("transaction_type"):
+                normalized["underlying_transaction"] = to_string(tx.get("transaction_type"), '')
+            
+            if tx.get("payment_mode"):
+                normalized["case_description"] = to_string(tx.get("payment_mode"), '')
+        
+        # Handle nested "case_identity" object
+        if "case_identity" in raw_data and isinstance(raw_data["case_identity"], dict):
+            ci = raw_data["case_identity"]
+            api_logger.info(f"Processing nested case_identity object: {ci}")
+            
+            if ci.get("case_type"):
+                # Store case type for reference
+                normalized["case_description"] = to_string(ci.get("case_type"), "Cheque Bounce") + " - " + normalized.get("case_description", "")
+            
+            if ci.get("case_number"):
+                normalized["case_id"] = to_string(ci.get("case_number"), normalized["case_id"])
+            
+            if ci.get("filing_date"):
+                normalized["complaint_date"] = to_string(ci.get("filing_date"), '')
+                if ci.get("filing_date"):
+                    normalized["complaint_filed"] = True
+        
+        # Handle nested "parties" object
+        if "parties" in raw_data and isinstance(raw_data["parties"], dict):
+            parties = raw_data["parties"]
+            api_logger.info(f"Processing nested parties object: {parties}")
+            
+            if parties.get("complainant"):
+                if isinstance(parties["complainant"], dict):
+                    normalized["plaintiff_name"] = to_string(parties["complainant"].get("name"), "Plaintiff")
+                else:
+                    normalized["plaintiff_name"] = to_string(parties["complainant"], "Plaintiff")
+            
+            if parties.get("accused"):
+                if isinstance(parties["accused"], dict):
+                    normalized["defendant_name"] = to_string(parties["accused"].get("name"), "Defendant")
+                else:
+                    normalized["defendant_name"] = to_string(parties["accused"], "Defendant")
+        
+        # Handle nested "cheque_details" object
+        if "cheque_details" in raw_data and isinstance(raw_data["cheque_details"], dict):
+            cd = raw_data["cheque_details"]
+            api_logger.info(f"Processing nested cheque_details object: {cd}")
+            
+            if cd.get("cheque_number"):
+                normalized["cheque_number"] = to_string(cd.get("cheque_number"), '')
+                normalized["cheque_present"] = True
+            
+            if cd.get("cheque_amount"):
+                normalized["cheque_amount"] = to_float(cd.get("cheque_amount"), 0.0)
+            
+            if cd.get("cheque_date"):
+                normalized["cheque_date"] = to_string(cd.get("cheque_date"), '')
+            
+            if cd.get("bank_name"):
+                normalized["bank_name"] = to_string(cd.get("bank_name"), '')
+            
+            if cd.get("account_number"):
+                normalized["account_number"] = to_string(cd.get("account_number"), '')
+            
+            if cd.get("dishonour_date"):
+                normalized["dishonour_date"] = to_string(cd.get("dishonour_date"), '')
+            
+            if cd.get("dishonour_reason"):
+                normalized["dishonour_reason"] = to_string(cd.get("dishonour_reason"), 'Insufficient funds')
+        
+        # Handle nested "legal_notice" object
+        if "legal_notice" in raw_data and isinstance(raw_data["legal_notice"], dict):
+            ln = raw_data["legal_notice"]
+            api_logger.info(f"Processing nested legal_notice object: {ln}")
+            
+            if ln.get("notice_sent"):
+                normalized["notice_sent"] = to_bool(ln.get("notice_sent"), False)
+            
+            if ln.get("notice_date"):
+                normalized["notice_date"] = to_string(ln.get("notice_date"), '')
+            
+            if ln.get("notice_mode"):
+                normalized["notice_mode"] = to_string(ln.get("notice_mode"), 'Registered Post')
+            
+            if ln.get("reply_received"):
+                normalized["notice_reply_received"] = to_bool(ln.get("reply_received"), False)
+            
+            if ln.get("reply_content"):
+                normalized["notice_reply_content"] = to_string(ln.get("reply_content"), '')
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 TASK 3: FORCE MINIMUM VALID SIGNAL
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # If user provided ANY financial/legal info, set appropriate flags
+        if normalized.get("cheque_amount", 0) > 0:
+            normalized["cheque_present"] = True
+            api_logger.info(f"✅ Auto-setting cheque_present=True because cheque_amount={normalized['cheque_amount']}")
+        
+        # If they provided notice date but forgot the flag
+        if normalized.get("notice_date") and not normalized.get("notice_sent"):
+            normalized["notice_sent"] = True
+            api_logger.info(f"✅ Auto-setting notice_sent=True because notice_date provided")
+        
+        # If they provided dishonour date but forgot the flag
+        if normalized.get("dishonour_date") and not normalized.get("cheque_present"):
+            normalized["cheque_present"] = True
+            api_logger.info(f"✅ Auto-setting cheque_present=True because dishonour_date provided")
+        
+        # If they provided complaint date but forgot the flag
+        if normalized.get("complaint_date") and not normalized.get("complaint_filed"):
+            normalized["complaint_filed"] = True
+            api_logger.info(f"✅ Auto-setting complaint_filed=True because complaint_date provided")
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 TASK 4: DEBUG LOG - FINAL NORMALIZED DATA
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        print("\n" + "=" * 80)
+        print("🔍 FINAL NORMALIZED DATA (BEFORE ENGINE):")
+        print("=" * 80)
+        print(json.dumps(normalized, indent=2, default=str))
+        print("=" * 80 + "\n")
+        
         api_logger.info(f"Normalized output: {json.dumps(normalized, default=str)[:500]}")
         
         return normalized
@@ -36306,6 +36445,41 @@ def safe_run_engine(case_data: dict) -> dict:
         # 🔥 CRITICAL: Validate input type
         case_data = ensure_dict(case_data)
         
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 TASK 5: PREVENT EMPTY ENGINE INPUT
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # Check if normalized data is actually empty (all False/0/empty values)
+        non_empty_values = [
+            v for k, v in case_data.items() 
+            if v and v not in [False, 0, 0.0, '', [], {}, None] and k != 'case_id'
+        ]
+        
+        if not non_empty_values:
+            api_logger.error("❌ EMPTY NORMALIZED DATA DETECTED - Returning fallback")
+            print("\n" + "🔥" * 40)
+            print("🔥 CRITICAL ERROR: Empty normalized data detected!")
+            print("🔥 All fields are empty/false/zero - cannot run analysis")
+            print("🔥" * 40 + "\n")
+            return {
+                "executive_decision": {
+                    "verdict": "Error - No Input Data",
+                    "score": 0,
+                    "defence_risk": "Unknown",
+                    "top_defences": [],
+                    "reasoning_trace": [
+                        "No valid input data provided",
+                        "All normalized fields are empty or default values",
+                        "Please provide case details: cheque information, notice details, or debt documentation"
+                    ]
+                },
+                "contradictions": [],
+                "draft": "Unable to generate draft - no case information provided.",
+                "legal_analysis": "Unable to complete analysis - please provide case details.",
+                "error": "Empty normalized data - all fields are default/empty values"
+            }
+        
+        api_logger.info(f"✅ Validation passed: {len(non_empty_values)} non-empty fields found")
         api_logger.info(f"Running engine for case: {case_data.get('case_id', 'UNKNOWN')}")
         api_logger.info(f"Input type validated: {type(case_data).__name__}")
         
