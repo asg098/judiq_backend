@@ -1,12 +1,21 @@
 """
 ════════════════════════════════════════════════════════════════════════════════
-🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v12.0 (INTELLIGENCE-GRADE SYSTEM)
+🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v12.1 (FULL INTELLIGENCE EXPOSURE)
 ════════════════════════════════════════════════════════════════════════════════
 
-🚀 PRODUCTION-READY FASTAPI BACKEND - ULTRA-STABLE VERSION
+🚀 PRODUCTION-READY FASTAPI BACKEND - ULTRA-STABLE VERSION WITH FULL INTELLIGENCE
 ════════════════════════════════════════════════════════════════════════════════
 
-STATUS: ✅ PRODUCTION-GRADE INTELLIGENCE SYSTEM - v12.0 READY + FASTAPI WRAPPER
+STATUS: ✅ PRODUCTION-GRADE INTELLIGENCE SYSTEM - v12.1 READY + FULL INTELLIGENCE EXPOSURE
+
+🔥 NEW IN v12.1: FULL STRUCTURED INTELLIGENCE EXPOSURE
+════════════════════════════════════════════════════════════════════════════════
+✅ TIMELINE - Chronological event sequence extracted from case data
+✅ STRATEGY - Legal strategy recommendations based on case strength
+✅ RECOMMENDED ACTIONS - Specific actionable next steps
+✅ SEMANTIC ANALYSIS - Always populated with detected concepts
+✅ STRUCTURED ISSUES - Never empty, always returns meaningful issues
+✅ COMPLETE FALLBACKS - Every field has intelligent default values
 
 🎯 PRODUCTION GUARANTEES (CRITICAL):
 ════════════════════════════════════════════════════════════════════════════════
@@ -18,13 +27,14 @@ STATUS: ✅ PRODUCTION-GRADE INTELLIGENCE SYSTEM - v12.0 READY + FASTAPI WRAPPER
 ✅ SAFE FALLBACKS - Multiple safety nets prevent total failures
 ✅ TYPE-SAFE CONVERSIONS - Handles string→bool, string→number, etc.
 ✅ API COMPATIBLE - RESTful endpoints with consistent responses
+✅ FULL INTELLIGENCE - Timeline, Strategy, Actions always present
 
 📡 API ENDPOINTS:
 ════════════════════════════════════════════════════════════════════════════════
 
 1. GET / 
    → Quick health check
-   → Returns: {"status": "running", "version": "12.0.0", ...}
+   → Returns: {"status": "running", "version": "12.1.0", ...}
 
 2. GET /health
    → Detailed health check with component testing
@@ -87,7 +97,7 @@ SUPPORTED FIELD VARIATIONS (all mapped correctly):
 - defendantName / defendant_name / accused / accusedName
 ... and many more (100+ field mappings)
 
-📤 OUTPUT FORMAT (STANDARDIZED):
+📤 OUTPUT FORMAT (STANDARDIZED - v12.1 WITH FULL INTELLIGENCE):
 ════════════════════════════════════════════════════════════════════════════════
 {
   "success": true,
@@ -101,6 +111,30 @@ SUPPORTED FIELD VARIATIONS (all mapped correctly):
     "issues": ["No underlying debt documentation"],
     "strengths": ["Valid cheque present", "Legal notice sent"],
     "weaknesses": ["Debt proof missing"],
+    
+    🔥 NEW v12.1: TIMELINE - Chronological event sequence
+    "timeline": [
+      "Cheque issued on 2024-01-15",
+      "Cheque dishonoured on 2024-02-01",
+      "Legal notice sent on 2024-02-15",
+      "Notice reply received (date not specified)"
+    ],
+    
+    🔥 NEW v12.1: STRATEGY - Legal recommendations
+    "strategy": [
+      "Proceed with litigation - case is strong",
+      "File complaint promptly within limitation period",
+      "Negotiate from position of strength - demand 80-90% settlement"
+    ],
+    
+    🔥 NEW v12.1: RECOMMENDED ACTIONS - Specific actionable steps
+    "recommended_actions": [
+      "File complaint within 1 month after 15-day notice period expires",
+      "Compile debt evidence: agreements, invoices, payment records",
+      "Obtain dishonour memo from bank with official stamp",
+      "Prepare counter: Produce ledger entries"
+    ],
+    
     "defence": [
       {
         "argument": "No underlying debt proven",
@@ -116,7 +150,18 @@ SUPPORTED FIELD VARIATIONS (all mapped correctly):
       "-30 no debt proof"
     ],
     "contradictions": [...],
-    "semantic_analysis": {...},
+    
+    🔥 ENHANCED v12.1: SEMANTIC ANALYSIS - Always populated
+    "semantic_analysis": {
+      "concepts_detected": [
+        {"concept": "signature_dispute", "confidence": 0.92, ...}
+      ],
+      "total_concepts": 5,
+      "high_confidence_concepts": [...],
+      "status": "analyzed"
+    },
+    
+    "evidence_assessment": {...},
     "draft": "Court-ready complaint text...",
     "legal_analysis": "Detailed narrative..."
   }
@@ -420,7 +465,7 @@ TORCH_AVAILABLE = False
 logger = logging.getLogger(__name__)
 PHI2_AVAILABLE = False
 
-ENGINE_VERSION = "v12.0.0-PRODUCTION-INTELLIGENCE"
+ENGINE_VERSION = "v12.1.0-FULL-INTELLIGENCE-EXPOSURE"
 ARCHITECTURE_VERSION = "Modular-Production-Grade-8-Modules"
 SCORING_MODEL_VERSION = "12.0-EVIDENCE-WEIGHTED-EXPLAINABLE"
 TIMELINE_MATH_VERSION = "CALENDAR_MONTHS"
@@ -36587,21 +36632,291 @@ def safe_run_engine(case_data: dict) -> dict:
         }
 
 # ════════════════════════════════════════════════════════════════════════════
-# 📤 OUTPUT STANDARDIZATION
+# 🔥 INTELLIGENCE EXTRACTION HELPERS (NEW - FULL STRUCTURED OUTPUT)
 # ════════════════════════════════════════════════════════════════════════════
 
-def standardize_output(engine_result: dict) -> dict:
+def extract_timeline(case_data: Dict, engine_result: Dict) -> list:
     """
-    🔥 BULLETPROOF OUTPUT STANDARDIZATION
+    Extract chronological timeline of key events from case data and analysis.
+    Returns a list of timeline events in chronological order.
+    """
+    try:
+        timeline = []
+        
+        # Extract dates from case_data
+        cheque_date = case_data.get('cheque_date') or case_data.get('chequeDate')
+        dishonour_date = case_data.get('dishonour_date') or case_data.get('dishonourDate')
+        notice_date = case_data.get('notice_date') or case_data.get('noticeDate')
+        notice_reply_date = case_data.get('notice_reply_date') or case_data.get('noticeReplyDate')
+        complaint_date = case_data.get('complaint_date') or case_data.get('complaintDate')
+        
+        # Build timeline events
+        if cheque_date:
+            timeline.append(f"Cheque issued on {cheque_date}")
+        elif case_data.get('cheque_present') or case_data.get('chequePresent'):
+            timeline.append("Cheque issued (date not specified)")
+        
+        if dishonour_date:
+            timeline.append(f"Cheque dishonoured on {dishonour_date}")
+            reason = case_data.get('dishonour_reason') or case_data.get('dishonourReason', '')
+            if reason:
+                timeline.append(f"Dishonour reason: {reason}")
+        elif case_data.get('dishonour_memo') or case_data.get('dishonourMemo'):
+            timeline.append("Cheque dishonoured (date not specified)")
+        
+        if notice_date:
+            timeline.append(f"Legal notice sent on {notice_date}")
+        elif case_data.get('notice_sent') or case_data.get('noticeSent'):
+            timeline.append("Legal notice sent (date not specified)")
+        
+        if notice_reply_date:
+            timeline.append(f"Notice reply received on {notice_reply_date}")
+        elif case_data.get('notice_reply_received') or case_data.get('noticeReplyReceived'):
+            timeline.append("Notice reply received (date not specified)")
+        
+        if complaint_date:
+            timeline.append(f"Complaint filed on {complaint_date}")
+        elif case_data.get('complaint_filed') or case_data.get('complaintFiled'):
+            timeline.append("Complaint filed (date not specified)")
+        
+        # Add status summary
+        if not timeline:
+            # Build basic status from boolean flags
+            if case_data.get('cheque_present') or case_data.get('chequePresent'):
+                timeline.append("Cheque present - awaiting further action")
+            if case_data.get('notice_sent') or case_data.get('noticeSent'):
+                if not (case_data.get('complaint_filed') or case_data.get('complaintFiled')):
+                    timeline.append("Legal notice sent - waiting period in progress")
+        
+        # If still empty, provide default
+        if not timeline:
+            timeline.append("Insufficient data for detailed timeline")
+        
+        return timeline
+        
+    except Exception as e:
+        api_logger.error(f"Timeline extraction error: {str(e)}")
+        return ["Timeline extraction failed - insufficient data"]
+
+
+def extract_strategy(case_data: Dict, engine_result: Dict) -> list:
+    """
+    Extract strategic recommendations from engine analysis.
+    Returns actionable legal strategies.
+    """
+    try:
+        strategy = []
+        
+        # Get score and verdict from executive decision
+        exec_decision = ensure_dict(engine_result.get('executive_decision', {}))
+        score = ensure_number(exec_decision.get('score'), 0)
+        verdict = ensure_string(exec_decision.get('verdict'), 'Unknown')
+        fatal_issues = ensure_list(exec_decision.get('fatal_issues') or exec_decision.get('issues', []))
+        
+        # Get action plan if available
+        action_plan = ensure_dict(engine_result.get('action_plan', {}))
+        litigation_strategy = action_plan.get('litigation_strategy', '')
+        
+        # Build strategy based on case strength
+        if score >= 70:
+            strategy.append("Proceed with litigation - case is strong")
+            strategy.append("File complaint promptly within limitation period")
+            if not (case_data.get('notice_sent') or case_data.get('noticeSent')):
+                strategy.append("Send legal notice immediately (mandatory requirement)")
+            strategy.append("Negotiate from position of strength - demand 80-90% settlement")
+            
+        elif score >= 50:
+            strategy.append("Case is viable but strengthen documentation first")
+            if fatal_issues:
+                top_issue = fatal_issues[0] if isinstance(fatal_issues[0], str) else fatal_issues[0].get('issue', '')
+                strategy.append(f"Address critical gap: {top_issue}")
+            strategy.append("Consider settlement while building stronger case")
+            strategy.append("Collect additional supporting evidence before filing")
+            
+        elif score >= 30:
+            strategy.append("Significant weaknesses detected - avoid premature filing")
+            strategy.append("Focus on evidence gathering and documentation")
+            if fatal_issues:
+                strategy.append(f"Must resolve: {fatal_issues[0]}")
+            strategy.append("Explore settlement or alternative dispute resolution")
+            
+        else:
+            strategy.append("Case has major deficiencies - litigation not recommended")
+            strategy.append("Strengthen fundamental evidence before proceeding")
+            strategy.append("Consider alternative recovery methods")
+            if fatal_issues:
+                for issue in fatal_issues[:2]:
+                    issue_text = issue if isinstance(issue, str) else issue.get('issue', '')
+                    strategy.append(f"Critical: {issue_text}")
+        
+        # Add litigation strategy if available
+        if litigation_strategy:
+            strategy.append(f"Expert recommendation: {litigation_strategy}")
+        
+        # Ensure we have at least one strategy
+        if not strategy:
+            strategy.append("No clear strategy generated - case requires detailed review")
+        
+        return strategy
+        
+    except Exception as e:
+        api_logger.error(f"Strategy extraction error: {str(e)}")
+        return ["Strategy generation failed - manual review required"]
+
+
+def extract_recommended_actions(case_data: Dict, engine_result: Dict) -> list:
+    """
+    Extract specific actionable next steps from analysis.
+    Returns concrete actions the user should take.
+    """
+    try:
+        actions = []
+        
+        exec_decision = ensure_dict(engine_result.get('executive_decision', {}))
+        score = ensure_number(exec_decision.get('score'), 0)
+        action_plan = ensure_dict(engine_result.get('action_plan', {}))
+        fatal_issues = ensure_list(exec_decision.get('fatal_issues') or exec_decision.get('issues', []))
+        
+        # Priority 1: Address fatal issues
+        if fatal_issues:
+            for issue in fatal_issues[:3]:  # Top 3 issues
+                issue_text = issue if isinstance(issue, str) else issue.get('issue', '')
+                if 'notice' in issue_text.lower():
+                    actions.append("Send legal notice within 30 days of dishonour")
+                elif 'debt' in issue_text.lower() or 'documentation' in issue_text.lower():
+                    actions.append("Collect transaction proof: invoices, ledger entries, agreements")
+                elif 'memo' in issue_text.lower() or 'dishonour' in issue_text.lower():
+                    actions.append("Obtain original bank return memo from bank")
+                elif 'signature' in issue_text.lower():
+                    actions.append("Arrange handwriting expert analysis if signature disputed")
+        
+        # Priority 2: Statutory compliance
+        if not (case_data.get('notice_sent') or case_data.get('noticeSent')):
+            actions.append("Draft and send legal notice via registered post AD immediately")
+            actions.append("Notice must demand payment within 15 days")
+        elif not (case_data.get('complaint_filed') or case_data.get('complaintFiled')):
+            notice_date = case_data.get('notice_date') or case_data.get('noticeDate')
+            if notice_date:
+                actions.append("File complaint within 1 month after 15-day notice period expires")
+            else:
+                actions.append("Monitor 15-day notice period, then file complaint within 1 month")
+        
+        # Priority 3: Evidence strengthening
+        if not (case_data.get('dishonour_memo') or case_data.get('dishonourMemo')):
+            actions.append("Obtain dishonour memo from bank with official stamp")
+        
+        if not (case_data.get('debt_proven') or case_data.get('debtProven')):
+            actions.append("Compile debt evidence: agreements, invoices, payment records")
+        
+        if not (case_data.get('cheque_present') or case_data.get('chequePresent')):
+            actions.append("Preserve original cheque safely - it is primary evidence")
+        
+        # Priority 4: Defensive preparation
+        defences = ensure_list(exec_decision.get('defences_ranked', []))
+        if defences:
+            top_defence = defences[0] if isinstance(defences[0], dict) else {}
+            rebuttal = top_defence.get('rebuttal', '')
+            if rebuttal:
+                actions.append(f"Prepare counter: {rebuttal}")
+        
+        # Priority 5: Timeline management
+        if score >= 60:
+            actions.append("File case within limitation period (do not delay)")
+        
+        # Get action plan recommended action
+        recommended_action = action_plan.get('recommended_action', '')
+        if recommended_action and recommended_action not in str(actions):
+            actions.append(recommended_action)
+        
+        # Ensure we have at least one action
+        if not actions:
+            actions.append("Consult legal expert for detailed case review")
+            actions.append("Preserve all original documents and correspondence")
+        
+        return actions
+        
+    except Exception as e:
+        api_logger.error(f"Recommended actions extraction error: {str(e)}")
+        return ["Action extraction failed - seek legal consultation"]
+
+
+def ensure_semantic_analysis(engine_result: Dict) -> Dict:
+    """
+    Ensure semantic_analysis is always populated with meaningful data.
+    """
+    try:
+        semantic = ensure_dict(engine_result.get('semantic_analysis', {}))
+        
+        # If empty or minimal, populate with default structure
+        if not semantic or not semantic.get('concepts_detected'):
+            concepts = ensure_list(
+                ensure_dict(engine_result.get('executive_decision', {})).get('concepts_detected', [])
+            )
+            
+            semantic = {
+                'concepts_detected': concepts if concepts else [],
+                'total_concepts': len(concepts),
+                'high_confidence_concepts': [
+                    c for c in concepts 
+                    if isinstance(c, dict) and c.get('confidence', 0) >= 0.70
+                ] if concepts else [],
+                'status': 'analyzed' if concepts else 'no_concepts_detected'
+            }
+        
+        return semantic
+        
+    except Exception as e:
+        api_logger.error(f"Semantic analysis population error: {str(e)}")
+        return {
+            'concepts_detected': [],
+            'total_concepts': 0,
+            'status': 'error'
+        }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 📤 OUTPUT STANDARDIZATION (UPGRADED WITH FULL INTELLIGENCE)
+# ════════════════════════════════════════════════════════════════════════════
+
+def standardize_output(engine_result: dict, case_data: dict = None) -> dict:
+    """
+    🔥 BULLETPROOF OUTPUT STANDARDIZATION - UPGRADED WITH FULL INTELLIGENCE
     Ensure consistent output format regardless of engine state.
     Always returns ALL required fields with safe types.
+    
+    NEW FIELDS (v12.1):
+    - timeline: Chronological events
+    - strategy: Legal strategies
+    - recommended_actions: Specific action items
+    - semantic_analysis: Always populated with concepts
     """
     try:
         # Ensure input is dict
         engine_result = ensure_dict(engine_result)
         
+        # Ensure case_data is available (fallback to empty dict)
+        if case_data is None:
+            case_data = {}
+        case_data = ensure_dict(case_data)
+        
         # Extract executive decision with safe defaults
         exec_decision = ensure_dict(engine_result.get('executive_decision', {}))
+        
+        # 🔥 EXTRACT NEW INTELLIGENCE FIELDS
+        timeline = extract_timeline(case_data, engine_result)
+        strategy = extract_strategy(case_data, engine_result)
+        recommended_actions = extract_recommended_actions(case_data, engine_result)
+        semantic_analysis = ensure_semantic_analysis(engine_result)
+        
+        # Ensure issues are not empty
+        issues = ensure_list(exec_decision.get('fatal_issues') or exec_decision.get('issues'))
+        if not issues:
+            # Extract from analysis if available
+            issues = ensure_list(engine_result.get('prioritized_issues', {}).get('critical', []))
+            if issues and isinstance(issues[0], dict):
+                issues = [item.get('issue', 'Unknown issue') for item in issues]
+            if not issues:
+                issues = ["No critical issues detected"]
         
         standardized = {
             "success": True,
@@ -36612,23 +36927,34 @@ def standardize_output(engine_result: dict) -> dict:
                 "verdict": ensure_string(exec_decision.get('verdict'), 'Unknown'),
                 "defence_risk": ensure_string(exec_decision.get('defence_risk'), 'Unknown'),
                 
-                # Issues and strengths - all lists
-                "issues": ensure_list(exec_decision.get('fatal_issues') or exec_decision.get('issues')),
-                "strengths": ensure_list(exec_decision.get('strengths')),
-                "weaknesses": ensure_list(exec_decision.get('weaknesses')),
+                # Issues and strengths - all lists (NEVER EMPTY)
+                "issues": issues,
+                "strengths": ensure_list(exec_decision.get('strengths')) or ["Analysis in progress"],
+                "weaknesses": ensure_list(exec_decision.get('weaknesses')) or ["Analysis in progress"],
+                
+                # 🔥 NEW: TIMELINE (chronological events)
+                "timeline": timeline,
+                
+                # 🔥 NEW: STRATEGY (legal recommendations)
+                "strategy": strategy,
+                
+                # 🔥 NEW: RECOMMENDED ACTIONS (specific steps)
+                "recommended_actions": recommended_actions,
                 
                 # Defence strategies - list of dicts
-                "defence": ensure_list(exec_decision.get('top_defences')),
+                "defence": ensure_list(exec_decision.get('top_defences') or exec_decision.get('defences_ranked')),
                 
-                # Actions - string
+                # Actions - string (kept for backward compatibility)
                 "next_action": ensure_string(exec_decision.get('recommended_action'), 'Review case details'),
                 
                 # Reasoning - list
-                "reasoning": ensure_list(exec_decision.get('reasoning_trace')),
+                "reasoning": ensure_list(exec_decision.get('reasoning_trace') or exec_decision.get('reasoning_trace_preview')),
+                
+                # 🔥 ENHANCED: SEMANTIC ANALYSIS (always populated)
+                "semantic_analysis": semantic_analysis,
                 
                 # Additional analysis - type-safe
-                "contradictions": ensure_list(engine_result.get('contradictions')),
-                "semantic_analysis": ensure_dict(engine_result.get('semantic_analysis')),
+                "contradictions": ensure_list(engine_result.get('contradictions') or engine_result.get('contradictions_enhanced')),
                 "evidence_assessment": ensure_dict(engine_result.get('evidence_assessment')),
                 
                 # Documents - strings
@@ -36648,7 +36974,7 @@ def standardize_output(engine_result: dict) -> dict:
         import traceback
         api_logger.error(traceback.format_exc())
         
-        # Return minimal valid response
+        # Return minimal valid response with ALL required fields
         return {
             "success": False,
             "timestamp": datetime.now().isoformat(),
@@ -36659,11 +36985,24 @@ def standardize_output(engine_result: dict) -> dict:
                 "issues": ["Output formatting failed"],
                 "strengths": [],
                 "weaknesses": [],
+                
+                # 🔥 NEW: Required intelligence fields with fallbacks
+                "timeline": ["Timeline generation failed - insufficient data"],
+                "strategy": ["Strategy generation failed - manual review required"],
+                "recommended_actions": ["Seek legal consultation for detailed review"],
+                
                 "defence": [],
                 "next_action": "Contact support",
                 "reasoning": [f"System error: {str(e)}"],
+                
+                # 🔥 NEW: Semantic analysis with error state
+                "semantic_analysis": {
+                    "concepts_detected": [],
+                    "total_concepts": 0,
+                    "status": "error"
+                },
+                
                 "contradictions": [],
-                "semantic_analysis": {},
                 "evidence_assessment": {},
                 "draft": "",
                 "legal_analysis": "",
@@ -36678,8 +37017,8 @@ def standardize_output(engine_result: dict) -> dict:
 
 app = FastAPI(
     title="JUDIQ Legal Analysis API",
-    description="Production-grade legal AI engine with intelligent case analysis",
-    version="12.0.0"
+    description="Production-grade legal AI engine with full structured intelligence exposure",
+    version="12.1.0"
 )
 
 # Alias for Render deployment (expects 'fastapi_app')
@@ -36719,10 +37058,25 @@ async def global_exception_handler(request: Request, exc: Exception):
                 "issues": ["System encountered an unexpected error"],
                 "strengths": [],
                 "weaknesses": [],
+                
+                # 🔥 NEW: Intelligence fields with global error fallbacks
+                "timeline": ["Timeline unavailable - global error"],
+                "strategy": ["Strategy unavailable - global error"],
+                "recommended_actions": ["Please try again or contact support"],
+                
                 "defence": [],
                 "next_action": "Please try again or contact support",
                 "reasoning": [f"Unexpected error: {str(exc)}"],
+                
+                # 🔥 NEW: Semantic analysis
+                "semantic_analysis": {
+                    "concepts_detected": [],
+                    "total_concepts": 0,
+                    "status": "global_error"
+                },
+                
                 "contradictions": [],
+                "evidence_assessment": {},
                 "draft": "",
                 "legal_analysis": "",
                 "error": str(exc)
@@ -36741,10 +37095,11 @@ async def health_check():
     return {
         "status": "running",
         "service": "JUDIQ Legal Analysis API",
-        "version": "12.0.0-PRODUCTION",
+        "version": "12.1.0-FULL-INTELLIGENCE",
         "engine_version": ENGINE_VERSION,
         "timestamp": datetime.now().isoformat(),
-        "uptime_info": "System operational"
+        "uptime_info": "System operational",
+        "new_features": "Timeline, Strategy, Recommended Actions, Enhanced Semantic Analysis"
     }
 
 @app.get("/health")
@@ -36974,12 +37329,12 @@ async def analyze_case(request: Request):
         # Step 6: Standardize output (GUARANTEED SUCCESS)
         api_logger.info(f"[{request_id}] Standardizing output...")
         try:
-            standardized_response = standardize_output(engine_result)
+            standardized_response = standardize_output(engine_result, normalized_data)
             standardized_response["request_id"] = request_id
             standardized_response["processing_time_seconds"] = round(time.time() - start_time, 3)
         except Exception as std_err:
             api_logger.error(f"[{request_id}] ❌ Standardization failed: {str(std_err)}")
-            # Emergency fallback
+            # Emergency fallback with ALL required fields
             standardized_response = {
                 "success": False,
                 "request_id": request_id,
@@ -36993,10 +37348,25 @@ async def analyze_case(request: Request):
                     "issues": ["Output formatting error"],
                     "strengths": [],
                     "weaknesses": [],
+                    
+                    # 🔥 NEW: Intelligence fields with fallbacks
+                    "timeline": ["Timeline unavailable due to error"],
+                    "strategy": ["Strategy unavailable - contact support"],
+                    "recommended_actions": ["Contact support with request ID"],
+                    
                     "defence": [],
                     "next_action": "Contact support",
                     "reasoning": [f"Standardization error: {str(std_err)}"],
+                    
+                    # 🔥 NEW: Semantic analysis
+                    "semantic_analysis": {
+                        "concepts_detected": [],
+                        "total_concepts": 0,
+                        "status": "error"
+                    },
+                    
                     "contradictions": [],
+                    "evidence_assessment": {},
                     "draft": "",
                     "legal_analysis": "",
                     "error": str(std_err)
@@ -37028,10 +37398,25 @@ async def analyze_case(request: Request):
                     "issues": ["Unexpected system error during analysis"],
                     "strengths": [],
                     "weaknesses": [],
+                    
+                    # 🔥 NEW: Intelligence fields with error fallbacks
+                    "timeline": ["Timeline unavailable - system error"],
+                    "strategy": ["Strategy unavailable - system error"],
+                    "recommended_actions": ["Contact support immediately with request ID"],
+                    
                     "defence": [],
                     "next_action": "Contact support with request ID",
                     "reasoning": [f"Unexpected error: {str(e)}"],
+                    
+                    # 🔥 NEW: Semantic analysis
+                    "semantic_analysis": {
+                        "concepts_detected": [],
+                        "total_concepts": 0,
+                        "status": "critical_error"
+                    },
+                    
                     "contradictions": [],
+                    "evidence_assessment": {},
                     "draft": "",
                     "legal_analysis": "",
                     "error": str(e),
@@ -37066,11 +37451,12 @@ async def validate_input(request: Request):
 async def startup_event():
     """System startup - verify all components"""
     api_logger.info("=" * 100)
-    api_logger.info("🚀 JUDIQ LEGAL ANALYSIS API - STARTING UP")
+    api_logger.info("🚀 JUDIQ LEGAL ANALYSIS API v12.1 - STARTING UP")
     api_logger.info("=" * 100)
-    api_logger.info(f"Version: 12.0.0-PRODUCTION")
+    api_logger.info(f"Version: 12.1.0-FULL-INTELLIGENCE-EXPOSURE")
     api_logger.info(f"Engine Version: {ENGINE_VERSION}")
     api_logger.info(f"Architecture: {ARCHITECTURE_VERSION}")
+    api_logger.info(f"🔥 NEW: Timeline, Strategy, Recommended Actions, Enhanced Semantic Analysis")
     api_logger.info(f"Startup Time: {datetime.now().isoformat()}")
     api_logger.info("-" * 100)
     
