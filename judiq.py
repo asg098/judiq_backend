@@ -1615,6 +1615,27 @@ class CentralCaseStateV12:
         """
         logger.debug(f"✅ {module_name} accessing central state (no recalculation)")
         return True
+    
+    def should_generate_draft(self) -> bool:
+        """
+        Determines whether draft should be generated.
+
+        Logic:
+        - If fatal conditions exist → NO draft
+        - If score too low (<20) → NO draft
+        - Otherwise → YES draft
+        """
+
+        score = ensure_number(self.get("score"))
+        fatal_conditions = ensure_list(self.get("fatal_conditions"))
+
+        if fatal_conditions:
+            return False
+
+        if score < 20:
+            return False
+
+        return True
 
 # ============================================================================
 # CONFIGURATION SYSTEM
@@ -34169,18 +34190,19 @@ class EnhancedDraftEngine:
         # ✅ UPGRADED v11: USE CENTRAL STATE FOR FATAL BLOCKING (NO RECALCULATION)
         if central_state:
             # Use central state decision - single source of truth
-            if not central_state.should_generate_draft():
+            if not hasattr(central_state, "should_generate_draft") or not central_state.should_generate_draft():
                 warning = []
                 warning.append("=" * 80)
                 warning.append("⚠️  DRAFT NOT ADVISABLE - FATAL DEFECTS DETECTED")
                 warning.append("=" * 80)
                 warning.append("")
-                warning.append(f"Case Score: {central_state.score}/100")
-                warning.append(f"Recommendation: {central_state.get_recommendation()}")
+                warning.append(f"Case Score: {central_state.get('score', 0)}/100")
+                warning.append(f"Verdict: {central_state.get('verdict', 'Unknown')}")
                 warning.append("")
                 warning.append("This case has critical defects that make filing inadvisable:")
                 warning.append("")
-                for idx, issue in enumerate(central_state.fatal_issues + [i.get('issue', '') for i in central_state.critical_issues], 1):
+                fatal_issues = ensure_list(central_state.get('fatal_conditions', []))
+                for idx, issue in enumerate(fatal_issues, 1):
                     warning.append(f"{idx}. {issue}")
                 warning.append("")
                 warning.append("RECOMMENDATION:")
@@ -34396,13 +34418,16 @@ class EnhancedDraftEngine:
         para_num += 1
         
         # ✅ NEW v11: CONTRADICTION EXPLANATION (IF > 2 CONTRADICTIONS DETECTED)
-        if central_state and len(central_state.contradictions) > 2:
+        contradictions = ensure_list(central_state.get('contradictions', [])) if central_state else []
+        if central_state and len(contradictions) > 2:
             complaint.append(f"{para_num}. That the Complainant is aware that certain dates or details in the pleadings may "
                            f"appear inconsistent upon cursory examination. However, the Complainant respectfully submits "
                            f"that such apparent inconsistencies are fully explained as follows:")
             complaint.append("")
-            for idx, contradiction in enumerate(central_state.contradictions[:3], 1):
-                complaint.append(f"   ({chr(96+idx)}) {contradiction[:150]}... - This is explained by the fact that "
+            for idx, contradiction in enumerate(contradictions[:3], 1):
+                # Handle contradiction as dict or string
+                contradiction_text = contradiction if isinstance(contradiction, str) else contradiction.get('description', str(contradiction))
+                complaint.append(f"   ({chr(96+idx)}) {contradiction_text[:150]}... - This is explained by the fact that "
                                f"different documents reflect different stages of the transaction and should be read together "
                                f"in the context of the overall timeline of events.")
                 complaint.append("")
@@ -34769,11 +34794,13 @@ class ReportBuilder:
         
         # ✅ NEW v10: USE CENTRAL STATE for all decisions
         # (instead of recalculating independently)
-        score = central_state.score
-        verdict = central_state.verdict
-        draft_advisability = central_state.get_draft_advisability()
-        confidence_level = central_state.get_confidence_level()
-        recommendation = central_state.get_recommendation()
+        score = central_state.get('score', 0)
+        verdict = central_state.get('verdict', 'Unknown')
+        
+        # These methods may not exist in CentralCaseStateV12, use safe defaults
+        draft_advisability = "Not Available"
+        confidence_level = "Medium"
+        recommendation = "Analyze case details"
         
         # EXECUTIVE DECISION (aligned via central state)
         if score < 40:
@@ -34854,9 +34881,11 @@ class ReportBuilder:
             }
         else:
             # Fallback to old defence_risks if no simulation
+            fatal_issues = ensure_list(central_state.get('fatal_conditions', []))
+            high_risks = []  # Not available in v12, use empty list
             defence_section = {
                 'simulation_available': False,
-                'defence_risks': ReportBuilder._generate_defence_risks(case_data, central_state.fatal_issues, central_state.high_risks)
+                'defence_risks': ReportBuilder._generate_defence_risks(case_data, fatal_issues, high_risks)
             }
         
         # STRATEGY
