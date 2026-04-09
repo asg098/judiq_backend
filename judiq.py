@@ -31350,10 +31350,12 @@ class ControlledAnalysisEngine:
         if adjustments is None:
             return []
         
-        # Handle non-list types
-        if not isinstance(adjustments, list):
+        # 🔥 FIX 3: Convert dict to list, handle any non-list type
+        if isinstance(adjustments, dict):
+            adjustments = [adjustments]
+        elif not isinstance(adjustments, list):
             print(f"⚠️ ADJUSTMENTS TYPE WARNING: Expected list, got {type(adjustments).__name__}")
-            return []
+            adjustments = []
         
         # Process each adjustment safely
         for idx, adj in enumerate(adjustments):
@@ -31902,11 +31904,11 @@ def analyze_case_production(case_data: Dict, case_id: str = None) -> Dict:
     # ✅ FIX 2 (FINAL): Apply learned adjustments WITH FEEDBACK LOOP
     learned_adjustment = LEARNING_SYSTEM.get_learned_adjustment(case_data)
     if learned_adjustment != 0:
-        original_score = analysis_ensure_number(ensure_dict(result).get('score'))
+        original_score = ensure_number(ensure_dict(result).get('score'))
         result['score'] = original_score + learned_adjustment
         analysis_result['learned_adjustment'] = learned_adjustment
         analysis_result['score_before_learning'] = original_score
-        logger.info(f"🧠 Applied learned adjustment: {original_score:.1f} → {analysis_ensure_number(ensure_dict(result).get('score')):.1f} ({learned_adjustment:+.1f})")
+        logger.info(f"🧠 Applied learned adjustment: {original_score:.1f} → {ensure_number(ensure_dict(result).get('score')):.1f} ({learned_adjustment:+.1f})")
     
     # ✅ NEW: Automatic feedback trigger (ready for real outcomes)
     # When actual outcome is known, call: LEARNING_SYSTEM.record_feedback(case_id, analysis_result, actual_outcome)
@@ -31923,7 +31925,7 @@ def analyze_case_production(case_data: Dict, case_id: str = None) -> Dict:
     
     # ✅ FIX 5: Modular narrative generation
     narrative = NarrativeModule.generate_narrative(
-        score=analysis_ensure_number(ensure_dict(result).get('score')),
+        score=ensure_number(ensure_dict(result).get('score')),
         verdict=analysis_ensure_dict(result).get('verdict', 'Unknown'),
         fatal_issues=analysis_result.get('fatal_issues', []),
         contradictions=analysis_result.get('contradictions', []),
@@ -36303,9 +36305,11 @@ def normalize_input(raw_data: dict) -> dict:
             ci = raw_data["case_identity"]
             api_logger.info(f"Processing nested case_identity object: {ci}")
             
+            # 🔥 FIX 2: Extract case_type for engine validation
             if ci.get("case_type"):
-                # Store case type for reference
-                normalized["case_description"] = to_string(ci.get("case_type"), "Cheque Bounce") + " - " + normalized.get("case_description", "")
+                normalized["case_type"] = to_string(ci.get("case_type"), "Cheque Bounce")
+                # Also append to description for reference
+                normalized["case_description"] = normalized["case_type"] + " - " + normalized.get("case_description", "")
             
             if ci.get("case_number"):
                 normalized["case_id"] = to_string(ci.get("case_number"), normalized["case_id"])
@@ -36444,6 +36448,10 @@ def safe_run_engine(case_data: dict) -> dict:
     try:
         # 🔥 CRITICAL: Validate input type
         case_data = ensure_dict(case_data)
+        
+        # 🔥 FIX 4: Ensure case_type exists with safe default
+        if "case_type" not in case_data or not case_data.get("case_type"):
+            case_data["case_type"] = "Cheque Bounce"
         
         # ═══════════════════════════════════════════════════════════════════════
         # 🔥 TASK 5: PREVENT EMPTY ENGINE INPUT
