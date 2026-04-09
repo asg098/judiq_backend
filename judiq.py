@@ -30105,7 +30105,7 @@ class SemanticLegalMatcher:
             score += min(0.3, related_matches * 0.1)
         
         # Check phrases (high confidence for context)
-        for phrase in ensure_list(pattern['phrases']:
+        for phrase in ensure_list(pattern['phrases']):
             if phrase in text_lower:
                 score += 0.3
                 evidence.append(f"phrase: {phrase}")
@@ -30336,7 +30336,7 @@ class UnifiedTruthEngine:
                 verdict = 'NON_VIABLE'
                 verdict_rationale = 'Critical deficiencies (score < 30)'
             
-            ensure_dict(result).get('verdict', 'Unknown') = verdict
+            result['verdict'] = verdict
             result['verdict_rationale'] = verdict_rationale
             
             # Reasoning - UNIFIED (explains everything)
@@ -31903,7 +31903,7 @@ def analyze_case_production(case_data: Dict, case_id: str = None) -> Dict:
     learned_adjustment = LEARNING_SYSTEM.get_learned_adjustment(case_data)
     if learned_adjustment != 0:
         original_score = analysis_ensure_number(ensure_dict(result).get('score'))
-        analysis_ensure_number(ensure_dict(result).get('score')) += learned_adjustment
+        result['score'] = original_score + learned_adjustment
         analysis_result['learned_adjustment'] = learned_adjustment
         analysis_result['score_before_learning'] = original_score
         logger.info(f"🧠 Applied learned adjustment: {original_score:.1f} → {analysis_ensure_number(ensure_dict(result).get('score')):.1f} ({learned_adjustment:+.1f})")
@@ -32027,7 +32027,7 @@ def build_structured_output(analysis_result: Dict, case_data: Dict) -> Dict:
     
     # Build concise summary
     if fatal_issues:
-        summary = f"Case verdict: {verdict} (Score: {score:.1f}/100). Critical fatal issues detected: {', '.join([f['issue'] for f in ensure_list(fatal_issues[:2]])}. Case has severe weaknesses that require immediate attention."
+        summary = f"Case verdict: {verdict} (Score: {score:.1f}/100). Critical fatal issues detected: {', '.join([f['issue'] for f in ensure_list(fatal_issues[:2])])}. Case has severe weaknesses that require immediate attention."
     else:
         conviction_prob = _calculate_conviction_probability(score)
         summary = f"Case verdict: {verdict} (Score: {score:.1f}/100). Conviction probability: {conviction_prob}%. " + \
@@ -32309,7 +32309,7 @@ def generate_7_page_report(structured_output: Dict, case_data: Dict) -> str:
     
     if timeline.get('issues'):
         report.append("TIMELINE ISSUES DETECTED:")
-        for issue in ensure_list(timeline['issues']:
+        for issue in ensure_list(timeline['issues']):
             report.append(f"  - {issue}")
     else:
         report.append("✅ No timeline violations detected")
@@ -32366,7 +32366,7 @@ def generate_7_page_report(structured_output: Dict, case_data: Dict) -> str:
     
     if defence.get('weaknesses'):
         report.append("IDENTIFIED WEAKNESSES:")
-        for weakness in ensure_list(defence['weaknesses']:
+        for weakness in ensure_list(defence['weaknesses']):
             report.append(f"  - {weakness}")
     else:
         report.append("No specific defence weaknesses identified in current analysis.")
@@ -33237,7 +33237,7 @@ RISK MITIGATION:
 Defence Success Probability: {analysis.get('defence_vulnerabilities', {}).get('score', 0):.0f}%
 
 Key Risks:
-{chr(10).join('- ' + w for w in ensure_list(analysis.get('defence_vulnerabilities', {}).get('weaknesses', [])[:3])}
+{chr(10).join('- ' + w for w in ensure_list(analysis.get('defence_vulnerabilities', {}).get('weaknesses', [])[:3]))}
 
 Mitigation Steps:
 {chr(10).join('- ' + s for s in _extract_suggestions(analysis, case_data)[:3])}
@@ -33764,7 +33764,7 @@ class ActionEngine:
         verdict = analysis_result.get('verdict', '')
         
         # CRITICAL ACTIONS (from critical issues)
-        for critical in ensure_list(prioritized_issues.get('critical', []):
+        for critical in ensure_list(prioritized_issues.get('critical', [])):
             issue_lower = critical['issue'].lower()
             
             if 'limitation' in issue_lower or 'time-barred' in issue_lower:
@@ -33820,7 +33820,7 @@ class ActionEngine:
                 })
         
         # HIGH PRIORITY ACTIONS (from high-risk issues)
-        for high in ensure_list(prioritized_issues.get('high', []):
+        for high in ensure_list(prioritized_issues.get('high', [])):
             issue_lower = high['issue'].lower()
             
             if 'debt proof' in issue_lower or 'no agreement' in issue_lower:
@@ -33863,7 +33863,7 @@ class ActionEngine:
                 })
         
         # MEDIUM PRIORITY ACTIONS (procedural improvements)
-        for medium in ensure_list(prioritized_issues.get('medium', []):
+        for medium in ensure_list(prioritized_issues.get('medium', [])):
             actions.append({
                 'priority': 'MEDIUM',
                 'action': f"Resolve contradiction: {medium['issue'][:100]}",
@@ -34794,7 +34794,7 @@ class ReportBuilder:
         
         # CRITICAL ISSUES (formatted for frontend)
         critical_issues_list = []
-        for issue_dict in ensure_list(prioritized_issues.get('critical', []):
+        for issue_dict in ensure_list(prioritized_issues.get('critical', [])):
             critical_issues_list.append({
                 'priority': 'CRITICAL',
                 'issue': issue_dict['issue'],
@@ -34803,7 +34803,7 @@ class ReportBuilder:
                 'severity_score': issue_dict['severity_score']
             })
         
-        for issue_dict in ensure_list(prioritized_issues.get('high', [])[:3]:  # Top 3 high issues
+        for issue_dict in ensure_list(prioritized_issues.get('high', [])[:3]):  # Top 3 high issues
             critical_issues_list.append({
                 'priority': 'HIGH',
                 'issue': issue_dict['issue'],
@@ -34985,7 +34985,7 @@ class ReportBuilder:
                 "Proper service of notice"
             ],
             'risk_factors': [
-                issue['issue'] for issue in ensure_list(prioritized_issues.get('critical', [])
+                issue['issue'] for issue in ensure_list(prioritized_issues.get('critical', []))
             ]
         }
 
