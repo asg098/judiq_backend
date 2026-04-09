@@ -2497,9 +2497,10 @@ def generate_aligned_narrative(final_score: float, verdict: str, contradictions:
     """FIX 4 & 6: Narrative ALIGNED with logic, contradictions FULLY impact narrative"""
     parts = []
     
-    if uncertainty['verdict_certainty'] == 'LOW':
+    # 🔥 FIX: Safe access to uncertainty dict
+    if uncertainty.get('verdict_certainty') == 'LOW':
         parts.append(f"**Case Assessment (uncertainties): {verdict}**\n")
-        parts.append(f"Warning: {uncertainty['uncertainty_statement']}\n")
+        parts.append(f"Warning: {uncertainty.get('uncertainty_statement', 'Multiple uncertainties detected')}\n")
     else:
         parts.append(f"**Case Assessment: {verdict}**\n")
     
@@ -31448,8 +31449,10 @@ class NarrativeModule:
     
     @staticmethod
     def generate_narrative(score: float, verdict: str, fatal_issues: List, 
-                          contradictions: List, case_data: Dict) -> str:
+                          contradictions: List, case_data: Dict, uncertainty: Dict = None) -> str:
         """Generate aligned narrative"""
+        if uncertainty is None:
+            uncertainty = {}
         return generate_aligned_narrative(
             final_score=score,
             verdict=verdict,
@@ -31457,7 +31460,7 @@ class NarrativeModule:
             fatal_issues=fatal_issues,
             priority_category=verdict,
             case_data=case_data,
-            uncertainty={}
+            uncertainty=uncertainty
         )
 
 
@@ -31923,20 +31926,21 @@ def analyze_case_production(case_data: Dict, case_id: str = None) -> Dict:
         avg_similar_score = sum(ensure_number(ensure_dict(c).get('score')) for c in ensure_list(similar_cases)) / len(similar_cases)
         logger.info(f"Found {len(similar_cases)} similar cases, avg score: {avg_similar_score:.1f}")
     
-    # ✅ FIX 5: Modular narrative generation
+    # ✅ FIX 5: Modular uncertainty calculation (MOVED BEFORE NARRATIVE)
+    uncertainty = UncertaintyModule.calculate_uncertainty(
+        case_data,
+        analysis_result.get('contradictions', []),
+        analysis_result.get('score_breakdown', {})
+    )
+    
+    # ✅ FIX 5: Modular narrative generation (NOW USES UNCERTAINTY)
     narrative = NarrativeModule.generate_narrative(
         score=ensure_number(ensure_dict(analysis_result).get('score')),
         verdict=ensure_dict(analysis_result).get('verdict', 'Unknown'),
         fatal_issues=analysis_result.get('fatal_issues', []),
         contradictions=analysis_result.get('contradictions', []),
-        case_data=case_data
-    )
-    
-    # ✅ FIX 5: Modular uncertainty calculation
-    uncertainty = UncertaintyModule.calculate_uncertainty(
-        case_data,
-        analysis_result.get('contradictions', []),
-        analysis_result.get('score_breakdown', {})
+        case_data=case_data,
+        uncertainty=uncertainty
     )
     
     # Build comprehensive result
