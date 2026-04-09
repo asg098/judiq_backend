@@ -452,7 +452,7 @@ def ensure_number(x, default=0):
     if x is None:
         return default
     try:
-        return ensure_number(x)
+        return float(x)
     except (ValueError, TypeError):
         return default
 
@@ -477,6 +477,23 @@ def ensure_bool(x, default=False):
         return bool(x)
     except Exception:
         return default
+
+def normalize_output(data):
+    """
+    TASK 5: Safe output normalization
+    Ensures all output fields are type-safe before returning
+    """
+    data = ensure_dict(data)
+    
+    data['issues'] = ensure_list(data.get('issues'))
+    data['strengths'] = ensure_list(data.get('strengths'))
+    data['defence'] = ensure_list(data.get('defence'))
+    data['reasoning'] = ensure_list(data.get('reasoning'))
+    
+    data['score'] = ensure_number(data.get('score'))
+    data['verdict'] = ensure_string(data.get('verdict'), "Unknown")
+    
+    return data
 
 # ============================================================================
 # 🆕 v12.0 PRODUCTION-GRADE MODULES
@@ -1110,8 +1127,8 @@ class ScoringEngineV12:
         
         # Concept-based penalties/boosts
         for concept_det in ensure_list(concepts):
-            concept = concept_det['concept']
-            confidence = concept_det['confidence']
+            concept = ensure_dict(concept_det).get("concept", "unknown")
+            confidence = ensure_number(ensure_dict(concept_det).get("confidence", 0))
             
             impact = LegalKnowledgeBaseV12.get_score_impact(concept)
             risk = LegalKnowledgeBaseV12.get_risk_level(concept)
@@ -1204,8 +1221,8 @@ class DefenceEngineV12:
         
         # Generate defences from detected concepts
         for concept_det in ensure_list(concepts):
-            concept = concept_det['concept']
-            confidence = concept_det['confidence']
+            concept = ensure_dict(concept_det).get("concept", "unknown")
+            confidence = ensure_number(ensure_dict(concept_det).get("confidence", 0))
             
             # Only generate defence if confidence is reasonable
             if confidence < 0.40:
@@ -1394,7 +1411,7 @@ class ContradictionEngineV12:
             return True
         
         for contra in ensure_list(contradictions):
-            if contra.get('severity') == "CRITICAL":
+            if ensure_dict(contra).get('severity', 'MEDIUM') == 'HIGH':
                 return True
         
         return False
@@ -1446,9 +1463,10 @@ class ReasoningEngineV12:
         """Build reasoning trace for detected concepts"""
         trace = []
         for c in ensure_list(concepts):
+            c = ensure_dict(c)
             trace.append(
-                f"Detected '{c['concept'].replace('_', ' ')}' with {c['confidence']} confidence - "
-                f"Legal impact: {c.get('legal_impact', 'unknown')}"
+                f"Detected '{ensure_string(c.get('concept', 'unknown')).replace('_', ' ')}' with {ensure_number(c.get('confidence', 0))} confidence - "
+                f"Legal impact: {ensure_string(c.get('legal_impact', 'unknown'))}"
             )
         return trace
     
@@ -2736,7 +2754,7 @@ class RealSemanticEngine:
         return {
             'categories': concepts,
             'primary': ensure_dict(concepts[0]).get('category') if concepts else None,
-            'confidence': concepts[0]['confidence'] if concepts else 0.0
+            'confidence': ensure_number(ensure_dict(concepts[0]).get('confidence', 0.0)) if concepts else 0.0
         }
 
 
@@ -6914,7 +6932,7 @@ def analyze_timeline(case_data: Dict) -> Dict:
                 timeline_analysis['limitation_risk'] = 'HIGH'
 
                 _tl_granular = 85
-                for _mk in ensure_list(timeline_analysis.get('risk_markers', []):
+                for _mk in ensure_list(timeline_analysis.get('risk_markers', [])):
                     _mk_sev = _mk.get('severity', 'LOW')
                     if _mk_sev == 'CRITICAL': _tl_granular -= 25
                     elif _mk_sev == 'HIGH':   _tl_granular -= 15
@@ -9164,7 +9182,7 @@ def calculate_overall_risk_score(
     else:
         timeline_score = 20
 
-    for marker in ensure_list(timeline_data.get('risk_markers', []):
+    for marker in ensure_list(timeline_data.get('risk_markers', [])):
         if marker['severity'] == 'CRITICAL':
             timeline_score -= 30
         elif marker['severity'] == 'HIGH':
@@ -9236,7 +9254,7 @@ def calculate_overall_risk_score(
     }
     risk_model['risk_breakdown']['procedural_risk'] = int((100 - procedural_score) * weights['procedural'])
 
-    total_weighted = round(sum(ensure_number(ensure_dict(cat).get('weighted_score')) for cat in ensure_list(ensure_list(risk_model['category_scores'].values())), 1)
+    total_weighted = round(sum(ensure_number(ensure_dict(cat).get('weighted_score')) for cat in ensure_list(risk_model['category_scores'].values())), 1)
 
     risk_model['final_score'] = normalize_score(total_weighted)
 
@@ -9307,7 +9325,7 @@ def calculate_overall_risk_score(
             })
 
     if ingredient_data.get('fatal_defects'):
-        for defect in ensure_list(ingredient_data['fatal_defects']:
+        for defect in ensure_list(ingredient_data['fatal_defects']):
 
             defect_name = defect.get('defect', '')
             if 'Notice' in defect_name and '30 days' in defect_name:
@@ -10286,11 +10304,12 @@ def analyze_defence_risks(case_data: Dict, documentary_result: Dict) -> Dict:
 
     escalation_result = pure_escalation_engine(flags)
 
-    defence_analysis['overall_risk'] = escalation_result['tier']
-    defence_analysis['case_viability_impact'] = escalation_result['status']
-    defence_analysis['final_risk_score'] = escalation_ensure_number(ensure_dict(result).get('score'))
-    defence_analysis['recommendation'] = escalation_result['recommendation']
-    defence_analysis['escalation_reason'] = escalation_result['reason']
+    escalation_result = ensure_dict(escalation_result)
+    defence_analysis['overall_risk'] = ensure_string(escalation_result.get('tier', 'UNKNOWN'))
+    defence_analysis['case_viability_impact'] = ensure_string(escalation_result.get('status', 'Unknown'))
+    defence_analysis['final_risk_score'] = ensure_number(ensure_dict(escalation_result).get('score', 0))
+    defence_analysis['recommendation'] = ensure_string(escalation_result.get('recommendation', 'Unknown'))
+    defence_analysis['escalation_reason'] = ensure_string(escalation_result.get('reason', 'Unknown'))
     defence_analysis['deterministic_tier'] = True
 
     return defence_analysis
@@ -11723,7 +11742,7 @@ def generate_executive_summary(
 
     critical_risks = []
     _seen_cr = set()
-    for d in ensure_list(unique_fatals[:2]:
+    for d in ensure_list(unique_fatals)[:2]:
         _ck = str(d.get('defect',''))[:35]
         if _ck in _seen_cr: continue
         _seen_cr.add(_ck)
@@ -11864,7 +11883,7 @@ def generate_executive_summary(
 
 
     opponent_strategies = []
-    for d in ensure_list(unique_fatals[:2]:
+    for d in ensure_list(unique_fatals)[:2]:
         defect_text = str(d.get('defect','')).lower()
         if 'premature' in defect_text or 'cause of action' in defect_text:
             opponent_strategies.append(
@@ -12629,7 +12648,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             f"Filing is legally impermissible until these defects are remedied. Risk score: {score}/100."
         )
         recommended_action = "Address all fatal defects listed below before filing. Consult litigation counsel urgently."
-        for d in ensure_list(real_fatal_defects[:3]:
+        for d in ensure_list(real_fatal_defects)[:3]:
             filing_reasons.append(f"Fatal: {d.get('defect', 'Critical statutory violation')}")
     elif score >= 75:
         filing_status = "READY TO FILE"
@@ -12665,7 +12684,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
             filing_reasons.append("Weak documentary evidence base")
         elif _proc_defects:
             _caution_reason = "procedural gaps that are curable but require attention before filing"
-            for defect in ensure_list(_proc_defects[:2]:
+            for defect in ensure_list(_proc_defects)[:2]:
                 filing_reasons.append(f"Procedural: {defect.get('defect', 'Gap identified')}")
         else:
             _caution_reason = "evidentiary gaps that weaken the case strength"
@@ -12736,7 +12755,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
 
 
     fatal_summary = []
-    for d in ensure_list(fatal_defects[:5]:
+    for d in ensure_list(fatal_defects)[:5]:
         fatal_summary.append({
             'defect': _safe(d.get('defect')),
             'severity': _safe(d.get('severity')),
@@ -12789,7 +12808,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
                 'severity': _safe(r.get('severity')),
                 'impact': _safe(r.get('impact'))
             }
-            for r in ensure_list(timeline.get('risk_markers', [])
+            for r in ensure_list(timeline.get('risk_markers', []))
         ],
         # FIX 5: Add caveat when timeline is compliant but documentary is weak
         'compliance_caveat': (
@@ -12918,7 +12937,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
         })
 
     # FIX 7: Add factual basis to defence items
-    for d in ensure_list(high_risk[:5]:
+    for d in ensure_list(high_risk)[:5]:
         defence_name = str(d.get('defence', d.get('ground', ''))).lower()
         
         # Connect defences to specific case facts
@@ -12965,7 +12984,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
                 'factual_basis': _safe(d.get('factual_basis', 'Fact-specific assessment required')),
                 'strategy': _safe(d.get('strategy')),
             }
-            for d in ensure_list(high_risk[:5]
+            for d in ensure_list(high_risk[:5])
         ] if high_risk else [{
             'defence': 'No major defences identified',
             'strength': 'LOW',
@@ -12988,7 +13007,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
                 'impact': _safe(d.get('impact')),
                 'remedy': _safe(d.get('remedy', d.get('cure', 'Consult legal counsel')))
             }
-            for d in ensure_list(defects_m.get('fatal_defects', [])
+            for d in ensure_list(defects_m.get('fatal_defects', []))
         ],
         'curable_defects': [
             {
@@ -12996,11 +13015,11 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
                 'severity': _safe(d.get('severity')),
                 'cure': _safe(d.get('cure'))
             }
-            for d in ensure_list(defects_m.get('curable_defects', [])
+            for d in ensure_list(defects_m.get('curable_defects', []))
         ],
         'warnings': [
             {'area': _safe(w.get('area')), 'warning': _safe(w.get('warning'))}
-            for w in ensure_list(defects_m.get('warnings', [])
+            for w in ensure_list(defects_m.get('warnings', []))
         ]
     }
 
@@ -13052,7 +13071,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
                 'risk': _safe(z.get('risk_level', z.get('severity'))),
                 'likely_question': _safe(z.get('likely_question', z.get('question')))
             }
-            for z in ensure_list(vuln_zones[:5]
+            for z in ensure_list(vuln_zones[:5])
         ] if vuln_zones else [],
         'likely_questions': R.get('cross_exam_questions') or likely_qs[:8] or [
             'Can you produce the original loan agreement in writing?',
@@ -13070,7 +13089,7 @@ def generate_clean_professional_report(analysis: Dict, case_data: Dict) -> Dict:
 
     immediate_actions = []
     if fatal_defects:
-        for d in ensure_list(fatal_defects[:3]:
+        for d in ensure_list(fatal_defects)[:3]:
             immediate_actions.append(f"URGENT: {d.get('remedy', d.get('defect', 'Address fatal defect'))}")
     if not case_data.get('written_agreement_exists'):
         immediate_actions.append("Obtain written acknowledgment of debt from accused")
@@ -13607,8 +13626,8 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
                 }
                 for d in (fatal_defects + defect_data.get('fatal_defects', []))[:5]
             ],
-            "strengths":    [_safe(s) for s in ensure_list(strengths[:5]],
-            "weaknesses":   [_safe(w) for w in ensure_list(weaknesses[:5]],
+            "strengths":    [_safe(s) for s in ensure_list(strengths[:5])],
+            "weaknesses":   [_safe(w) for w in ensure_list(weaknesses[:5])],
             "recommendation": recommendation,
             "limitation_status": _safe(
                 timeline_data.get('compliance_status', {}).get('limitation'),
@@ -13668,7 +13687,7 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
                     'legal_basis': _safe(d.get('legal_basis'), 'Statutory violation'),
                     'impact':      _safe(d.get('viability_impact') or d.get('impact'), 'Case may be dismissed')
                 }
-                for d in ensure_list(fatal_defences[:3]
+                for d in ensure_list(fatal_defences[:3])
             ],
             "high_risk_defences": [
                 {
@@ -13676,7 +13695,7 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
                     'strength':_safe(d.get('strength'),'HIGH'),
                     'counter': _safe(d.get('counter_strategy') or d.get('counter'), 'Obtain documentary proof')
                 }
-                for d in ensure_list(high_risk_defences[:5]
+                for d in ensure_list(high_risk_defences[:5])
             ],
             "no_defence_note": (
                 None if (fatal_defences or high_risk_defences) else
@@ -13693,9 +13712,9 @@ def generate_executive_report(analysis_data: Dict) -> Dict:
                     'risk':   _safe(v.get('risk_level'), 'HIGH'),
                     'detail': _safe(v.get('detail'),  'Witness may be challenged')
                 }
-                for v in ensure_list(vuln_zones[:5]
+                for v in ensure_list(vuln_zones[:5])
             ],
-            "likely_questions": [_safe(q) for q in ensure_list(cross_questions[:8]],
+            "likely_questions": [_safe(q) for q in ensure_list(cross_questions[:8])],
             "preparation_advice": _safe(
                 cross_data.get('preparation_summary'),
                 "Prepare witnesses for questions on transaction basis, notice receipt, and document authenticity."
@@ -13785,7 +13804,7 @@ def generate_executive_report_legacy(analysis_data: Dict) -> Dict:
                         "finding": issue.get('issue', issue.get('category', 'Issue')),
                         "impact": issue.get('impact', 'Significant impact on case')
                     }
-                    for issue in ensure_list(executive_summary.get('critical_risks', [])[:3]
+                    for issue in ensure_list(executive_summary.get('critical_risks', []))[:3]
                 ]
             },
 
@@ -13823,11 +13842,11 @@ def generate_executive_report_legacy(analysis_data: Dict) -> Dict:
             "strategic_recommendations": {
                 "title": "STRATEGIC RECOMMENDATIONS",
                 "urgent": [
-                    rec for rec in ensure_list(executive_summary.get('strategic_recommendations', [])
+                    rec for rec in ensure_list(executive_summary.get('strategic_recommendations', []))
                     if rec.get('priority') in ['URGENT', 'CRITICAL']
                 ][:3],
                 "high_priority": [
-                    rec for rec in ensure_list(executive_summary.get('strategic_recommendations', [])
+                    rec for rec in ensure_list(executive_summary.get('strategic_recommendations', []))
                     if rec.get('priority') == 'HIGH'
                 ][:2]
             },
@@ -14231,7 +14250,7 @@ def cross_validate_defence_documents(case_data: Dict, defence_result: Dict, doc_
 
     if case_data.get('electronic_evidence'):
         if not case_data.get('section_63_certificate'):
-            if not any(g['gap'] == 'ELECTRONIC_NO_63' for g in ensure_list(cross_validation['gaps_identified']):
+            if not any(g['gap'] == 'ELECTRONIC_NO_63' for g in ensure_list(cross_validation['gaps_identified'])):
                 cross_validation['gaps_identified'].append({
                     'gap': 'ELECTRONIC_NO_63',
                     'description': 'Electronic evidence without Section 63 certificate',
@@ -15818,7 +15837,7 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
 
 
     _all_res_fatals = _res_data.get('fatal_defects', []) or []
-    for _fd in ensure_list(_all_res_fatals[:3]:
+    for _fd in ensure_list(_all_res_fatals)[:3]:
         _fd_text = str(_fd.get('defect', '') or '').strip()
         if _fd_text:
             weaknesses.append(f'FATAL: {_fd_text}')
@@ -15854,14 +15873,14 @@ def generate_plain_summary(analysis: Dict, case_data: Dict) -> Dict:
     _def_data = analysis.get('modules', {}).get('defence_matrix', {}) or {}
     _def_possible = _def_data.get('possible_defences', []) or []
     _high_def = [d for d in _def_possible if d.get('strength_score', 0) >= 60]
-    for _hd in ensure_list(_high_def[:2]:
+    for _hd in ensure_list(_high_def[:2]):
         _hd_name = str(_hd.get('defence', _hd.get('type', 'defence argument')) or '')
         if _hd_name:
             weaknesses.append(f'Strong defence exposure: {_hd_name} — prepare counter-evidence')
 
 
     _es_weak = (_es.get('weaknesses') or [])
-    for _w in ensure_list(_es_weak[:2]:
+    for _w in ensure_list(_es_weak[:2]):
         _w_text = str(_w or '').strip()
         if _w_text and _w_text not in weaknesses and len(_w_text) > 10:
             weaknesses.append(_w_text)
@@ -16294,7 +16313,7 @@ def enforce_verdict_integrity(analysis_report: Dict) -> Dict:
 
     if is_fatal:
         logger.warning("  ⚠️ FATAL override: Syncing all module scores to reflect fatal condition")
-        for module_name in ensure_list(analysis_report.get('modules', {}):
+        for module_name in ensure_list(analysis_report.get('modules', {})):
             module = analysis_report['modules'][module_name]
             if isinstance(module, dict):
                 module['fatal_override_applied'] = True
@@ -16552,12 +16571,12 @@ def _calculate_data_completeness_v1(case_data: Dict) -> Dict:
         'fields_filled':       filled,
         'fields_total':        total_fields,
         'missing_required':    [f.replace('_',' ') for f in missing_required],
-        'missing_important':   [f.replace('_',' ') for f in ensure_list(missing_important[:4]],
+        'missing_important':   [f.replace('_',' ') for f in ensure_list(missing_important)[:4]],
         'analysis_note':       (
             'Analysis is fully reliable — all required data provided.'
             if not missing_required else
             f'Analysis partially reliable — {len(missing_required)} required field(s) missing: '
-            + ', '.join(f.replace("_"," ") for f in ensure_list(missing_required[:3])
+            + ', '.join(f.replace("_"," ") for f in ensure_list(missing_required)[:3])
         )
     }
 
@@ -16870,7 +16889,7 @@ def analyze_legally_enforceable_debt(case_data: Dict) -> Dict:
     elif fatal_count > 0:
         result['overall_assessment'] = f'FATAL: {fatal_count} legal enforceability issue(s) detected — complaint may fail at root'
         result['is_enforceable']     = False
-        result['recommendation']     = '; '.join(i['remedy'] for i in ensure_list(result['fatal_issues'])
+        result['recommendation']     = '; '.join(i['remedy'] for i in ensure_list(result['fatal_issues']))
     else:
         result['overall_assessment'] = f'{len(result["issues"])} issue(s) require attention before filing'
         result['recommendation']     = 'Address identified issues with additional documentary evidence'
@@ -16994,7 +17013,7 @@ def analyze_delay_condonation(case_data: Dict, timeline_result: Dict) -> Dict:
     result['recommendation'] = (
         'Delay condonation application MUST be filed along with complaint. '
         + (f'Strongest ground: {strong[0]["ground"]}. ' if strong else '')
-        + f'Produce: {"; ".join(g["requirement"] for g in ensure_list(result["grounds"][:2])}. '
+        + f'Produce: {"; ".join(g["requirement"] for g in ensure_list(result["grounds"][:2]))}. '
         + (f'Delay of {delay} days is ' + ('manageable' if delay <= 60 else 'significant — expect challenge') + '.' if delay else '')
     )
 
@@ -17264,9 +17283,9 @@ def analyze_document_validity(case_data: Dict) -> Dict:
         result['risk_level']       = 'HIGH'
 
     result['recommendation'] = (
-        'Critical: ' + ' | '.join(d['fix'] for d in ensure_list(result['invalid_documents'][:2])
+        'Critical: ' + ' | '.join(d['fix'] for d in ensure_list(result['invalid_documents'][:2]))
         if result['invalid_documents'] else
-        'Risk documents: ' + ' | '.join(d['fix'] for d in ensure_list(result['risk_documents'][:2])
+        'Risk documents: ' + ' | '.join(d['fix'] for d in ensure_list(result['risk_documents'][:2]))
         if result['risk_documents'] else
         'Core documents appear in order — verify originals before filing'
     )
@@ -17402,14 +17421,14 @@ def analyze_fraud_signals(case_data: Dict) -> Dict:
         result['overall_verdict'] = 'Multiple serious fraud indicators — fundamental case review required'
 
 
-    for sig in ensure_list(result['fraud_signals']:
+    for sig in ensure_list(result['fraud_signals']):
         if sig['severity'] in ('HIGH', 'CRITICAL'):
             result['for_accused'].append(f"Strong defence signal: {sig['signal']}")
             result['for_complainant'].append(f"Prepare counter: {sig.get('check', 'Gather supporting evidence')}")
 
     result['recommendation'] = (
         'CRITICAL review required: ' + ' | '.join(s['signal'] for s in ensure_list(result.get('fraud_signals', [])) if s['severity'] in ('HIGH','CRITICAL'))
-        if any(s['severity'] in ('HIGH','CRITICAL') for s in ensure_list(result['fraud_signals']) else
+        if any(s['severity'] in ('HIGH','CRITICAL') for s in ensure_list(result['fraud_signals'])) else
         'Minor signals noted — document thoroughly to preempt defence challenges'
         if result['fraud_signals'] else
         'No action required — standard case preparation applies'
@@ -18039,12 +18058,12 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             defect_result = {'overall_risk': 'Insufficient data', 'fatal_defects': [], 'curable_defects': [], 'warnings': []}
 
 
-        for rm in ensure_list(timeline_result.get('risk_markers', []):
+        for rm in ensure_list(timeline_result.get('risk_markers', [])):
             sev = rm.get('severity', '')
             defect_text = rm.get('issue', '')
 
             existing = [d.get('defect', '') for d in ensure_list(defect_result.get('fatal_defects', []) +
-                        defect_result.get('curable_defects', []) + defect_result.get('warnings', [])]
+                        defect_result.get('curable_defects', []) + defect_result.get('warnings', []))]
             if defect_text and defect_text not in existing:
                 if sev == 'FATAL' or sev == 'CRITICAL':
                     defect_result.setdefault('fatal_defects', []).append({
@@ -18076,7 +18095,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         elif fatal_count == 1:
             defect_result['overall_risk']     = 'HIGH — One Fatal Defect Present'
             defect_result['risk_category']    = 'Clear Defect'
-        elif any(d.get('severity') == 'HIGH' for d in ensure_list(defect_result.get('curable_defects', [])):
+        elif any(d.get('severity') == 'HIGH' for d in ensure_list(defect_result.get('curable_defects', []))):
             defect_result['overall_risk']     = 'MEDIUM — Borderline Procedural Risk'
             defect_result['risk_category']    = 'Borderline Risk'
         elif defect_result.get('curable_defects'):
@@ -18328,7 +18347,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
             logger.warning("🔴 FATAL EVIDENCE GAP — continuing modules for complete report")
 
         if len(dependency_check.get('violations', [])) > 0:
-            has_fatal_dependency = any(v['severity'] == 'FATAL' for v in ensure_list(dependency_check['violations'])
+            has_fatal_dependency = any(v['severity'] == 'FATAL' for v in ensure_list(dependency_check['violations']))
             if has_fatal_dependency:
                 analysis_report['fatal_flag'] = True
                 analysis_report['overall_status'] = 'FATAL - MANDATORY REQUIREMENTS NOT MET'
@@ -18800,7 +18819,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
         analysis_report['processing_time'] = f'{_pt:.2f}s'
 
         if 'modules' in analysis_report:
-            for _mod in ensure_list(analysis_report['modules'].values():
+            for _mod in ensure_list(analysis_report['modules'].values()):
                 if isinstance(_mod, dict):
                     for _k, _v in list(_mod.items()):
                         if isinstance(_v, float):
@@ -18987,7 +19006,7 @@ def perform_comprehensive_analysis(case_data: Dict) -> Dict:
 
 
             _next_actions = []
-            for _fd in ensure_list(_uniq_f[:3]:
+            for _fd in ensure_list(_uniq_f[:3]):
                 _next_actions.append({
                     'action':  str(_fd.get('remedy', _fd.get('defect', 'Address fatal defect')) or 'Consult legal counsel'),
                     'urgency': 'URGENT',
@@ -19687,7 +19706,7 @@ async def validate_accuracy():
             elif 'expected_fatal' in case:
                 passed = any(
                     r.get('severity') in ['CRITICAL', 'FATAL']
-                    for r in ensure_list(result.get('risk_markers', [])
+                    for r in ensure_list(result.get('risk_markers', []))
                 )
             else:
                 passed = False
@@ -19913,7 +19932,7 @@ def _build_flat_report(a: dict) -> dict:
 
     next_actions = list(R.get('next_actions') or [])
     if not next_actions:
-        for fd in ensure_list(uniq[:3]:
+        for fd in ensure_list(uniq[:3]):
             next_actions.append({
                 'action': str(fd.get('remedy', fd.get('defect', 'Address fatal defect')) or 'Consult legal counsel'),
                 'urgency': 'URGENT',
@@ -19979,11 +19998,11 @@ def _build_flat_report(a: dict) -> dict:
         'filing_status':          _s(R.get('filing_verdict') or exec_s.get('filing_verdict') or a.get('final_status'), 'See analysis'),
         'one_line_verdict':       _s(exec_s.get('case_overview') or exec_s.get('filing_verdict'), 'Analysis complete'),
         'recommended_action':     _s(a.get('decisive_verdict') or a.get('filing_recommendation'), 'Consult legal counsel'),
-        'strengths':              [_s(s) for s in ensure_list(strengths[:5]],
-        'weaknesses':             [_s(w) for w in ensure_list(weaknesses[:5]],
+        'strengths':              [_s(s) for s in ensure_list(strengths[:5])],
+        'weaknesses':             [_s(w) for w in ensure_list(weaknesses[:5])],
         'critical_risks':         [{'defect': _s(d.get('defect')), 'severity': _s(d.get('severity'), 'CRITICAL'),
                                     'impact': _s(d.get('impact')), 'remedy': _s(d.get('remedy', d.get('cure', 'Consult counsel')))}
-                                    for d in ensure_list(uniq[:5]],
+                                    for d in ensure_list(uniq[:5])],
         'next_actions':           next_actions[:5],
         'score_timeline':         cat('Timeline Compliance'),
         'score_timeline_display': f"{cat('Timeline Compliance'):.1f}/100",
@@ -20036,7 +20055,7 @@ def _build_flat_report(a: dict) -> dict:
         'burden_position':        pres_burden,
         'presumption_activated':  bool(pres.get('presumption_activated') or pres.get('presumption_triggered')),
         'cross_exam_risk':        _s(R.get('cross_exam_risk') or cx.get('overall_cross_exam_risk') or cx.get('overall_risk'), 'Insufficient data'),
-        'cross_exam_questions':   [_s(q) for q in ensure_list(cx_questions[:8]],
+        'cross_exam_questions':   [_s(q) for q in ensure_list(cx_questions[:8])],
         'cross_exam_zones':       [{'zone': _s(z.get('zone', z.get('area'))), 'risk': _s(z.get('risk_level', z.get('severity')), 'MEDIUM')}
                                     for z in (cx.get('vulnerability_zones') or [])[:4]],
         'section_63_status':     _s(adv_65b.get('status')) if adv_65b.get('applicable') else 'NOT_APPLICABLE',
@@ -20223,10 +20242,10 @@ async def analyze_case(request: CaseAnalysisRequest, http_request: Request = Non
             'FUTURE_DATE_COMPLAINT_FILED_DATE',
             'LARGE_AMOUNT',
         }
-        _hard_errors = [e for e in ensure_list(_sanity.get('errors', [])
+        _hard_errors = [e for e in ensure_list(_sanity.get('errors', []))
                         if e.get('check') not in _SOFT_CHECKS]
         _soft_warnings = _sanity.get('warnings', []) + [
-            e for e in ensure_list(_sanity.get('errors', []) if e.get('check') in _SOFT_CHECKS
+            e for e in ensure_list(_sanity.get('errors', [])) if e.get('check') in _SOFT_CHECKS
         ]
         if _hard_errors:
             logger.warning(f"⚠️ INPUT SANITY HARD STOP: {len(_hard_errors)} impossible input(s)")
@@ -21248,7 +21267,7 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
             "section": "Section 142 NI Act"
         })
 
-    for fd in ensure_list(risk.get("fatal_defects", []):
+    for fd in ensure_list(risk.get("fatal_defects", [])):
         suggestions["critical"].append({
             "id": "SG-C02",
             "title": "Fatal Defect: " + str(fd.get("defect", "Unknown")),
@@ -21258,7 +21277,7 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
         })
 
     if proc.get("fatal_defects"):
-        for _pd in ensure_list(proc.get("fatal_defects", []):
+        for _pd in ensure_list(proc.get("fatal_defects", [])):
             suggestions["critical"].append({
                 "id": "SG-C03",
                 "title": "Procedural Fatal Defect",
@@ -21290,7 +21309,7 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
             "detail": (
                 f"Documentary strength is {doc_score:.0f}/100. "
                 "Weak documentation significantly raises the risk of acquittal. "
-                + ("Not available: " + ", ".join(str(d) for d in ensure_list(missing_docs[:4]) + "." if missing_docs else "")
+                + ("Not available: " + ", ".join(str(d) for d in ensure_list(missing_docs[:4])) + "." if missing_docs else "")
             ),
             "action": "Obtain original dishonour memo from bank, registered notice copy with AD card, and any transaction proof.",
             "section": "Evidence Act + Section 138 NI Act"
@@ -21358,7 +21377,7 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
             "title": "Ingredient Compliance Below 70%",
             "detail": (
                 f"Section 138 ingredient compliance is {ingred_score:.0f}/100. "
-                + ("Unmet: " + ", ".join(str(x) for x in ensure_list(missing_ingr[:3]) if missing_ingr else
+                + ("Unmet: " + ", ".join(str(x) for x in ensure_list(missing_ingr[:3])) if missing_ingr else
                     "One or more of the six mandatory ingredients is weak.")
             ),
             "action": "Review each of the six Section 138 ingredients (cheque validity, dishonour, legally enforceable debt, notice, 15-day period, complaint within limitation) and plug any gaps.",
@@ -21383,14 +21402,14 @@ def _generate_case_suggestions(analysis_result: dict, case_data: dict) -> dict:
             "id": "SG-M04",
             "title": f"{len(defence_risks)} High-Risk Defence(s) Identified",
             "detail": (
-                "Accused may raise: " + "; ".join(str(d.get("ground", d.get("defence", ""))) for d in ensure_list(defence_risks[:3]) + ". "
+                "Accused may raise: " + "; ".join(str(d.get("ground", d.get("defence", ""))) for d in ensure_list(defence_risks[:3])) + ". "
                 "Prepare counter-evidence for each."
             ),
             "action": "Prepare affidavit-in-evidence and documentary rebuttal for each identified defence ground.",
             "section": "Section 139 NI Act — presumption as rebuttal tool"
         })
 
-    for gap in ensure_list(draft_c.get("critical_gaps", []):
+    for gap in ensure_list(draft_c.get("critical_gaps", [])):
         suggestions["medium"].append({
             "id": "SG-M05",
             "title": "Drafting Gap: " + str(gap.get("gap", gap.get("issue", "Complaint drafting issue"))),
@@ -22923,7 +22942,7 @@ def check_absolute_fatal_conditions(case_data: Dict, timeline_result: Dict, doc_
 
     if len(doc_compliance.get('fatal_defects', [])) > 0:
         fatal_conditions['has_fatal'] = True
-        for defect in ensure_list(doc_compliance['fatal_defects']:
+        for defect in ensure_list(doc_compliance['fatal_defects']):
             fatal_conditions['fatal_reasons'].append({
                 'condition': defect.get('defect', 'Fatal document defect'),
                 'impact': defect.get('impact', 'Filing blocked'),
@@ -22932,7 +22951,7 @@ def check_absolute_fatal_conditions(case_data: Dict, timeline_result: Dict, doc_
 
     if len(defence_risks.get('fatal_defences', [])) > 0:
         fatal_conditions['has_fatal'] = True
-        for fatal_def in ensure_list(defence_risks['fatal_defences']:
+        for fatal_def in ensure_list(defence_risks['fatal_defences']):
             fatal_conditions['fatal_reasons'].append({
                 'condition': fatal_def.get('ground', 'Fatal defence exposure'),
                 'impact': fatal_def.get('viability_impact', 'Case may collapse'),
@@ -24202,11 +24221,11 @@ class CaseDatabase:
             comparison['weakest_case'] = sorted_cases[-1]
             
             # Calculate metrics
-            scores = [c['score'] for c in ensure_list(comparison['cases']]
+            scores = [c['score'] for c in ensure_list(comparison['cases'])]
             comparison['comparison_metrics'] = {
                 'average_score': sum(scores) / len(scores),
                 'score_range': f"{min(scores)} - {max(scores)}",
-                'total_amount': sum(ensure_number(ensure_dict(c).get('amount')) for c in ensure_list(ensure_list(comparison['cases'])),
+                'total_amount': sum(ensure_number(ensure_dict(c).get('amount')) for c in ensure_list(ensure_list(comparison['cases']))),
                 'cases_ready_to_file': sum(1 for c in ensure_list(comparison.get('cases', [])) if c['score'] >= 60)
             }
         
@@ -24655,7 +24674,7 @@ def generate_html_report(case_data: Dict, analysis: Dict, output_path: str = Non
         </tr>"""
     
     # Add timeline events
-    for event in ensure_list(timeline.get('events', []):
+    for event in ensure_list(timeline.get('events', [])):
         html_content += f"""
         <tr>
             <td>{event.get('event', 'Event')}</td>
@@ -24669,7 +24688,7 @@ def generate_html_report(case_data: Dict, analysis: Dict, output_path: str = Non
     <h2>🎯 Next Actions</h2>"""
     
     # Add critical risks
-    for risk in ensure_list(exec_summary.get('critical_risks', [])[:5]:
+    for risk in ensure_list(exec_summary.get('critical_risks', [])[:5]):
         html_content += f"""
     <div class="action-item risk-high">
         <strong>⚠️ CRITICAL:</strong> {risk.get('risk', risk.get('issue', 'Risk identified'))}
@@ -24677,7 +24696,7 @@ def generate_html_report(case_data: Dict, analysis: Dict, output_path: str = Non
     </div>"""
     
     # Add next actions
-    for action in ensure_list(exec_summary.get('next_actions', [])[:5]:
+    for action in ensure_list(exec_summary.get('next_actions', [])[:5]):
         html_content += f"""
     <div class="action-item">
         <strong>Action:</strong> {action.get('action', 'Action required')}
@@ -28968,9 +28987,9 @@ def generate_legal_narrative(analysis: Dict, defence_simulation: Dict = None) ->
         defence_note = ""
         if defence_simulation:
             defence_risk = defence_simulation.get('overall_defence_risk', 'Unknown')
-            likely_defences = defence_simulation.get('likely_defences', [])
+            likely_defences = ensure_list(defence_simulation.get('likely_defences', []))
             if likely_defences:
-                top_defence = likely_defences[0].get('defence', '').split('-')[0].strip()
+                top_defence = ensure_dict(likely_defences[0]).get('defence', '').split('-')[0].strip()
                 defence_note = f" Likely defence by accused will be: {top_defence}. Counter-strategy prepared."
         
         # Build narrative
@@ -29098,7 +29117,7 @@ def validate_output_consistency(result: Dict) -> Dict:
                 result['priority_category'] = 'CRITICAL'
             if score > 30:
                 logger.warning(f"Inconsistency fixed: FATAL case had score={score}, forced to <30")
-                ensure_number(ensure_dict(result).get('score')) = min(score, 25)
+                result['score'] = min(score, 25)
         
         # High score must have appropriate priority
         elif score >= 80 and priority not in ['HIGH', 'CRITICAL']:
@@ -29273,9 +29292,9 @@ class SemanticLegalMatcher:
         
         for category, pattern in cls.LEGAL_PATTERNS.items():
             # Check keywords
-            keyword_match = any(kw in issue_lower for kw in ensure_list(pattern['keywords'])
+            keyword_match = any(kw in issue_lower for kw in ensure_list(pattern['keywords']))
             # Check synonyms
-            synonym_match = any(syn in issue_lower for syn in ensure_list(pattern['synonyms'])
+            synonym_match = any(syn in issue_lower for syn in ensure_list(pattern['synonyms']))
             
             if keyword_match or synonym_match:
                 matched_categories.append(pattern['concept'])
@@ -29871,7 +29890,7 @@ class ProductionSafeAnalysisEngine:
         
         # STEP 3: Score Calculation (guaranteed 0-100 integer)
         score = ProductionSafeAnalysisEngine._safe_get_score(case_data, fatal_result)
-        ensure_number(ensure_dict(result).get('score')) = score
+        result['score'] = score
         
         # STEP 4: Priority (deterministic from score, no external dependencies)
         if 'priority' in required_modules:
@@ -29887,13 +29906,13 @@ class ProductionSafeAnalysisEngine:
         # STEP 5: Verdict (deterministic from score, no external dependencies)
         if 'verdict' in required_modules:
             if score >= 70:
-                ensure_dict(result).get('verdict', 'Unknown') = 'STRONG'
+                result['verdict'] = 'STRONG'
             elif score >= 50:
-                ensure_dict(result).get('verdict', 'Unknown') = 'VIABLE'
+                result['verdict'] = 'VIABLE'
             elif score >= 30:
-                ensure_dict(result).get('verdict', 'Unknown') = 'WEAK'
+                result['verdict'] = 'WEAK'
             else:
-                ensure_dict(result).get('verdict', 'Unknown') = 'NON_VIABLE'
+                result['verdict'] = 'NON_VIABLE'
         
         # STEP 6: Narrative (optional, protected by safe execution)
         if 'narrative' in required_modules:
@@ -30005,7 +30024,7 @@ class SemanticLegalMatcher:
             evidence = []
             
             # Check exact keywords (highest confidence)
-            for keyword in ensure_list(pattern['exact_keywords']:
+            for keyword in ensure_list(pattern['exact_keywords']):
                 if keyword in text_lower:
                     score += 0.4
                     evidence.append(f"exact: {keyword}")
@@ -30013,7 +30032,7 @@ class SemanticLegalMatcher:
             
             # Check related terms (medium confidence)
             related_count = 0
-            for term in ensure_list(pattern['related_terms']:
+            for term in ensure_list(pattern['related_terms']):
                 if term in text_lower:
                     related_count += 1
                     evidence.append(f"related: {term}")
@@ -30022,7 +30041,7 @@ class SemanticLegalMatcher:
                 score += min(0.3, related_count * 0.1)
             
             # Check phrases (high confidence for context)
-            for phrase in ensure_list(pattern['phrases']:
+            for phrase in ensure_list(pattern['phrases']):
                 if phrase in text_lower:
                     score += 0.3
                     evidence.append(f"phrase: {phrase}")
@@ -30041,12 +30060,12 @@ class SemanticLegalMatcher:
                 })
         
         # Sort by confidence
-        matches.sort(key=lambda x: x['confidence'], reverse=True)
+        matches.sort(key=lambda x: ensure_number(ensure_dict(x).get('confidence', 0)), reverse=True)
         
         return {
             'matches': matches,
-            'primary_category': matches[0]['category'] if matches else None,
-            'confidence': matches[0]['confidence'] if matches else 0.0,
+            'primary_category': ensure_dict(matches[0]).get('category') if matches else None,
+            'confidence': ensure_number(ensure_dict(matches[0]).get('confidence', 0.0)) if matches else 0.0,
             'method': 'semantic_pattern_matching',
             'total_matches': len(matches)
         }
@@ -30069,7 +30088,7 @@ class SemanticLegalMatcher:
         evidence = []
         
         # Check exact keywords (highest confidence)
-        for keyword in ensure_list(pattern['exact_keywords']:
+        for keyword in ensure_list(pattern['exact_keywords']):
             if keyword in text_lower:
                 score += 0.4
                 evidence.append(f"exact_keyword: {keyword}")
@@ -30077,7 +30096,7 @@ class SemanticLegalMatcher:
         
         # Check related terms (medium confidence)
         related_matches = 0
-        for term in ensure_list(pattern['related_terms']:
+        for term in ensure_list(pattern['related_terms']):
             if term in text_lower:
                 related_matches += 1
                 evidence.append(f"related: {term}")
@@ -30275,15 +30294,15 @@ class UnifiedTruthEngine:
             # STAGE 3: Real Calculation with Confidence
             calc_result = TruthfulCalculationEngine.calculate_final_score_with_confidence(validated_data)
             
-            base_score = calc_ensure_number(ensure_dict(result).get('score'))
-            confidence = calc_result['confidence']
+            base_score = ensure_number(ensure_dict(calc_result).get('score'))
+            confidence = ensure_dict(calc_result).get('confidence', 0)
             
             # STAGE 4: Derive ALL outputs from SAME base score (ensures alignment)
             result.update({
                 'score': base_score,
                 'confidence': confidence,
-                'uncertainty_level': calc_result['uncertainty_level'],
-                'calculation_breakdown': calc_result['breakdown']
+                'uncertainty_level': ensure_dict(calc_result).get('uncertainty_level', 'UNKNOWN'),
+                'calculation_breakdown': ensure_dict(calc_result).get('breakdown', [])
             })
             
             # Priority - DERIVED FROM SCORE (cannot contradict)
@@ -30377,14 +30396,14 @@ class UnifiedTruthEngine:
             fatal_issues = []
             
             # Check for limitation breach
-            limitation_issues = [i for i in ensure_list(semantic_result.get('detected_issues', []) 
-                               if i['concept'] == 'limitation_breach' and i['confidence'] > 0.7]
+            limitation_issues = [i for i in ensure_list(semantic_result.get('detected_issues', [])) 
+                               if ensure_dict(i).get('concept') == 'limitation_breach' and ensure_number(ensure_dict(i).get('confidence', 0)) > 0.7]
             if limitation_issues:
                 fatal_issues.append('limitation_period_expired')
             
             # Check for signature forgery
-            signature_issues = [i for i in ensure_list(semantic_result.get('detected_issues', [])
-                              if i['concept'] == 'signature_challenge' and i['confidence'] > 0.8]
+            signature_issues = [i for i in ensure_list(semantic_result.get('detected_issues', []))
+                              if ensure_dict(i).get('concept') == 'signature_challenge' and ensure_number(ensure_dict(i).get('confidence', 0)) > 0.8]
             if signature_issues:
                 fatal_issues.append('signature_forgery_alleged')
             
@@ -32096,7 +32115,7 @@ def _extract_next_steps(analysis_result: Dict, case_data: Dict) -> List[str]:
     
     # RULE 1: Fatal issues get IMMEDIATE timeline
     if fatal_issues:
-        for fatal in ensure_list(fatal_issues[:2]:
+        for fatal in ensure_list(fatal_issues[:2]):
             remedy = fatal.get('remedy', 'Seek legal counsel immediately')
             steps.append(f"IMMEDIATE (Within 7 days): {fatal['issue']} - {remedy}")
     
@@ -33084,12 +33103,13 @@ Date: {datetime.now().strftime('%d-%m-%Y')}
         
         # Get defence arguments from analysis if available
         defence_vulnerabilities = analysis.get('defence_vulnerabilities', {})
-        potential_defences = defence_vulnerabilities.get('arguments', [])
+        potential_defences = ensure_list(defence_vulnerabilities.get('arguments', []))
         
         # Generate case-specific questions based on potential defences
         case_specific_questions = ""
         if potential_defences:
-            case_specific_questions = f"21. You claim {potential_defences[0] if potential_defences else 'there was no debt'} - do you have documentary evidence to support this?"
+            first_defence = ensure_string(potential_defences[0], 'there was no debt')
+            case_specific_questions = f"21. You claim {first_defence} - do you have documentary evidence to support this?"
         else:
             case_specific_questions = "21. [ADD CASE-SPECIFIC QUESTIONS BASED ON DEFENCE ARGUMENTS]"
         
@@ -35292,7 +35312,8 @@ def run_full_analysis_v12(case_data: Dict, case_id: str = None, fast_mode: bool 
     
     logger.info(f"  ✅ Detected {len(concepts_detected)} legal concepts")
     for concept in ensure_list(concepts_detected[:3]):  # Log top 3
-        logger.info(f"     - {concept['concept']}: {concept['confidence']} confidence")
+        concept = ensure_dict(concept)
+        logger.info(f"     - {ensure_string(concept.get('concept', 'unknown'))}: {ensure_number(concept.get('confidence', 0))} confidence")
     
     # ═══════════════════════════════════════════════════════════════════════════
     # STAGE 2: EVIDENCE ASSESSMENT (NEW v12.0)
@@ -35562,6 +35583,9 @@ def run_full_analysis_v12(case_data: Dict, case_id: str = None, fast_mode: bool 
     logger.info(f"   Evidence Strength: {evidence_assessment['strength']}")
     logger.info("=" * 80)
     
+    # TASK 5: Normalize output before returning
+    final_report['executive_decision'] = normalize_output(final_report.get('executive_decision', {}))
+    
     return final_report
 
 # ============================================================================
@@ -35638,41 +35662,44 @@ print("=" * 80)
 exec_decision = result['executive_decision']
 print(f"\n📊 VERDICT: {ensure_dict(exec_decision).get('verdict', 'Unknown')}")
 print(f"   Score: {ensure_number(ensure_dict(exec_decision).get('score'))}/100")
-print(f"   Defence Risk: {exec_decision['defence_risk']}")
-print(f"   Evidence Strength: {exec_decision['evidence_strength']}")
+print(f"   Defence Risk: {ensure_dict(exec_decision).get('defence_risk', 'Unknown')}")
+print(f"   Evidence Strength: {ensure_dict(exec_decision).get('evidence_strength', 'Unknown')}")
 
 # 2. Semantic Concepts Detected
 print(f"\n🧠 CONCEPTS DETECTED:")
-for concept in ensure_list(exec_decision['concepts_detected'][:3]:
-    print(f"   - {concept['concept']}: {concept['confidence']} confidence")
-    print(f"     Legal Impact: {concept['legal_impact']}")
+for concept in ensure_list(ensure_dict(exec_decision).get('concepts_detected', [])[:3]):
+    concept = ensure_dict(concept)
+    print(f"   - {ensure_string(concept.get('concept', 'unknown'))}: {ensure_number(concept.get('confidence', 0))} confidence")
+    print(f"     Legal Impact: {ensure_string(concept.get('legal_impact', 'Unknown'))}")
 
 # 3. Evidence Assessment
-evidence = result['evidence_assessment']
+evidence = ensure_dict(result.get('evidence_assessment', {}))
 print(f"\n⚖️  EVIDENCE ASSESSMENT:")
-print(f"   Strength: {evidence['strength']}")
-print(f"   Overall Weight: {evidence['overall_weight']}")
-print(f"   Best Evidence: {evidence['best_evidence']}")
-print(f"   Weaknesses: {', '.join(evidence['weaknesses'])}")
+print(f"   Strength: {ensure_string(evidence.get('strength', 'Unknown'))}")
+print(f"   Overall Weight: {ensure_number(evidence.get('overall_weight', 0))}")
+print(f"   Best Evidence: {ensure_string(evidence.get('best_evidence', 'Unknown'))}")
+print(f"   Weaknesses: {', '.join(ensure_list(evidence.get('weaknesses', [])))}")
 
 # 4. Ranked Defence Strategies
 print(f"\n🛡️  TOP DEFENCE STRATEGIES:")
-for i, defence in enumerate(exec_decision['top_defences'], 1):
-    print(f"   {i}. {defence['argument']}")
-    print(f"      Success Probability: {defence['success_probability']}%")
-    print(f"      Strength: {defence['strength']}")
-    print(f"      Rebuttal: {defence['rebuttal']}")
+for i, defence in enumerate(ensure_list(ensure_dict(exec_decision).get('top_defences', [])), 1):
+    defence = ensure_dict(defence)
+    print(f"   {i}. {ensure_string(defence.get('argument', 'Unknown'))}")
+    print(f"      Success Probability: {ensure_number(defence.get('success_probability', 0))}%")
+    print(f"      Strength: {ensure_string(defence.get('strength', 'Unknown'))}")
+    print(f"      Rebuttal: {ensure_string(defence.get('rebuttal', 'Unknown'))}")
 
 # 5. Reasoning Trace (Explainability)
 print(f"\n📊 REASONING TRACE:")
-for step in ensure_list(exec_decision['reasoning_trace_preview']:
-    print(f"   - {step}")
+for step in ensure_list(ensure_dict(exec_decision).get('reasoning_trace_preview', [])):
+    print(f"   - {ensure_string(step, 'Unknown step')}")
 
 # 6. Fatal Conditions
-if exec_decision['fatal_conditions']:
+if ensure_dict(exec_decision).get('fatal_conditions'):
     print(f"\n⚠️  FATAL CONDITIONS DETECTED:")
-    for fatal in ensure_list(exec_decision['fatal_conditions']:
-        print(f"   - {fatal['concept']}: {fatal['severity']} severity")
+    for fatal in ensure_list(ensure_dict(exec_decision).get('fatal_conditions', [])):
+        fatal = ensure_dict(fatal)
+        print(f"   - {ensure_string(fatal.get('concept', 'unknown'))}: {ensure_string(fatal.get('severity', 'unknown'))} severity")
 
 # 7. Complete Reasoning Trace
 print(f"\n🧩 COMPLETE REASONING BREAKDOWN:")
