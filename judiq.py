@@ -36612,19 +36612,20 @@ def safe_run_engine(case_data: dict) -> dict:
         
         # 🔥 NEW: Extract central_state data from result for final response builder
         # Store central_state data in result for later use by build_final_response
-        if 'metadata' in result and isinstance(result.get('metadata'), dict):
-            # Extract central state information from metadata or executive decision
-            result['_central_state_data'] = {
-                'score': result.get('executive_decision', {}).get('score', 0),
-                'verdict': result.get('executive_decision', {}).get('verdict', 'Unknown'),
-                'defences_ranked': result.get('executive_decision', {}).get('defences_ranked', []),
-                'defence_risk': result.get('executive_decision', {}).get('defence_risk', 'Unknown'),
-                'concepts_detected': result.get('semantic_analysis', {}).get('concepts_detected', []),
-                'score_reasoning_trace': result.get('reasoning_trace', []),
-                'timeline': result.get('timeline', []),
-                'strategy': result.get('strategy', []),
-                'recommended_actions': result.get('recommended_actions', [])
-            }
+        exec_decision = result.get('executive_decision', {})
+        
+        result['_central_state_data'] = {
+            'score': exec_decision.get('score', 0),
+            'verdict': exec_decision.get('verdict', 'Unknown'),
+            'defences_ranked': result.get('defence_simulation', {}).get('likely_defences', []),
+            'defence_risk': result.get('defence_simulation', {}).get('overall_defence_risk', 'UNKNOWN'),
+            'concepts_detected': [],  # Will be filled by standardize_output
+            'score_reasoning_trace': [],  # Will be filled by standardize_output
+            'timeline': [],  # Will be filled by standardize_output
+            'strategy': result.get('strategy', {}),  # Strategy from ReportBuilder
+            'recommended_actions': result.get('action_plan', []),  # Action plan
+            'contradictions': []  # Will be filled by standardize_output
+        }
         
         return result
         
@@ -38340,10 +38341,10 @@ def build_final_response(output, central_state):
     
     # Normalize inputs using existing helper functions
     output = ensure_dict(output)
-    central_state_data = central_state.get_all() if hasattr(central_state, "get_all") else {}
+    cs = central_state.get_all() if hasattr(central_state, "get_all") else {}
     
-    # Extract score using existing ensure_number
-    score = ensure_number(output.get("score"))
+    # Extract score from central_state first, fallback to output
+    score = ensure_number(cs.get("score", output.get("score")))
     
     # VERDICT - Based on score
     if score < 30:
@@ -38355,6 +38356,19 @@ def build_final_response(output, central_state):
     else:
         verdict = "STRONG"
     
+    # 🔥 TASK 5: GUARANTEE TIMELINE + STRATEGY + ACTIONS
+    timeline = ensure_list(output.get("timeline"))
+    if not timeline:
+        timeline = ["Timeline not available"]
+    
+    strategy = ensure_list(output.get("strategy"))
+    if not strategy:
+        strategy = ["Strategy not available"]
+    
+    recommended_actions = ensure_list(output.get("recommended_actions"))
+    if not recommended_actions:
+        recommended_actions = ["No actions available"]
+    
     # Build complete response
     final_response = {
         "success": True,
@@ -38362,41 +38376,43 @@ def build_final_response(output, central_state):
             "score": score,
             "verdict": verdict,
             
-            # Core analysis
-            "issues": ensure_list(output.get("issues")) or ["No critical issues detected"],
-            "strengths": ensure_list(output.get("strengths")) or ["Analysis in progress"],
+            "issues": ensure_list(output.get("issues")),
+            "strengths": ensure_list(output.get("strengths")),
             
             # 🔥 GUARANTEED FIELDS - NEVER EMPTY
-            "timeline": ensure_list(output.get("timeline")) or ensure_list(central_state_data.get("timeline")) or ["Timeline not available"],
-            "strategy": ensure_list(output.get("strategy")) or ensure_list(central_state_data.get("strategy")) or ["No strategy available"],
-            "recommended_actions": ensure_list(output.get("recommended_actions")) or ensure_list(central_state_data.get("recommended_actions")) or ["No actions available"],
+            "timeline": timeline,
+            "strategy": strategy,
+            "recommended_actions": recommended_actions,
             
             # Defence analysis
-            "defence": ensure_list(central_state_data.get("defences_ranked")) or ensure_list(output.get("defence")) or [],
-            "defence_risk": central_state_data.get("defence_risk") or output.get("defence_risk") or "Unknown",
+            "defence": ensure_list(cs.get("defences_ranked")),
+            "defence_risk": cs.get("defence_risk", "UNKNOWN"),
             
             # Semantic analysis - ALWAYS POPULATED
             "semantic_analysis": {
-                "concepts": ensure_list(central_state_data.get("concepts_detected")) or ensure_list(output.get("semantic_analysis", {}).get("concepts")) or [],
-                "total_concepts": len(ensure_list(central_state_data.get("concepts_detected")) or ensure_list(output.get("semantic_analysis", {}).get("concepts")) or []),
-                "status": "analyzed"
+                "concepts": ensure_list(cs.get("concepts_detected"))
             },
             
             # Reasoning trace
-            "reasoning": ensure_list(central_state_data.get("score_reasoning_trace")) or ensure_list(output.get("reasoning")) or ["Reasoning trace not available"],
+            "reasoning": ensure_list(cs.get("score_reasoning_trace")),
+            
+            # Contradictions
+            "contradictions": ensure_list(cs.get("contradictions")),
             
             # Draft - GUARANTEED
             "draft": ensure_string(output.get("draft")) if output.get("draft") else "No draft generated",
             
-            # Additional fields
+            # Legal analysis
+            "legal_analysis": ensure_string(output.get("legal_analysis")) if output.get("legal_analysis") else "Not available",
+            
+            # Additional fields for compatibility
             "next_action": ensure_string(output.get("next_action")) if output.get("next_action") else "Consult with legal advisor",
-            "weaknesses": ensure_list(output.get("weaknesses")) or [],
-            "contradictions": ensure_list(output.get("contradictions")) or [],
-            "evidence_assessment": ensure_dict(output.get("evidence_assessment")),
-            "legal_analysis": ensure_string(output.get("legal_analysis")) if output.get("legal_analysis") else ""
+            "weaknesses": ensure_list(output.get("weaknesses")),
+            "evidence_assessment": ensure_dict(output.get("evidence_assessment"))
         }
     }
     
+    # 🔥 TASK 6: DEBUG LOG FINAL OUTPUT
     print("\n" + "=" * 100)
     print("🔥 FINAL RESPONSE BUILDER - OUTPUT VERIFICATION")
     print("=" * 100)
@@ -38407,9 +38423,10 @@ def build_final_response(output, central_state):
     print(f"✅ Strategy count: {len(final_response['data']['strategy'])}")
     print(f"✅ Recommended actions count: {len(final_response['data']['recommended_actions'])}")
     print(f"✅ Defence count: {len(final_response['data']['defence'])}")
-    print(f"✅ Semantic concepts count: {final_response['data']['semantic_analysis']['total_concepts']}")
+    print(f"✅ Semantic concepts count: {len(final_response['data']['semantic_analysis']['concepts'])}")
     print(f"✅ Reasoning count: {len(final_response['data']['reasoning'])}")
     print(f"✅ Draft length: {len(final_response['data']['draft'])} chars")
+    print("FINAL OUTPUT:", final_response)
     print("=" * 100 + "\n")
     
     return final_response
