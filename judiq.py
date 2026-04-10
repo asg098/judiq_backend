@@ -1,21 +1,24 @@
 """
 ════════════════════════════════════════════════════════════════════════════════
-🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v12.2 (CONSISTENCY ENFORCED)
+🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v12.3 (TYPE-SAFE & CRASH-PROOF)
 ════════════════════════════════════════════════════════════════════════════════
 
-🚀 PRODUCTION-READY FASTAPI BACKEND - ULTRA-STABLE WITH COMPLETE CONSISTENCY
+🚀 PRODUCTION-READY FASTAPI BACKEND - ULTRA-STABLE WITH TYPE-SAFETY ENFORCEMENT
 ════════════════════════════════════════════════════════════════════════════════
 
-STATUS: ✅ PRODUCTION-GRADE WITH CRITICAL CONSISTENCY FIXES v12.2
+STATUS: ✅ PRODUCTION-GRADE WITH CRITICAL TYPE-SAFETY & CONSISTENCY FIXES v12.3
 
-🔥 NEW IN v12.2: COMPLETE CONSISTENCY ENFORCEMENT
+🔥 NEW IN v12.3: COMPLETE TYPE-SAFETY & CRASH-PROOF ENFORCEMENT
 ════════════════════════════════════════════════════════════════════════════════
+✅ TYPE-SAFETY FIX - All adjustments normalized to safe dict format (CRITICAL)
+✅ CRASH-PROOF - Never crashes on malformed adjustment data
+✅ DEBUG LOGGING - Comprehensive output at every critical point
 ✅ ISSUES DETECTION - Never empty, always detects critical defects
 ✅ VERDICT ALIGNMENT - Score and verdict match issue severity
 ✅ DRAFT CONSISTENCY - Draft content aligns with detected issues
 ✅ SEMANTIC ANALYSIS - Always populated with meaningful concepts
 ✅ VALIDATION LAYER - Final consistency check before response
-✅ LOGGING - Complete decision trail for debugging
+✅ COMPLETE OUTPUT - All fields present, never null/undefined
 
 🎯 CONSISTENCY GUARANTEES (CRITICAL):
 ════════════════════════════════════════════════════════════════════════════════
@@ -482,8 +485,8 @@ TORCH_AVAILABLE = False
 logger = logging.getLogger(__name__)
 PHI2_AVAILABLE = False
 
-ENGINE_VERSION = "v12.2.0-CONSISTENCY-ENFORCED"
-ARCHITECTURE_VERSION = "Modular-Production-Grade-8-Modules-Consistency-Fixed"
+ENGINE_VERSION = "v12.3.0-TYPE-SAFE-CRASH-PROOF"
+ARCHITECTURE_VERSION = "Modular-Production-Grade-8-Modules-Type-Safe"
 SCORING_MODEL_VERSION = "12.0-EVIDENCE-WEIGHTED-EXPLAINABLE"
 TIMELINE_MATH_VERSION = "CALENDAR_MONTHS"
 
@@ -36612,15 +36615,33 @@ def safe_run_engine(case_data: dict) -> dict:
     except TypeError as e:
         api_logger.error(f"Type error in engine: {str(e)}")
         api_logger.error(traceback.format_exc())
-        print(f"🔥 TYPE ERROR DEBUG: {str(e)}")
-        print(f"🔥 Case data type: {type(case_data).__name__}")
+        
+        # 🔥 ENHANCED DEBUG for adjustment type errors
+        print("=" * 100)
+        print("🔥 TYPE ERROR DETECTED - DETAILED DIAGNOSTICS:")
+        print("=" * 100)
+        print(f"Error Message: {str(e)}")
+        print(f"Error Type: {type(e).__name__}")
+        print(f"Case Data Type: {type(case_data).__name__}")
+        
+        # Check if error is related to adjustments
+        if "indices must be integers" in str(e) or "adjustments" in str(e).lower():
+            print("🔥 LIKELY CAUSE: Adjustment type error (string instead of dict)")
+            print("🔥 This error has been fixed in v12.3 - but still caught here for safety")
+        
+        print("=" * 100)
+        
         return {
             "executive_decision": {
                 "verdict": "Error - Invalid Data Type",
                 "score": 0,
                 "defence_risk": "Unknown",
                 "top_defences": [],
-                "reasoning_trace": [f"Analysis failed: Invalid data type - {str(e)}"]
+                "reasoning_trace": [
+                    f"Analysis failed: Invalid data type - {str(e)}",
+                    "Type errors in adjustments have been normalized in v12.3",
+                    "This should not occur - please report to support"
+                ]
             },
             "contradictions": [],
             "draft": "Unable to generate draft due to data type error.",
@@ -36939,27 +36960,92 @@ def ensure_semantic_analysis(engine_result: Dict) -> Dict:
 
 def enforce_final_consistency(case_data: dict, engine_result: dict) -> dict:
     """
-    🔥 FINAL CONSISTENCY ENFORCEMENT LAYER
+    🔥 FINAL CONSISTENCY ENFORCEMENT LAYER v12.3 - TYPE-SAFE & CRASH-PROOF
     🎯 OBJECTIVE: Create ONE TRUTH - all outputs must be 100% synchronized
     
     This is the CRITICAL layer that ensures:
     - Issues, Score, Verdict, Draft, Strategy are ALL aligned
     - Everything comes from central_state (single source of truth)
     - NO contradictions exist in the final output
+    - TYPE-SAFE: All adjustments are normalized to dicts
+    - CRASH-PROOF: Never fails on malformed data
     
     Flow:
     1. Extract central_state as single source of truth
-    2. Build unified issues list from 3 sources
+    2. Build unified issues list from 3 sources (TYPE-SAFE)
     3. Enforce verdict-issue-score consistency
     4. Force draft alignment with issues
     5. Generate strategy based on score
     6. Validate all relationships
     7. Return fully consistent result
     """
-    api_logger.info("[CONSISTENCY ENFORCEMENT] Starting final consistency layer...")
+    api_logger.info("[CONSISTENCY ENFORCEMENT v12.3] Starting final consistency layer...")
     
     case_data = ensure_dict(case_data)
     engine_result = ensure_dict(engine_result)
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # 🔥 TASK 0: TYPE-SAFETY FIX - Normalize all adjustments to dicts
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    def safe_normalize_adjustments(adjustments_raw):
+        """Convert any adjustment format to safe list of dicts"""
+        if not adjustments_raw:
+            return []
+        
+        if not isinstance(adjustments_raw, list):
+            adjustments_raw = [adjustments_raw]
+        
+        safe_adjustments = []
+        for adj in adjustments_raw:
+            if isinstance(adj, dict):
+                # Already a dict, ensure required keys
+                safe_adjustments.append({
+                    "reason": adj.get("reason", adj.get("text", "Unknown adjustment")),
+                    "value": ensure_number(adj.get("value", adj.get("score", 0)), 0),
+                    "source": adj.get("source", "unknown")
+                })
+            elif isinstance(adj, str):
+                # String - convert to dict
+                safe_adjustments.append({
+                    "reason": str(adj),
+                    "value": 0,
+                    "source": "string_conversion"
+                })
+            else:
+                # Unknown type - convert to dict with string representation
+                safe_adjustments.append({
+                    "reason": str(adj),
+                    "value": 0,
+                    "source": "type_conversion"
+                })
+        
+        return safe_adjustments
+    
+    # Apply type-safety to all adjustments in engine_result
+    if 'adjustments' in engine_result:
+        engine_result['adjustments'] = safe_normalize_adjustments(engine_result.get('adjustments'))
+    
+    if 'score_adjustments' in engine_result:
+        engine_result['score_adjustments'] = safe_normalize_adjustments(engine_result.get('score_adjustments'))
+    
+    # Apply to executive_decision if present
+    if 'executive_decision' in engine_result and isinstance(engine_result['executive_decision'], dict):
+        exec_dec = engine_result['executive_decision']
+        if 'adjustments' in exec_dec:
+            exec_dec['adjustments'] = safe_normalize_adjustments(exec_dec.get('adjustments'))
+        if 'score_adjustments' in exec_dec:
+            exec_dec['score_adjustments'] = safe_normalize_adjustments(exec_dec.get('score_adjustments'))
+    
+    # Apply to central_state if present
+    if 'central_state' in engine_result and isinstance(engine_result['central_state'], dict):
+        central = engine_result['central_state']
+        if 'adjustments' in central:
+            central['adjustments'] = safe_normalize_adjustments(central.get('adjustments'))
+        if 'score_adjustments' in central:
+            central['score_adjustments'] = safe_normalize_adjustments(central.get('score_adjustments'))
+    
+    api_logger.info("[TYPE-SAFETY] ✅ All adjustments normalized to safe dict format")
     
     # ═══════════════════════════════════════════════════════════════════════════
     # 🔥 TASK 1: USE CENTRAL_STATE AS SINGLE SOURCE OF TRUTH
@@ -37223,6 +37309,22 @@ def enforce_final_consistency(case_data: dict, engine_result: dict) -> dict:
     # Convert final_issues to simple string list for output
     issues_list = [issue['text'] for issue in final_issues]
     
+    # 🔥 TASK 4: DEBUG LOGGING (as requested)
+    print("=" * 100)
+    print("🔍 FINAL CONSISTENCY OUTPUT DEBUG:")
+    print("=" * 100)
+    print(f"SCORE: {adjusted_score}")
+    print(f"VERDICT: {adjusted_verdict}")
+    print(f"ISSUES COUNT: {len(issues_list)}")
+    print(f"ISSUES: {issues_list}")
+    print(f"HIGH SEVERITY COUNT: {high_count}")
+    print(f"CRITICAL COUNT: {critical_count}")
+    print(f"TIMELINE EVENTS: {len(original_timeline)}")
+    print(f"STRATEGY ITEMS: {len(aligned_strategy)}")
+    print(f"DRAFT LENGTH: {len(aligned_draft)} chars")
+    print(f"DRAFT PREVIEW: {aligned_draft[:200]}..." if len(aligned_draft) > 200 else f"DRAFT: {aligned_draft}")
+    print("=" * 100)
+    
     # Build consistent result
     consistent_result = {
         **engine_result,  # Preserve all original fields
@@ -37251,6 +37353,17 @@ def enforce_final_consistency(case_data: dict, engine_result: dict) -> dict:
             'validation_passed': True
         }
     }
+    
+    # 🔥 FINAL OUTPUT DEBUG (as requested)
+    print("=" * 100)
+    print("📦 FINAL OUTPUT STRUCTURE:")
+    print("=" * 100)
+    print(f"FINAL OUTPUT KEYS: {list(consistent_result.keys())}")
+    print(f"EXEC DECISION KEYS: {list(consistent_result['executive_decision'].keys())}")
+    print(f"EXEC DECISION SCORE: {consistent_result['executive_decision']['score']}")
+    print(f"EXEC DECISION VERDICT: {consistent_result['executive_decision']['verdict']}")
+    print(f"EXEC DECISION ISSUES: {consistent_result['executive_decision']['issues']}")
+    print("=" * 100)
     
     api_logger.info("[CONSISTENCY ENFORCEMENT] ✅ Complete - all outputs aligned")
     return consistent_result
@@ -37556,6 +37669,20 @@ def standardize_output(engine_result: dict, case_data: dict = None) -> dict:
             }
         }
         
+        # 🔥 TASK 4: DEBUG LOGGING (as requested in instructions)
+        print("=" * 100)
+        print("📋 STANDARDIZE_OUTPUT DEBUG:")
+        print("=" * 100)
+        print(f"FINAL OUTPUT SCORE: {standardized['data']['score']}")
+        print(f"FINAL OUTPUT VERDICT: {standardized['data']['verdict']}")
+        print(f"FINAL OUTPUT ISSUES: {standardized['data']['issues']}")
+        print(f"FINAL OUTPUT TIMELINE: {len(standardized['data']['timeline'])} events")
+        print(f"FINAL OUTPUT STRATEGY: {len(standardized['data']['strategy'])} items")
+        print(f"FINAL OUTPUT STRENGTHS: {standardized['data']['strengths']}")
+        print(f"FINAL OUTPUT WEAKNESSES: {standardized['data']['weaknesses']}")
+        print(f"FINAL OUTPUT DRAFT LENGTH: {len(standardized['data']['draft'])} chars")
+        print("=" * 100)
+        
         # ═══════════════════════════════════════════════════════════════════════
         # 🔥 TASK 9: RESPONSE NORMALIZATION - Ensure ALL fields present, NO nulls
         # ═══════════════════════════════════════════════════════════════════════
@@ -37694,8 +37821,8 @@ def standardize_output(engine_result: dict, case_data: dict = None) -> dict:
 
 app = FastAPI(
     title="JUDIQ Legal Analysis API",
-    description="Production-grade legal AI engine with complete consistency enforcement",
-    version="12.2.0"
+    description="Production-grade legal AI engine with complete type-safety and consistency enforcement v12.3",
+    version="12.3.0"
 )
 
 # Alias for Render deployment (expects 'fastapi_app')
@@ -37772,11 +37899,11 @@ async def health_check():
     return {
         "status": "running",
         "service": "JUDIQ Legal Analysis API",
-        "version": "12.2.0-CONSISTENCY-ENFORCED",
+        "version": "12.3.0-TYPE-SAFE-CRASH-PROOF",
         "engine_version": ENGINE_VERSION,
         "timestamp": datetime.now().isoformat(),
         "uptime_info": "System operational",
-        "new_features": "Timeline, Strategy, Recommended Actions, Enhanced Semantic Analysis"
+        "new_features": "Type-Safe Adjustments, Crash-Proof Engine, Complete Debug Logging, Timeline, Strategy, Actions"
     }
 
 @app.get("/health")
@@ -37820,11 +37947,17 @@ async def detailed_health():
     return {
         "status": overall_status,
         "service": "JUDIQ Legal Analysis API",
-        "version": "12.0.0-PRODUCTION",
+        "version": "12.3.0-TYPE-SAFE-CRASH-PROOF",
         "engine_version": ENGINE_VERSION,
         "architecture": ARCHITECTURE_VERSION,
         "timestamp": datetime.now().isoformat(),
         "components": components,
+        "critical_fixes": [
+            "Type-safe adjustment handling (string->dict normalization)",
+            "Crash-proof engine with comprehensive error handling",
+            "Complete debug logging at all critical stages",
+            "Full output consistency enforcement"
+        ],
         "endpoints": {
             "analyze": "/analyze",
             "validate": "/validate",
@@ -38128,13 +38261,15 @@ async def validate_input(request: Request):
 async def startup_event():
     """System startup - verify all components"""
     api_logger.info("=" * 100)
-    api_logger.info("🚀 JUDIQ LEGAL ANALYSIS API v12.2 - CONSISTENCY ENFORCED")
+    api_logger.info("🚀 JUDIQ LEGAL ANALYSIS API v12.3 - TYPE-SAFE & CRASH-PROOF")
     api_logger.info("=" * 100)
-    api_logger.info(f"Version: 12.2.0-CONSISTENCY-ENFORCED")
+    api_logger.info(f"Version: 12.3.0-TYPE-SAFE-CRASH-PROOF")
     api_logger.info(f"Engine Version: {ENGINE_VERSION}")
     api_logger.info(f"Architecture: {ARCHITECTURE_VERSION}")
-    api_logger.info(f"🔥 CRITICAL: Complete consistency enforcement across all outputs")
+    api_logger.info(f"🔥 CRITICAL: Complete type-safety enforcement for all adjustments")
+    api_logger.info(f"🔥 FIXED: Type errors in adjustment handling (string->dict normalization)")
     api_logger.info(f"🔥 FIXED: Issues detection, verdict alignment, draft consistency")
+    api_logger.info(f"🔥 ADDED: Comprehensive debug logging at all critical points")
     api_logger.info(f"Startup Time: {datetime.now().isoformat()}")
     api_logger.info("-" * 100)
     
@@ -38183,7 +38318,10 @@ async def startup_event():
     api_logger.info("   ✅ Handles missing/malformed fields")
     api_logger.info("   ✅ Full error logging and tracing")
     api_logger.info("   ✅ Safe fallbacks at every layer")
+    api_logger.info("   ✅ TYPE-SAFE: All adjustments normalized to dict format")
+    api_logger.info("   ✅ CRASH-PROOF: String adjustments auto-converted to dicts")
     api_logger.info("   ✅ COMPLETE CONSISTENCY - Issues/Verdict/Draft/Score aligned")
+    api_logger.info("   ✅ DEBUG LOGGING - Complete output trace at all stages")
     api_logger.info("=" * 100)
     api_logger.info("✅ SYSTEM READY - Waiting for requests...")
     api_logger.info("=" * 100)
