@@ -36614,17 +36614,43 @@ def safe_run_engine(case_data: dict) -> dict:
         # Store central_state data in result for later use by build_final_response
         exec_decision = result.get('executive_decision', {})
         
+        # Extract concepts_detected from semantic analysis
+        semantic_raw = ensure_dict(result.get('semantic_analysis', {}))
+        concepts_detected = ensure_list(
+            semantic_raw.get('concepts_detected') or semantic_raw.get('concepts', [])
+        )
+
+        # Extract reasoning trace from executive_decision
+        reasoning_trace = ensure_list(
+            exec_decision.get('reasoning_trace') or
+            exec_decision.get('reasoning_trace_preview') or
+            exec_decision.get('score_reasoning_trace', [])
+        )
+
+        # Extract contradictions
+        contradictions_raw = ensure_list(
+            result.get('contradictions') or
+            result.get('contradictions_enhanced', [])
+        )
+
         result['_central_state_data'] = {
             'score': exec_decision.get('score', 0),
             'verdict': exec_decision.get('verdict', 'Unknown'),
-            'defences_ranked': result.get('defence_simulation', {}).get('likely_defences', []),
-            'defence_risk': result.get('defence_simulation', {}).get('overall_defence_risk', 'UNKNOWN'),
-            'concepts_detected': [],  # Will be filled by standardize_output
-            'score_reasoning_trace': [],  # Will be filled by standardize_output
-            'timeline': [],  # Will be filled by standardize_output
-            'strategy': result.get('strategy', {}),  # Strategy from ReportBuilder
-            'recommended_actions': result.get('action_plan', []),  # Action plan
-            'contradictions': []  # Will be filled by standardize_output
+            'defences_ranked': ensure_list(
+                result.get('defence_simulation', {}).get('likely_defences') or
+                exec_decision.get('top_defences') or
+                exec_decision.get('defences_ranked', [])
+            ),
+            'defence_risk': (
+                result.get('defence_simulation', {}).get('overall_defence_risk') or
+                exec_decision.get('defence_risk', 'UNKNOWN')
+            ),
+            'concepts_detected': concepts_detected,
+            'score_reasoning_trace': reasoning_trace,
+            'timeline': ensure_list(result.get('timeline', [])),
+            'strategy': result.get('strategy', {}),
+            'recommended_actions': ensure_list(result.get('action_plan', [])),
+            'contradictions': contradictions_raw
         }
         
         return result
@@ -38220,10 +38246,28 @@ async def analyze_case(request: Request):
         # Step 7: Final success log and validation
         api_logger.info(f"[{request_id}] ✅ Analysis completed successfully in {time.time() - start_time:.2f}s")
         
-        # 🔥 TASK 2: USE build_final_response TO GUARANTEE COMPLETE OUTPUT
-        # Extract central_state data from engine_result
-        central_state_data = engine_result.get('_central_state_data', {})
-        
+        # 🔥 BUILD CENTRAL STATE: merge _central_state_data from engine with
+        # the fully-enriched data already produced by standardize_output so that
+        # build_final_response always has the richest possible source.
+        central_state_data = ensure_dict(engine_result.get('_central_state_data', {}))
+
+        # Supplement central_state with data from the standardized response if
+        # those fields are still empty (belt-and-suspenders).
+        std_data = ensure_dict(standardized_response.get('data', {}))
+        for key, std_key in [
+            ('score_reasoning_trace', 'reasoning'),
+            ('contradictions',        'contradictions'),
+            ('defences_ranked',       'defence'),
+        ]:
+            if not central_state_data.get(key):
+                central_state_data[key] = ensure_list(std_data.get(std_key))
+
+        if not central_state_data.get('concepts_detected'):
+            sem = ensure_dict(std_data.get('semantic_analysis', {}))
+            central_state_data['concepts_detected'] = ensure_list(
+                sem.get('concepts_detected') or sem.get('concepts')
+            )
+
         # Create a mock central_state object with get_all method
         class MockCentralState:
             def __init__(self, data):
@@ -38235,13 +38279,15 @@ async def analyze_case(request: Request):
         
         mock_central_state = MockCentralState(central_state_data)
         
-        # 🔥 TASK 4: DEBUG - Print final response
+        # 🔥 DEBUG: Print before calling build_final_response
         print("\n" + "=" * 100)
         print("🔥 CALLING build_final_response")
         print("=" * 100)
         
-        # Build the final response using the new builder
-        final_response = build_final_response(standardized_response.get('data', {}), mock_central_state)
+        # Build the final response using the builder.
+        # Pass the full standardized data dict as `output` — it already contains
+        # timeline, strategy, defence, semantic_analysis, reasoning, etc.
+        final_response = build_final_response(std_data, mock_central_state)
         
         # Add metadata from standardized_response
         final_response['request_id'] = request_id
@@ -38323,112 +38369,184 @@ async def validate_input(request: Request):
 
 def build_final_response(output, central_state):
     """
-    🔥 CRITICAL: Build complete final response with ALL fields guaranteed
-    This function ENSURES that the API ALWAYS returns a FULL STRUCTURED REPORT
+    🔥 CRITICAL: Build complete final response with ALL fields guaranteed.
     
+    Uses the already-standardized `output` (from standardize_output) as the
+    PRIMARY source of truth for all rich data fields.  The `central_state`
+    dict is used only as a supplementary fallback for fields that are genuinely
+    absent from `output`.
+
     GUARANTEES:
-    ✅ score - always present
-    ✅ verdict - always present
-    ✅ issues - always present (never empty)
-    ✅ timeline - always present (never empty)
-    ✅ strategy - always present (never empty)
-    ✅ recommended_actions - always present (never empty)
-    ✅ defence - always present
-    ✅ semantic_analysis - always present
-    ✅ reasoning - always present
-    ✅ draft - always present
+    ✅ score               - always numeric, never null
+    ✅ verdict             - always string, aligned with score
+    ✅ issues              - always list, never empty
+    ✅ strengths           - always list
+    ✅ weaknesses          - always list
+    ✅ timeline            - always list, never empty
+    ✅ strategy            - always list, never empty
+    ✅ recommended_actions - always list, never empty
+    ✅ defence             - always list
+    ✅ defence_risk        - always string
+    ✅ semantic_analysis   - always dict with concepts_detected list
+    ✅ reasoning           - always list
+    ✅ contradictions      - always list
+    ✅ draft               - always non-empty string
+    ✅ legal_analysis      - always string
     """
-    
-    # Normalize inputs using existing helper functions
+
+    # ── 1. Normalise inputs ──────────────────────────────────────────────────
     output = ensure_dict(output)
     cs = central_state.get_all() if hasattr(central_state, "get_all") else {}
-    
-    # Extract score from central_state first, fallback to output
-    score = ensure_number(cs.get("score", output.get("score")))
-    
-    # VERDICT - Based on score
-    if score < 30:
-        verdict = "VERY_WEAK"
-    elif score < 60:
-        verdict = "WEAK"
-    elif score < 80:
-        verdict = "MODERATE"
+    cs = ensure_dict(cs)
+
+    # ── 2. Score & verdict ───────────────────────────────────────────────────
+    # output already carries the consistency-enforced score from standardize_output
+    score = ensure_number(output.get("score") or cs.get("score"), 0)
+
+    # Use the verdict already computed by enforce_final_consistency when present,
+    # otherwise derive from score so the two stay aligned.
+    raw_verdict = ensure_string(output.get("verdict") or cs.get("verdict"), "")
+    if raw_verdict in ("VERY_WEAK", "WEAK", "MODERATE", "STRONG",
+                       "Very Weak", "Weak", "Moderate", "Strong",
+                       "Strong Case", "Moderate Case", "Weak Case"):
+        verdict = raw_verdict
     else:
-        verdict = "STRONG"
-    
-    # 🔥 TASK 5: GUARANTEE TIMELINE + STRATEGY + ACTIONS
-    timeline = ensure_list(output.get("timeline"))
+        if score < 30:
+            verdict = "VERY_WEAK"
+        elif score < 60:
+            verdict = "WEAK"
+        elif score < 80:
+            verdict = "MODERATE"
+        else:
+            verdict = "STRONG"
+
+    # ── 3. Issues ────────────────────────────────────────────────────────────
+    issues = ensure_list(output.get("issues"))
+    if not issues:
+        issues = [{"text": "No critical issues identified from available data",
+                   "severity": "LOW", "source": "fallback"}]
+
+    # ── 4. TASK 7: Verdict-issue consistency enforcement ─────────────────────
+    high_issues = [i for i in issues
+                   if isinstance(i, dict) and i.get("severity") in ("HIGH", "CRITICAL")
+                   or (isinstance(i, str) and any(w in i.upper() for w in ("FATAL", "CRITICAL", "HIGH")))]
+    if high_issues and verdict in ("STRONG", "MODERATE", "Strong Case", "Moderate Case"):
+        verdict = "WEAK"
+        score = min(score, 55)
+
+    # ── 5. TASK 8: Draft / issues alignment ──────────────────────────────────
+    draft = ensure_string(output.get("draft"), "")
+    if "FATAL DEFECTS" in draft.upper() and not issues:
+        issues = [{"text": "Fatal defects detected in case — see draft for details",
+                   "severity": "HIGH", "source": "draft_alignment"}]
+    if not draft:
+        draft = "No draft generated"
+
+    # ── 6. Timeline, strategy, actions (output is primary, cs is fallback) ───
+    timeline = ensure_list(output.get("timeline")) or ensure_list(cs.get("timeline"))
     if not timeline:
-        timeline = ["Timeline not available"]
-    
-    strategy = ensure_list(output.get("strategy"))
+        timeline = ["No timeline generated"]
+
+    strategy = ensure_list(output.get("strategy")) or ensure_list(cs.get("strategy"))
     if not strategy:
-        strategy = ["Strategy not available"]
-    
-    recommended_actions = ensure_list(output.get("recommended_actions"))
+        strategy = ["No strategy available"]
+
+    recommended_actions = (ensure_list(output.get("recommended_actions")) or
+                           ensure_list(cs.get("recommended_actions")))
     if not recommended_actions:
         recommended_actions = ["No actions available"]
-    
-    # Build complete response
+
+    # ── 7. Defence ────────────────────────────────────────────────────────────
+    defence = (ensure_list(output.get("defence")) or
+               ensure_list(cs.get("defences_ranked")))
+    defence_risk = (ensure_string(output.get("defence_risk"), "") or
+                    ensure_string(cs.get("defence_risk"), "UNKNOWN"))
+
+    # ── 8. Semantic analysis ─────────────────────────────────────────────────
+    # Prefer the fully-enriched semantic_analysis dict already in output.
+    raw_semantic = output.get("semantic_analysis")
+    if isinstance(raw_semantic, dict) and raw_semantic:
+        semantic_analysis = raw_semantic
+        # Guarantee concepts_detected key exists
+        if "concepts_detected" not in semantic_analysis:
+            semantic_analysis["concepts_detected"] = ensure_list(
+                semantic_analysis.get("concepts") or cs.get("concepts_detected")
+            )
+    else:
+        semantic_analysis = {
+            "concepts_detected": ensure_list(cs.get("concepts_detected")),
+            "total_concepts": len(ensure_list(cs.get("concepts_detected"))),
+            "status": "analyzed"
+        }
+
+    # ── 9. Reasoning & contradictions ────────────────────────────────────────
+    reasoning = (ensure_list(output.get("reasoning")) or
+                 ensure_list(cs.get("score_reasoning_trace")))
+    contradictions = (ensure_list(output.get("contradictions")) or
+                      ensure_list(cs.get("contradictions")))
+
+    # ── 10. Assemble final response ──────────────────────────────────────────
     final_response = {
         "success": True,
         "data": {
-            "score": score,
+            "score": round(score, 1),
             "verdict": verdict,
-            
-            "issues": ensure_list(output.get("issues")),
+
+            "issues": issues,
             "strengths": ensure_list(output.get("strengths")),
-            
-            # 🔥 GUARANTEED FIELDS - NEVER EMPTY
+            "weaknesses": ensure_list(output.get("weaknesses")),
+
+            # ── GUARANTEED NEVER-EMPTY ──
             "timeline": timeline,
             "strategy": strategy,
             "recommended_actions": recommended_actions,
-            
-            # Defence analysis
-            "defence": ensure_list(cs.get("defences_ranked")),
-            "defence_risk": cs.get("defence_risk", "UNKNOWN"),
-            
-            # Semantic analysis - ALWAYS POPULATED
-            "semantic_analysis": {
-                "concepts": ensure_list(cs.get("concepts_detected"))
-            },
-            
-            # Reasoning trace
-            "reasoning": ensure_list(cs.get("score_reasoning_trace")),
-            
-            # Contradictions
-            "contradictions": ensure_list(cs.get("contradictions")),
-            
-            # Draft - GUARANTEED
-            "draft": ensure_string(output.get("draft")) if output.get("draft") else "No draft generated",
-            
-            # Legal analysis
-            "legal_analysis": ensure_string(output.get("legal_analysis")) if output.get("legal_analysis") else "Not available",
-            
-            # Additional fields for compatibility
-            "next_action": ensure_string(output.get("next_action")) if output.get("next_action") else "Consult with legal advisor",
-            "weaknesses": ensure_list(output.get("weaknesses")),
-            "evidence_assessment": ensure_dict(output.get("evidence_assessment"))
+
+            # ── DEFENCE ──
+            "defence": defence,
+            "defence_risk": defence_risk,
+
+            # ── SEMANTIC ──
+            "semantic_analysis": semantic_analysis,
+
+            # ── REASONING / CONTRADICTIONS ──
+            "reasoning": reasoning,
+            "contradictions": contradictions,
+
+            # ── DRAFT / LEGAL ANALYSIS ──
+            "draft": draft,
+            "legal_analysis": ensure_string(output.get("legal_analysis"), "Not available") or "Not available",
+
+            # ── EXTRA FIELDS (backward-compat) ──
+            "next_action": ensure_string(output.get("next_action"), "") or "Consult with legal advisor",
+            "evidence_assessment": ensure_dict(output.get("evidence_assessment")),
+            "consistency_metadata": ensure_dict(output.get("consistency_metadata")),
+            "warnings": ensure_list(output.get("warnings")),
         }
     }
-    
-    # 🔥 TASK 6: DEBUG LOG FINAL OUTPUT
+
+    # ── 11. Debug logging ────────────────────────────────────────────────────
+    d = final_response["data"]
     print("\n" + "=" * 100)
     print("🔥 FINAL RESPONSE BUILDER - OUTPUT VERIFICATION")
     print("=" * 100)
-    print(f"✅ Score: {final_response['data']['score']}")
-    print(f"✅ Verdict: {final_response['data']['verdict']}")
-    print(f"✅ Issues count: {len(final_response['data']['issues'])}")
-    print(f"✅ Timeline count: {len(final_response['data']['timeline'])}")
-    print(f"✅ Strategy count: {len(final_response['data']['strategy'])}")
-    print(f"✅ Recommended actions count: {len(final_response['data']['recommended_actions'])}")
-    print(f"✅ Defence count: {len(final_response['data']['defence'])}")
-    print(f"✅ Semantic concepts count: {len(final_response['data']['semantic_analysis']['concepts'])}")
-    print(f"✅ Reasoning count: {len(final_response['data']['reasoning'])}")
-    print(f"✅ Draft length: {len(final_response['data']['draft'])} chars")
+    print(f"✅ Score:               {d['score']}")
+    print(f"✅ Verdict:             {d['verdict']}")
+    print(f"✅ Issues count:        {len(d['issues'])}")
+    print(f"✅ Strengths count:     {len(d['strengths'])}")
+    print(f"✅ Weaknesses count:    {len(d['weaknesses'])}")
+    print(f"✅ Timeline count:      {len(d['timeline'])}")
+    print(f"✅ Strategy count:      {len(d['strategy'])}")
+    print(f"✅ Actions count:       {len(d['recommended_actions'])}")
+    print(f"✅ Defence count:       {len(d['defence'])}")
+    print(f"✅ Defence risk:        {d['defence_risk']}")
+    print(f"✅ Semantic concepts:   {len(ensure_list(d['semantic_analysis'].get('concepts_detected')))}")
+    print(f"✅ Reasoning count:     {len(d['reasoning'])}")
+    print(f"✅ Contradictions:      {len(d['contradictions'])}")
+    print(f"✅ Draft length:        {len(d['draft'])} chars")
+    print(f"✅ Legal analysis:      {len(d['legal_analysis'])} chars")
     print("FINAL OUTPUT:", final_response)
     print("=" * 100 + "\n")
-    
+
     return final_response
 
 # ════════════════════════════════════════════════════════════════════════════
