@@ -31430,36 +31430,52 @@ class ControlledAnalysisEngine:
     
     @staticmethod
     def _safe_format_adjustments(adjustments):
-        """Safely format adjustments list - BULLETPROOF VERSION"""
+        """Safely format adjustments list - BULLETPROOF VERSION v12.3"""
         safe_adjustments = []
+        
+        # 🔥 DEBUG LOGGING - Track adjustment types
+        print(f"[DEBUG] _safe_format_adjustments called with type: {type(adjustments).__name__}")
         
         # Handle None
         if adjustments is None:
+            print("[DEBUG] Adjustments is None, returning empty list")
             return []
         
         # 🔥 FIX 3: Convert dict to list, handle any non-list type
         if isinstance(adjustments, dict):
+            print(f"[DEBUG] Converting dict adjustment to list: {adjustments}")
             adjustments = [adjustments]
         elif not isinstance(adjustments, list):
             print(f"⚠️ ADJUSTMENTS TYPE WARNING: Expected list, got {type(adjustments).__name__}")
+            print(f"[DEBUG] Raw adjustments value: {adjustments}")
             adjustments = []
+        
+        print(f"[DEBUG] Processing {len(adjustments)} adjustments")
         
         # Process each adjustment safely
         for idx, adj in enumerate(adjustments):
             try:
+                print(f"[DEBUG] Adjustment {idx}: type={type(adj).__name__}, value={adj}")
+                
                 if isinstance(adj, dict):
                     reason = ensure_string(adj.get("reason", "Unknown"), "Unknown")
                     value = ensure_number(adj.get("value", 0), 0)
-                    safe_adjustments.append(f"{reason}: {value:+.1f}")
+                    formatted = f"{reason}: {value:+.1f}"
+                    safe_adjustments.append(formatted)
+                    print(f"[DEBUG] Dict adjustment formatted: {formatted}")
                 elif isinstance(adj, str):
                     safe_adjustments.append(adj)
+                    print(f"[DEBUG] String adjustment kept as-is: {adj}")
                 else:
                     # Fallback for unexpected types
-                    safe_adjustments.append(f"Adjustment {idx + 1}: {str(adj)}")
+                    formatted = f"Adjustment {idx + 1}: {str(adj)}"
+                    safe_adjustments.append(formatted)
+                    print(f"[DEBUG] Unknown type converted: {formatted}")
             except Exception as e:
                 print(f"⚠️ ERROR formatting adjustment {idx}: {e}")
                 safe_adjustments.append(f"Adjustment {idx + 1}: [error]")
         
+        print(f"[DEBUG] _safe_format_adjustments returning {len(safe_adjustments)} formatted items")
         return safe_adjustments
     
     @staticmethod
@@ -38183,8 +38199,102 @@ async def analyze_case(request: Request):
                 }
             }
         
-        # Step 7: Final success log
+        # Step 7: Final success log and validation
         api_logger.info(f"[{request_id}] ✅ Analysis completed successfully in {time.time() - start_time:.2f}s")
+        
+        # 🔥 TASK 3 & 4: FINAL RESPONSE VALIDATION AND DEBUG LOGGING
+        print("=" * 100)
+        print("🔥 FINAL API RESPONSE VALIDATION")
+        print("=" * 100)
+        
+        # Extract data for validation
+        response_data = standardized_response.get("data", {})
+        
+        # Validate all required fields are present
+        required_fields = [
+            "score", "verdict", "defence_risk", "issues", "strengths", "weaknesses",
+            "timeline", "strategy", "recommended_actions", "defence", "next_action",
+            "reasoning", "semantic_analysis", "contradictions", "evidence_assessment",
+            "draft", "legal_analysis"
+        ]
+        
+        missing_fields = [f for f in required_fields if f not in response_data]
+        if missing_fields:
+            api_logger.error(f"[{request_id}] ❌ MISSING FIELDS: {missing_fields}")
+            print(f"❌ CRITICAL: Missing required fields: {missing_fields}")
+            # Add missing fields with defaults
+            for field in missing_fields:
+                if field in ["score"]:
+                    response_data[field] = 0
+                elif field in ["verdict", "defence_risk", "next_action", "draft", "legal_analysis"]:
+                    response_data[field] = "Unknown"
+                elif field in ["issues", "strengths", "weaknesses", "timeline", "strategy", "recommended_actions", "defence", "reasoning", "contradictions"]:
+                    response_data[field] = []
+                elif field == "semantic_analysis":
+                    response_data[field] = {"concepts_detected": [], "total_concepts": 0, "status": "unknown"}
+                elif field == "evidence_assessment":
+                    response_data[field] = {}
+        else:
+            print("✅ All required fields present")
+        
+        # Type validation
+        print(f"SCORE: {response_data.get('score')} (type: {type(response_data.get('score')).__name__})")
+        print(f"VERDICT: {response_data.get('verdict')}")
+        print(f"ISSUES: {len(response_data.get('issues', []))} items")
+        print(f"STRENGTHS: {len(response_data.get('strengths', []))} items")
+        print(f"WEAKNESSES: {len(response_data.get('weaknesses', []))} items")
+        print(f"TIMELINE: {len(response_data.get('timeline', []))} events")
+        print(f"STRATEGY: {len(response_data.get('strategy', []))} items")
+        print(f"RECOMMENDED_ACTIONS: {len(response_data.get('recommended_actions', []))} items")
+        print(f"DRAFT: {len(response_data.get('draft', ''))} characters")
+        print(f"SEMANTIC_ANALYSIS: {response_data.get('semantic_analysis', {}).get('total_concepts', 0)} concepts")
+        
+        # Consistency validation
+        score = response_data.get('score', 0)
+        verdict = str(response_data.get('verdict', ''))
+        issues = response_data.get('issues', [])
+        draft = response_data.get('draft', '')
+        
+        print("\n🔍 CONSISTENCY CHECKS:")
+        
+        # Check 1: Score-Verdict alignment
+        if score < 30 and ('Weak' in verdict or 'WEAK' in verdict):
+            print("  ✅ Score-Verdict alignment: PASS (low score, weak verdict)")
+        elif score >= 70 and ('Strong' in verdict or 'STRONG' in verdict):
+            print("  ✅ Score-Verdict alignment: PASS (high score, strong verdict)")
+        elif 30 <= score < 70 and ('Moderate' in verdict or 'MODERATE' in verdict):
+            print("  ✅ Score-Verdict alignment: PASS (medium score, moderate verdict)")
+        else:
+            print(f"  ⚠️ Score-Verdict alignment: WARNING (score={score}, verdict={verdict})")
+        
+        # Check 2: Issues-Draft alignment
+        high_issues = sum(1 for i in issues if 'HIGH' in str(i).upper() or 'CRITICAL' in str(i).upper())
+        has_fatal_draft = 'FATAL' in draft.upper() or 'CRITICAL DEFECT' in draft.upper()
+        
+        if high_issues > 0 and has_fatal_draft:
+            print(f"  ✅ Issues-Draft alignment: PASS ({high_issues} high issues, draft mentions fatal)")
+        elif high_issues == 0 and not has_fatal_draft:
+            print(f"  ✅ Issues-Draft alignment: PASS (no high issues, draft has no fatal warnings)")
+        else:
+            print(f"  ⚠️ Issues-Draft alignment: WARNING (high_issues={high_issues}, has_fatal_draft={has_fatal_draft})")
+        
+        # Check 3: Non-empty critical fields
+        if len(issues) == 0:
+            print("  ⚠️ Issues list is EMPTY - check if expected")
+        else:
+            print(f"  ✅ Issues list: POPULATED ({len(issues)} items)")
+        
+        if len(response_data.get('timeline', [])) == 0:
+            print("  ⚠️ Timeline is EMPTY")
+        else:
+            print(f"  ✅ Timeline: POPULATED ({len(response_data.get('timeline', []))} events)")
+        
+        if len(response_data.get('strategy', [])) == 0:
+            print("  ⚠️ Strategy is EMPTY")
+        else:
+            print(f"  ✅ Strategy: POPULATED ({len(response_data.get('strategy', []))} items)")
+        
+        print("=" * 100)
         api_logger.info("=" * 100)
         
         return standardized_response
