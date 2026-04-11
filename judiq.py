@@ -37788,6 +37788,107 @@ PRAYER: Grant appropriate relief under Section 138 NI Act.
     }
 
 
+def generate_pdf(report_data: dict, output_path: str = None) -> str:
+    """
+    PHASE 4: Simplified PDF generation
+    Generates PDF report from analysis data
+    Returns: file path to generated PDF
+    """
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        
+        if output_path is None:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            output_path = f"/tmp/legal_analysis_{timestamp}.pdf"
+        
+        # Create PDF
+        doc = SimpleDocTemplate(output_path, pagesize=letter)
+        story = []
+        styles = getSampleStyleSheet()
+        
+        # Title
+        title_style = styles['Title']
+        title = Paragraph("LEGAL CASE ANALYSIS REPORT", title_style)
+        story.append(title)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Score and Verdict
+        score = report_data.get('score', 0)
+        verdict = report_data.get('verdict', 'Unknown')
+        risk = report_data.get('risk_level', 'Unknown')
+        
+        story.append(Paragraph(f"<b>Case Score:</b> {score}/100", styles['Normal']))
+        story.append(Paragraph(f"<b>Verdict:</b> {verdict}", styles['Normal']))
+        story.append(Paragraph(f"<b>Risk Level:</b> {risk}", styles['Normal']))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Issues
+        story.append(Paragraph("<b>CRITICAL ISSUES</b>", styles['Heading2']))
+        issues = report_data.get('issues', [])
+        for issue in issues:
+            if isinstance(issue, dict):
+                text = f"• {issue.get('title', 'Unknown')} (Severity: {issue.get('severity', 'N/A')})"
+            else:
+                text = f"• {str(issue)}"
+            story.append(Paragraph(text, styles['Normal']))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Strengths
+        story.append(Paragraph("<b>CASE STRENGTHS</b>", styles['Heading2']))
+        strengths = report_data.get('strengths', [])
+        for strength in strengths:
+            if isinstance(strength, dict):
+                text = f"• {strength.get('title', 'Unknown')}"
+            else:
+                text = f"• {str(strength)}"
+            story.append(Paragraph(text, styles['Normal']))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Timeline
+        story.append(Paragraph("<b>TIMELINE</b>", styles['Heading2']))
+        timeline = report_data.get('timeline', [])
+        for event in timeline:
+            if isinstance(event, dict):
+                text = f"• {event.get('event', 'Unknown')} - {event.get('date', 'N/A')}"
+            else:
+                text = f"• {str(event)}"
+            story.append(Paragraph(text, styles['Normal']))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Legal Strategy
+        story.append(Paragraph("<b>LEGAL STRATEGY</b>", styles['Heading2']))
+        strategy = report_data.get('legal_strategy', [])
+        for step in strategy:
+            if isinstance(step, dict):
+                text = f"• {step.get('step', 'Unknown')} (Priority: {step.get('priority', 'N/A')})"
+            else:
+                text = f"• {str(step)}"
+            story.append(Paragraph(text, styles['Normal']))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Draft
+        story.append(PageBreak())
+        story.append(Paragraph("<b>LEGAL DRAFT</b>", styles['Heading1']))
+        story.append(Spacer(1, 0.2*inch))
+        draft = report_data.get('draft', 'No draft available')
+        for line in draft.split('\n'):
+            if line.strip():
+                story.append(Paragraph(line, styles['Normal']))
+        
+        # Build PDF
+        doc.build(story)
+        logger.info(f"PDF generated successfully: {output_path}")
+        return output_path
+        
+    except Exception as e:
+        logger.error(f"PDF generation failed: {str(e)}")
+        raise Exception(f"Failed to generate PDF: {str(e)}")
+
+
 def standardize_output(engine_result: dict, case_data: dict = None) -> dict:
     """
     Simplified output standardization using unified response builder
@@ -38455,46 +38556,19 @@ async def analyze_case(request: Request):
             standardized_response["processing_time_seconds"] = round(time.time() - start_time, 3)
         except Exception as std_err:
             api_logger.error(f"[{request_id}] ❌ Standardization failed: {str(std_err)}")
-            # Emergency fallback with ALL required fields
+            # Emergency fallback using unified builder
+            fallback_data = build_final_response({}, normalized_data)
             standardized_response = {
                 "success": False,
                 "request_id": request_id,
                 "timestamp": datetime.now().isoformat(),
                 "processing_time_seconds": round(time.time() - start_time, 3),
                 "error_type": "OUTPUT_STANDARDIZATION_ERROR",
-                "data": {
-                    "score": 0,
-                    "verdict": "Error",
-                    "defence_risk": "Unknown",
-                    "issues": ["Output formatting error"],
-                    "strengths": [],
-                    "weaknesses": [],
-                    
-                    # 🔥 NEW: Intelligence fields with fallbacks
-                    "timeline": ["Timeline unavailable due to error"],
-                    "strategy": ["Strategy unavailable - contact support"],
-                    "recommended_actions": ["Contact support with request ID"],
-                    
-                    "defence": [],
-                    "next_action": "Contact support",
-                    "reasoning": [f"Standardization error: {str(std_err)}"],
-                    
-                    # 🔥 NEW: Semantic analysis
-                    "semantic_analysis": {
-                        "concepts_detected": [],
-                        "total_concepts": 0,
-                        "status": "error"
-                    },
-                    
-                    "contradictions": [],
-                    "evidence_assessment": {},
-                    "draft": "",
-                    "legal_analysis": "",
-                    "error": str(std_err)
-                }
+                "data": fallback_data
             }
+            standardized_response["data"]["error"] = str(std_err)
         
-        # Step 7: Final success log and validation
+        # Step 7: Final success log
         api_logger.info(f"[{request_id}] ✅ Analysis completed successfully in {time.time() - start_time:.2f}s")
         
         # 🔥 BUILD CENTRAL STATE: merge _central_state_data from engine with
