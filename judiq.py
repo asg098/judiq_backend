@@ -1148,6 +1148,54 @@ class SemanticEngineV12:
             ],
             "weight": 0.85,
             "legal_impact": "challenges foundational fact of dishonour"
+        },
+        # ── POSITIVE / COMPLAINANT-SIDE CONCEPTS ──────────────────────────────
+        "cheque_bounce": {
+            "patterns": [
+                r"\b(cheque\s+(dishonoured|bounced|returned|presented))",
+                r"\b(negotiable\s+instrument)",
+                r"\b(cheque\s+present)",
+                r"\b(section\s+138)",
+                r"\b(ni\s+act)",
+                r"\b(dishonour\s+memo)",
+                r"\b(bank\s+(memo|slip|return\s+memo))"
+            ],
+            "weight": 0.95,
+            "legal_impact": "establishes core Section 138 NI Act offence"
+        },
+        "legal_notice_compliance": {
+            "patterns": [
+                r"\b(legal\s+notice\s+sent)",
+                r"\b(demand\s+notice\s+(issued|served|sent))",
+                r"\b(notice\s+(served|delivered|sent|issued))",
+                r"\b(registered\s+post\s+notice)",
+                r"\b(statutory\s+notice)"
+            ],
+            "weight": 0.90,
+            "legal_impact": "satisfies mandatory notice requirement under S.138(b)"
+        },
+        "legally_enforceable_debt": {
+            "patterns": [
+                r"\b(loan\s+(amount|given|advanced|transaction))",
+                r"\b(legally\s+enforceable\s+debt)",
+                r"\b(debt\s+proven|debt\s+established)",
+                r"\b(loan\s+agreement|written\s+agreement)",
+                r"\b(promissory\s+note|acknowledgment\s+of\s+debt)",
+                r"\b(consideration\s+paid)"
+            ],
+            "weight": 0.90,
+            "legal_impact": "establishes legally enforceable liability under S.139"
+        },
+        "strong_documentary_evidence": {
+            "patterns": [
+                r"\b(documentary\s+evidence)",
+                r"\b(bank\s+statement)",
+                r"\b(signed\s+agreement|notarized\s+agreement)",
+                r"\b(invoice|receipt|voucher)",
+                r"\b(written\s+(proof|record|documentation))"
+            ],
+            "weight": 0.85,
+            "legal_impact": "strengthens evidentiary basis of complainant's case"
         }
     }
     
@@ -36024,15 +36072,37 @@ def run_full_analysis_v12(case_data: Dict, case_id: str = None, fast_mode: bool 
     # ═══════════════════════════════════════════════════════════════════════════
     logger.info("🧠 Stage 1/10: Semantic concept detection...")
     
-    # Gather all text from case data for semantic analysis
+    # Gather ALL text fields from case data for semantic analysis
     text_corpus = []
-    if case_data.get('facts'):
-        text_corpus.append(ensure_dict(case_data).get('facts', ''))
-    if case_data.get('defence_arguments'):
-        text_corpus.append(ensure_dict(case_data).get('defence_arguments', ''))
-    if case_data.get('additional_notes'):
-        text_corpus.append(ensure_dict(case_data).get('additional_notes', ''))
-    
+    for field in ['facts', 'defence_arguments', 'additional_notes',
+                  'case_description', 'case_facts', 'description',
+                  'plaintiff_statement', 'defendant_statement', 'notes']:
+        val = ensure_string(ensure_dict(case_data).get(field, ''))
+        if val:
+            text_corpus.append(val)
+
+    # Also synthesize text from boolean/structured fields so the semantic
+    # engine can detect concepts even when free-text fields are sparse.
+    synthesized = []
+    if case_data.get('cheque_present'):
+        synthesized.append("cheque present dishonoured negotiable instrument")
+    if case_data.get('notice_sent'):
+        synthesized.append("legal notice sent demand notice served")
+    if case_data.get('debt_proven'):
+        synthesized.append("loan amount legally enforceable debt proven")
+    if case_data.get('dishonour_memo'):
+        synthesized.append("bank dishonour memo obtained")
+    if case_data.get('signature_disputed'):
+        synthesized.append("signature disputed not signed by accused")
+    if not case_data.get('notice_sent'):
+        synthesized.append("notice not sent no notice received")
+    if not case_data.get('debt_proven'):
+        synthesized.append("debt not proven no agreement shown")
+    if case_data.get('limitation_complied') is False:
+        synthesized.append("filed beyond limitation time barred")
+    if synthesized:
+        text_corpus.append(" ".join(synthesized))
+
     combined_text = " ".join(text_corpus)
     concepts_detected = SemanticEngineV12.detect_concepts(combined_text)
     
@@ -38983,23 +39053,55 @@ def standardize_output(engine_result: dict, case_data: dict = None) -> dict:
     try:
         if case_data is None:
             case_data = {}
-        
-        # Extract central state from engine result
-        central_state = engine_result.get('_central_state_data', {})
-        if not central_state:
-            # Fallback: build from executive_decision
-            exec_dec = engine_result.get('executive_decision', {})
-            central_state = {
+
+        # Extract _central_state_data populated by safe_run_engine
+        cs_data = ensure_dict(engine_result.get('_central_state_data', {}))
+        if not cs_data:
+            # Fallback: synthesize from executive_decision
+            exec_dec = ensure_dict(engine_result.get('executive_decision', {}))
+            cs_data = {
                 'score': exec_dec.get('score', 50),
                 'verdict': exec_dec.get('verdict', 'Unknown'),
                 'concepts_detected': [],
-                'score_reasoning_trace': exec_dec.get('reasoning_trace', []),
-                'draft': engine_result.get('draft', '')
+                'score_reasoning_trace': ensure_list(
+                    exec_dec.get('reasoning_trace') or
+                    exec_dec.get('reasoning_trace_preview', [])
+                ),
+                'draft': engine_result.get('draft', ''),
+                'defences_ranked': ensure_list(exec_dec.get('top_defences', [])),
+                'defence_risk': exec_dec.get('defence_risk', 'UNKNOWN'),
+                'strategy': {},
+                'timeline': [],
+                'recommended_actions': [],
+                'contradictions': [],
             }
-        
-        # Build unified response
-        unified = build_final_response(central_state, case_data)
-        
+
+        # Build the output dict: merge engine_result fields + case_data so that
+        # build_final_response (which reads 'output' as primary source) gets the
+        # richest possible data including semantic_analysis, timeline, strategy, etc.
+        output_dict = {}
+        output_dict.update(ensure_dict(case_data))       # base case fields
+        output_dict.update(ensure_dict(engine_result))   # engine output (overrides)
+        # Pull key fields from cs_data into output_dict so the builder sees them
+        for _k in ('score', 'verdict', 'strategy', 'timeline', 'recommended_actions',
+                   'defences_ranked', 'defence_risk', 'contradictions', 'draft'):
+            if _k not in output_dict or not output_dict[_k]:
+                output_dict[_k] = cs_data.get(_k)
+        # Normalise strategy key: builder reads "strategy" list
+        if isinstance(output_dict.get('strategy'), dict):
+            output_dict['strategy'] = []  # dict → clear; fallback in builder will generate proper steps
+        # Expose reasoning under the key the builder reads
+        if not output_dict.get('reasoning'):
+            output_dict['reasoning'] = cs_data.get('score_reasoning_trace', [])
+
+        # Wrap cs_data in an object the builder accepts via .get_all() / .get()
+        class _CS:
+            def __init__(self, d): self.data = ensure_dict(d)
+            def get_all(self): return self.data
+            def get(self, key, default=None): return self.data.get(key, default)
+
+        unified = build_final_response(output_dict, _CS(cs_data))
+
         # Wrap in standard API format
         return {
             "success": True,
@@ -39907,8 +40009,37 @@ def build_final_response(output, central_state):
         timeline = ["No timeline generated"]
 
     strategy = ensure_list(output.get("strategy")) or ensure_list(cs.get("strategy"))
+    # Filter out empty dicts that produce [{}] UX bug
+    strategy = [s for s in strategy if s and (not isinstance(s, dict) or any(s.values()))]
     if not strategy:
-        strategy = ["No strategy available"]
+        # Score-aware fallback strategy steps
+        if score >= 70:
+            strategy = [
+                {"step": "Proceed with complaint filing under Section 138 NI Act", "priority": "HIGH",
+                 "reason": "Strong case — all procedural requirements appear satisfied"},
+                {"step": "Compile complete documentary evidence bundle", "priority": "HIGH",
+                 "reason": "Strengthen evidentiary record before first hearing"},
+                {"step": "Prepare witness list and examination-in-chief affidavit", "priority": "MEDIUM",
+                 "reason": "Proactive preparation reduces hearing delays"}
+            ]
+        elif score >= 45:
+            strategy = [
+                {"step": "Strengthen evidence before filing complaint", "priority": "HIGH",
+                 "reason": "Moderate case — gaps in documentation must be addressed first"},
+                {"step": "Obtain missing procedural documents (dishonour memo, notice proof)", "priority": "HIGH",
+                 "reason": "Procedural compliance is mandatory under Section 138"},
+                {"step": "Evaluate settlement negotiation with accused", "priority": "MEDIUM",
+                 "reason": "Risk-adjusted settlement may be preferable to protracted litigation"}
+            ]
+        else:
+            strategy = [
+                {"step": "Address all critical defects before filing", "priority": "CRITICAL",
+                 "reason": "Weak case — filing now risks dismissal in limine"},
+                {"step": "Consult senior legal counsel for case viability review", "priority": "CRITICAL",
+                 "reason": "Independent expert review essential before proceeding"},
+                {"step": "Consider alternative dispute resolution or settlement", "priority": "HIGH",
+                 "reason": "Litigation risk outweighs potential recovery at current case strength"}
+            ]
 
     recommended_actions = (ensure_list(output.get("recommended_actions")) or
                            ensure_list(cs.get("recommended_actions")))
@@ -39932,11 +40063,20 @@ def build_final_response(output, central_state):
                 semantic_analysis.get("concepts") or cs.get("concepts_detected")
             )
     else:
+        concepts_from_cs = ensure_list(cs.get("concepts_detected"))
         semantic_analysis = {
-            "concepts_detected": ensure_list(cs.get("concepts_detected")),
-            "total_concepts": len(ensure_list(cs.get("concepts_detected"))),
+            "concepts_detected": concepts_from_cs,
+            "total_concepts": len(concepts_from_cs),
             "status": "analyzed"
         }
+    # Always keep total_concepts in sync with actual list length
+    _concepts = ensure_list(semantic_analysis.get("concepts_detected"))
+    semantic_analysis["total_concepts"] = len(_concepts)
+    # Add human-readable concept_names list for frontend display
+    semantic_analysis["concept_names"] = [
+        ensure_dict(c).get("concept", str(c)) if isinstance(c, dict) else str(c)
+        for c in _concepts
+    ]
 
     # ── 9. Reasoning & contradictions ────────────────────────────────────────
     reasoning = (ensure_list(output.get("reasoning")) or
@@ -39985,16 +40125,43 @@ def build_final_response(output, central_state):
     if reasoning_trace and not strengths:
         strengths.append({"title": "Evidence and transaction records present", "source": "fallback"})
     
-    if reasoning_trace and not weaknesses:
-        weaknesses.append({"title": "Procedural gaps detected in case preparation", "source": "fallback"})
-    
     # If NO reasoning at all, check output for pre-built strengths/weaknesses
     if not strengths:
         strengths = ensure_list(output.get("strengths"))
     if not weaknesses:
         weaknesses = ensure_list(output.get("weaknesses"))
     
-    # Final fallback if still empty
+    # 🔥 FIX ISSUE 3: SPECIFIC, CASE-DATA-AWARE WEAKNESSES (not generic fallback)
+    # Pull case facts from the output/central-state to generate meaningful weaknesses
+    if reasoning_trace and not weaknesses:
+        _case = ensure_dict(output)
+        # Cheque details
+        if not _case.get("dishonour_date") and not any(
+                "dishonour" in str(r).lower() for r in reasoning_trace):
+            weaknesses.append({"title": "Dishonour date not clearly established in records",
+                                "severity": "MEDIUM", "source": "case_analysis"})
+        cheque_number = ensure_string(_case.get("cheque_number", ""), "")
+        if cheque_number.upper() in ("UNKNOWN", "", "N/A"):
+            weaknesses.append({"title": "Cheque number/details incomplete — affects instrument identification",
+                                "severity": "MEDIUM", "source": "case_analysis"})
+        # Notice timing
+        if any("notice" in str(r).lower() and "not" in str(r).lower() for r in reasoning_trace):
+            weaknesses.append({"title": "Legal notice deficiency detected — may be fatal to complaint",
+                                "severity": "HIGH", "source": "reasoning_trace"})
+        # Debt proof
+        if any("debt" in str(r).lower() and ("not" in str(r).lower() or "weak" in str(r).lower())
+               for r in reasoning_trace):
+            weaknesses.append({"title": "Legally enforceable debt not sufficiently documented",
+                                "severity": "HIGH", "source": "reasoning_trace"})
+        # Score-based gap (strong case still has risk areas)
+        if score >= 70 and not weaknesses:
+            weaknesses.append({"title": "Accused may raise security cheque / part-payment defence",
+                                "severity": "LOW", "source": "predictive_analysis"})
+        elif score >= 45 and not weaknesses:
+            weaknesses.append({"title": "Evidence bundle has gaps that defence counsel will exploit",
+                                "severity": "MEDIUM", "source": "predictive_analysis"})
+
+    # Final fallback only when absolutely no data available
     if not strengths:
         strengths = [{"title": "Limited legal advantages from available data", "source": "final_fallback"}]
     if not weaknesses:
