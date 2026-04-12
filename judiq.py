@@ -608,22 +608,146 @@ def ensure_bool(x, default=False):
 
 def normalize_output(data):
     """
-    TASK 5: Safe output normalization
-    Ensures all output fields are type-safe before returning
+    STEP 3 - NORMALIZE FINAL OUTPUT (v15.0)
+    Ensures every field has correct Python type.
+    Called AFTER enforce_output_contract as a final type-safety pass.
     """
     data = ensure_dict(data)
-    
-    data['issues'] = ensure_list(data.get('issues'))
-    data['strengths'] = ensure_list(data.get('strengths'))
-    data['defence'] = ensure_list(data.get('defence'))
-    data['reasoning'] = ensure_list(data.get('reasoning'))
-    
-    data['score'] = ensure_number(data.get('score'))
-    data['verdict'] = ensure_string(data.get('verdict'), "Unknown")
-    
+
+    for arr_field in (
+        "issues", "strengths", "weaknesses",
+        "timeline", "legal_strategy", "strategy",
+        "recommended_actions",
+        "predicted_defences", "defence",
+        "reasoning_trace", "reasoning",
+        "contradictions", "warnings",
+    ):
+        data[arr_field] = ensure_list(data.get(arr_field))
+
+    data["score"] = ensure_number(data.get("score"), 0)
+
+    for str_field in ("verdict", "risk_level", "defence_risk",
+                      "draft", "legal_analysis", "next_action"):
+        data[str_field] = ensure_string(data.get(str_field), "")
+
+    for dict_field in ("semantic_analysis", "evidence_assessment", "consistency_metadata"):
+        if not isinstance(data.get(dict_field), dict):
+            data[dict_field] = {}
+
+    sem = data["semantic_analysis"]
+    if not isinstance(sem.get("concepts_detected"), list):
+        sem["concepts_detected"] = []
+
     return data
 
-# ============================================================================
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🔥 STEP 1: STRICT OUTPUT CONTRACT ENFORCEMENT (v15.0 PRODUCTION STABILITY)
+# ════════════════════════════════════════════════════════════════════════════
+
+def enforce_output_contract(response: dict) -> dict:
+    """
+    🔥 PRODUCTION-GRADE OUTPUT CONTRACT ENFORCER (v15.0)
+
+    Guarantees:
+    ✅ All required fields ALWAYS present — no missing fields
+    ✅ Correct types enforced (arrays → list, score → number, draft → string)
+    ✅ Alias fields resolved (strategy→legal_strategy, defence→predicted_defences,
+       reasoning→reasoning_trace)
+    ✅ Flat structure — no nested objects returned as top-level contract fields
+    ✅ Deterministic — same input always produces same output shape
+    ✅ Zero crashes — all errors have safe defaults
+
+    REQUIRED FIELDS (guaranteed):
+        score, verdict, risk_level, issues, strengths, weaknesses,
+        timeline, legal_strategy, recommended_actions, predicted_defences,
+        semantic_analysis, reasoning_trace, draft
+    """
+    # ── 0. Safety: ensure we operate on a dict ───────────────────────────────
+    if not isinstance(response, dict):
+        response = {}
+
+    # ── 1. Resolve field aliases BEFORE defaults ─────────────────────────────
+    # strategy → legal_strategy
+    if "strategy" in response and not response.get("legal_strategy"):
+        response["legal_strategy"] = response["strategy"]
+
+    # defence → predicted_defences
+    if "defence" in response and not response.get("predicted_defences"):
+        response["predicted_defences"] = response["defence"]
+
+    # reasoning → reasoning_trace
+    if "reasoning" in response and not response.get("reasoning_trace"):
+        response["reasoning_trace"] = response["reasoning"]
+
+    # defence_risk → risk_level
+    if "defence_risk" in response and not response.get("risk_level"):
+        response["risk_level"] = response["defence_risk"]
+
+    # ── 2. Enforce required fields with correct types and safe defaults ───────
+    REQUIRED_FIELDS = {
+        "score":              (lambda v: ensure_number(v, 0),                    0),
+        "verdict":            (lambda v: ensure_string(v, "Unknown"),            "Unknown"),
+        "risk_level":         (lambda v: ensure_string(v, "UNKNOWN"),            "UNKNOWN"),
+        "issues":             (lambda v: ensure_list(v),                         [{"text": "No issues identified", "severity": "LOW"}]),
+        "strengths":          (lambda v: ensure_list(v),                         []),
+        "weaknesses":         (lambda v: ensure_list(v),                         []),
+        "timeline":           (lambda v: ensure_list(v),                         ["Timeline not available"]),
+        "legal_strategy":     (lambda v: ensure_list(v),                         ["Consult with legal advisor"]),
+        "recommended_actions":(lambda v: ensure_list(v),                         ["Seek legal counsel immediately"]),
+        "predicted_defences": (lambda v: ensure_list(v),                         []),
+        "semantic_analysis":  (lambda v: v if isinstance(v, dict) else {},       {"concepts_detected": [], "total_concepts": 0, "status": "unavailable"}),
+        "reasoning_trace":    (lambda v: ensure_list(v),                         ["Reasoning not available"]),
+        "draft":              (lambda v: ensure_string(v, "Draft not available"), "Draft not available"),
+    }
+
+    for field, (coerce_fn, default) in REQUIRED_FIELDS.items():
+        raw = response.get(field)
+        coerced = coerce_fn(raw)
+
+        # Determine "empty" based on type
+        is_empty = (
+            coerced is None
+            or (isinstance(coerced, list) and len(coerced) == 0 and field in (
+                "issues", "timeline", "legal_strategy", "recommended_actions", "reasoning_trace"))
+            or (isinstance(coerced, str) and coerced.strip() == "")
+            or (isinstance(coerced, (int, float)) and field == "score" and coerced == 0 and raw is None)
+        )
+
+        response[field] = default if is_empty else coerced
+
+    # ── 3. Guarantee semantic_analysis.concepts_detected is always a list ────
+    sem = response["semantic_analysis"]
+    if "concepts_detected" not in sem or not isinstance(sem["concepts_detected"], list):
+        sem["concepts_detected"] = []
+    if "total_concepts" not in sem:
+        sem["total_concepts"] = len(sem["concepts_detected"])
+    if "status" not in sem:
+        sem["status"] = "analyzed"
+
+    # ── 4. Alias back-fill for frontend backward-compat ──────────────────────
+    # Keep the old keys in sync so any legacy consumer still works
+    response["strategy"]           = response["legal_strategy"]
+    response["defence"]            = response["predicted_defences"]
+    response["reasoning"]          = response["reasoning_trace"]
+    response["defence_risk"]       = response["risk_level"]
+
+    # ── 5. Final debug log ───────────────────────────────────────────────────
+    api_logger.info("FINAL RESPONSE (enforce_output_contract): "
+                    f"score={response['score']}, verdict={response['verdict']}, "
+                    f"risk_level={response['risk_level']}, "
+                    f"issues={len(response['issues'])}, "
+                    f"timeline={len(response['timeline'])}, "
+                    f"legal_strategy={len(response['legal_strategy'])}, "
+                    f"recommended_actions={len(response['recommended_actions'])}, "
+                    f"predicted_defences={len(response['predicted_defences'])}, "
+                    f"reasoning_trace={len(response['reasoning_trace'])}, "
+                    f"draft_len={len(response['draft'])}")
+
+    return response
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # 🆕 v12.0 PRODUCTION-GRADE MODULES
 # ============================================================================
 
@@ -37970,24 +38094,26 @@ def standardize_output(engine_result: dict, case_data: dict = None) -> dict:
         api_logger.error(f"Standardization error: {str(e)}")
         api_logger.error(traceback.format_exc())
         
-        # Return minimal valid response
+        # Return minimal valid response — always pass through contract enforcer
+        fallback = enforce_output_contract({
+            "score": 0,
+            "verdict": "Error",
+            "risk_level": "UNKNOWN",
+            "issues": [{"text": "System error occurred", "severity": "CRITICAL"}],
+            "strengths": [],
+            "weaknesses": [],
+            "timeline": [],
+            "legal_strategy": [],
+            "recommended_actions": [],
+            "predicted_defences": [],
+            "semantic_analysis": {"concepts_detected": [], "total_concepts": 0, "status": "error"},
+            "reasoning_trace": [f"Error: {str(e)}"],
+            "draft": "Unable to generate draft due to error",
+        })
         return {
             "success": False,
             "timestamp": datetime.now().isoformat(),
-            "data": {
-                "score": 0,
-                "verdict": "Error",
-                "risk_level": "UNKNOWN",
-                "issues": [{"title": "System error occurred", "severity": "CRITICAL"}],
-                "strengths": [],
-                "recommendations": [],
-                "timeline": [],
-                "legal_strategy": [],
-                "predicted_defences": [],
-                "semantic_analysis": [],
-                "reasoning_trace": [f"Error: {str(e)}"],
-                "draft": "Unable to generate draft due to error"
-            }
+            "data": fallback,
         }
 
 
@@ -38688,7 +38814,31 @@ async def analyze_case(request: Request):
         
         print(f"✅ Final response built successfully - returning to frontend")
         print("=" * 100 + "\n")
-        
+
+        # ── STEP 2 / STEP 3: Enforce strict output contract + normalize ──────
+        # Operate only on the analysis payload, not on envelope metadata.
+        metadata_keys = {"success", "request_id", "timestamp", "processing_time_seconds"}
+        payload = {k: v for k, v in final_response.items() if k not in metadata_keys}
+        metadata = {k: v for k, v in final_response.items() if k in metadata_keys}
+
+        # Enforce strict contract (inject safe defaults, resolve aliases)
+        payload = enforce_output_contract(payload)
+
+        # Normalize output types (belt-and-suspenders)
+        payload = normalize_output(payload)
+
+        # Reassemble flat final response
+        final_response = {**metadata, **payload}
+
+        api_logger.info(
+            f"[{request_id}] FINAL RESPONSE: "
+            + str({k: (len(v) if isinstance(v, (list, str)) else v)
+                   for k, v in final_response.items()
+                   if k in ("score","verdict","risk_level","issues",
+                             "timeline","legal_strategy","recommended_actions",
+                             "predicted_defences","reasoning_trace","draft")})
+        )
+
         return final_response
         
     except Exception as e:
@@ -38890,7 +39040,7 @@ def build_final_response(output, central_state):
 
         "issues": issues,
         "strengths": ensure_list(output.get("strengths")),
-        "weaknesses": ensure_list(output.get("weaknesses")),
+        "weaknesses": ensure_list(output.get("weaknesses")) or [],
 
         # ── GUARANTEED NEVER-EMPTY ──
         "timeline": timeline,
@@ -39264,35 +39414,46 @@ async def generate_pdf_endpoint(request: Request):
         data = await request.json()
         api_logger.info(f"[{request_id}] PDF generation request received")
         
-        # Check if this is already analyzed data or raw case data
+        # ── STEP 4: PDF PIPELINE GUARANTEE ─────────────────────────────────────
+        # Flow: if analysis_result exists → use it; else → run full analysis.
+        # THEN always pass through enforce_output_contract so PDF is never partial.
         if "score" in data and "verdict" in data:
-            # Already analyzed - use directly
-            api_logger.info(f"[{request_id}] Using pre-analyzed data")
+            # Pre-analyzed data supplied by caller - use directly
+            api_logger.info(f"[{request_id}] Using pre-analyzed data for PDF")
             analysis_result = data
         else:
-            # Raw case data - analyze first
-            api_logger.info(f"[{request_id}] Analyzing case data before PDF generation")
-            
-            # Normalize and analyze
+            # Raw case data - run full analysis pipeline first
+            api_logger.info(f"[{request_id}] Analyzing raw case data before PDF generation")
             normalized_data = normalize_input(data)
             engine_result = safe_run_engine(normalized_data)
-            standardized_response = standardize_output(engine_result)
-            
-            # Extract from standardized response
-            std_data = standardized_response.get("data", {})
-            central_state_data = std_data.get("central_state", {})
-            
-            # Mock central state
-            class MockCentralState:
-                def __init__(self, data):
-                    self.data = data
-                def get_all(self):
-                    return self.data
-                def get(self, key, default=None):
-                    return self.data.get(key, default)
-            
-            mock_central_state = MockCentralState(central_state_data)
-            analysis_result = build_final_response(std_data, mock_central_state)
+            standardized_response = standardize_output(engine_result, normalized_data)
+
+            # Extract the richest available data dict
+            std_data = ensure_dict(standardized_response.get("data", {}))
+            central_state_data = ensure_dict(engine_result.get("_central_state_data", {}))
+
+            class _MockCS:
+                def __init__(self, d): self.data = d
+                def get_all(self): return self.data
+                def get(self, k, default=None): return self.data.get(k, default)
+
+            analysis_result = build_final_response(std_data, _MockCS(central_state_data))
+
+        # ── ALWAYS enforce contract before generating PDF ─────────────────────
+        # Guarantees: score, verdict, timeline, strategy, actions, draft present
+        pdf_data = enforce_output_contract(dict(analysis_result))
+        pdf_data = normalize_output(pdf_data)
+        # Use contracted data for all PDF sections below
+        analysis_result = pdf_data
+        api_logger.info(
+            f"[{request_id}] PDF contract enforced: "
+            f"score={analysis_result.get('score')}, "
+            f"verdict={analysis_result.get('verdict')}, "
+            f"timeline={len(analysis_result.get('timeline',[]))}, "
+            f"strategy={len(analysis_result.get('legal_strategy',[]))}, "
+            f"actions={len(analysis_result.get('recommended_actions',[]))}, "
+            f"draft_len={len(analysis_result.get('draft',''))}"
+        )
         
         # ✅ Try to import reportlab
         try:
