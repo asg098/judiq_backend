@@ -36309,6 +36309,22 @@ def normalize_input(raw_data: dict) -> dict:
             return default
         
         # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 STEP 1: EXTRACT NESTED OBJECTS FIRST (before field mapping)
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # These are the primary nested objects the frontend sends
+        transaction = raw_data.get("transaction", {}) if isinstance(raw_data.get("transaction"), dict) else {}
+        cheque      = raw_data.get("cheque", {})      if isinstance(raw_data.get("cheque"), dict)      else {}
+        dishonour   = raw_data.get("dishonour", {})   if isinstance(raw_data.get("dishonour"), dict)   else {}
+        
+        if transaction:
+            api_logger.info(f"📦 STEP1: Found nested 'transaction' object with keys: {list(transaction.keys())}")
+        if cheque:
+            api_logger.info(f"📦 STEP1: Found nested 'cheque' object with keys: {list(cheque.keys())}")
+        if dishonour:
+            api_logger.info(f"📦 STEP1: Found nested 'dishonour' object with keys: {list(dishonour.keys())}")
+        
+        # ═══════════════════════════════════════════════════════════════════════
         # CORE CASE FIELDS
         # ═══════════════════════════════════════════════════════════════════════
         
@@ -36318,34 +36334,54 @@ def normalize_input(raw_data: dict) -> dict:
             default=False
         )
         
+        # 🔥 STEP 2: cheque_number — flat → nested cheque → UNKNOWN fallback
         normalized['cheque_number'] = to_string(
-            raw_data.get('chequeNumber') or raw_data.get('cheque_number'),
+            raw_data.get('chequeNumber') or raw_data.get('cheque_number')
+            or cheque.get('cheque_number') or cheque.get('number'),
             default=''
         )
         
+        # 🔥 STEP 2: cheque_amount — flat → nested cheque → 0
         normalized['cheque_amount'] = to_float(
-            raw_data.get('chequeAmount') or raw_data.get('cheque_amount') or raw_data.get('amount'),
+            raw_data.get('chequeAmount') or raw_data.get('cheque_amount') or raw_data.get('amount')
+            or cheque.get('cheque_amount') or cheque.get('amount')
+            or transaction.get('debt_amount'),
             default=0.0
         )
         
+        # 🔥 STEP 2: cheque_date — flat → nested cheque → transaction date
         normalized['cheque_date'] = to_string(
-            raw_data.get('chequeDate') or raw_data.get('cheque_date'),
+            raw_data.get('chequeDate') or raw_data.get('cheque_date')
+            or cheque.get('cheque_date') or cheque.get('date')
+            or transaction.get('transaction_date'),
             default=''
         )
         
+        # 🔥 STEP 2: dishonour_date — flat → nested dishonour
         normalized['dishonour_date'] = to_string(
-            raw_data.get('dishonourDate') or raw_data.get('dishonour_date'),
+            raw_data.get('dishonourDate') or raw_data.get('dishonour_date')
+            or dishonour.get('dishonour_date') or dishonour.get('date'),
             default=''
         )
         
         normalized['dishonour_reason'] = to_string(
-            raw_data.get('dishonourReason') or raw_data.get('dishonour_reason'),
+            raw_data.get('dishonourReason') or raw_data.get('dishonour_reason')
+            or dishonour.get('dishonour_reason') or dishonour.get('reason'),
             default='Insufficient funds'
         )
         
+        # 🔥 STEP 2: dishonour_memo — flat field mapped directly to normalized
+        normalized['dishonour_memo'] = to_bool(
+            raw_data.get('dishonourMemo') or raw_data.get('dishonour_memo')
+            or dishonour.get('memo_received') or dishonour.get('dishonour_memo'),
+            default=False
+        )
+        
         # Notice details
+        # 🔥 STEP 2: notice_sent — flat OR False
         normalized['notice_sent'] = to_bool(
-            raw_data.get('noticeSent') or raw_data.get('notice_sent'),
+            raw_data.get('noticeSent') or raw_data.get('notice_sent')
+            or raw_data.get('legalNoticeSent') or raw_data.get('hasNotice'),
             default=False
         )
         
@@ -36380,16 +36416,26 @@ def normalize_input(raw_data: dict) -> dict:
             default=''
         )
         
-        # Debt details
+        # 🔥 STEP 2: debt_proven — flat OR transaction.debt_acknowledged
         normalized['debt_proven'] = to_bool(
-            raw_data.get('debtProven') or raw_data.get('debt_proven'),
+            raw_data.get('debtProven') or raw_data.get('debt_proven')
+            or transaction.get('debt_acknowledged'),
             default=False
         )
         
-        normalized['underlying_transaction'] = to_string(
-            raw_data.get('underlyingTransaction') or raw_data.get('underlying_transaction'),
-            default=''
+        # 🔥 STEP 2: underlying_transaction — priority chain:
+        #   1. Explicit flat field
+        #   2. transaction.purpose
+        #   3. caseDescription
+        #   4. transaction.transaction_type
+        #   5. "financial transaction" (mandatory fallback — NOT empty)
+        _raw_underlying = (
+            raw_data.get('underlyingTransaction') or raw_data.get('underlying_transaction')
+            or transaction.get('purpose')
+            or raw_data.get('caseDescription') or raw_data.get('case_description')
+            or transaction.get('transaction_type')
         )
+        normalized['underlying_transaction'] = to_string(_raw_underlying, default='')
         
         # Agreement type (for evidence enrichment)
         normalized['agreement_type'] = to_string(
@@ -36397,11 +36443,24 @@ def normalize_input(raw_data: dict) -> dict:
             default=''
         )
         
-        # Evidence
-        normalized['evidence_available'] = to_list(
-            raw_data.get('evidenceAvailable') or raw_data.get('evidence_available') or raw_data.get('evidence'),
-            default=['oral_testimony']
+        # 🔥 STEP 2: evidence_available — start with flat, then enrich from transaction.supporting_documents
+        _raw_evidence = (
+            raw_data.get('evidenceAvailable') or raw_data.get('evidence_available') or raw_data.get('evidence')
         )
+        normalized['evidence_available'] = to_list(_raw_evidence, default=[])
+        
+        # Pull in supporting_documents from transaction object
+        if transaction.get('supporting_documents'):
+            _docs = to_list(transaction.get('supporting_documents'), [])
+            for _doc in _docs:
+                if _doc and _doc not in normalized['evidence_available']:
+                    normalized['evidence_available'].append(_doc)
+                    api_logger.info(f"✅ STEP2: Added '{_doc}' from transaction.supporting_documents → evidence_available")
+            # If we had only the default placeholder, replace it
+            if 'oral_testimony' in normalized['evidence_available'] and len(normalized['evidence_available']) > 1:
+                normalized['evidence_available'].remove('oral_testimony')
+            if not normalized['evidence_available']:
+                normalized['evidence_available'] = ['documentary_evidence']
         
         # Defendant response
         normalized['defendant_claims'] = to_list(
@@ -36438,12 +36497,14 @@ def normalize_input(raw_data: dict) -> dict:
         
         # Additional fields
         normalized['bank_name'] = to_string(
-            raw_data.get('bankName') or raw_data.get('bank_name'),
+            raw_data.get('bankName') or raw_data.get('bank_name')
+            or cheque.get('bank_name'),
             default=''
         )
         
         normalized['account_number'] = to_string(
-            raw_data.get('accountNumber') or raw_data.get('account_number'),
+            raw_data.get('accountNumber') or raw_data.get('account_number')
+            or cheque.get('account_number'),
             default=''
         )
         
@@ -36459,7 +36520,8 @@ def normalize_input(raw_data: dict) -> dict:
         
         # Case narrative
         normalized['case_description'] = to_string(
-            raw_data.get('caseDescription') or raw_data.get('case_description') or raw_data.get('description'),
+            raw_data.get('caseDescription') or raw_data.get('case_description') or raw_data.get('description')
+            or transaction.get('purpose'),
             default=''
         )
         
@@ -36492,74 +36554,30 @@ def normalize_input(raw_data: dict) -> dict:
         )
         
         # ═══════════════════════════════════════════════════════════════════════
-        # 🔥 TASK 2: NESTED JSON SUPPORT (CRITICAL FOR FRONTEND COMPATIBILITY)
+        # 🔥 ADDITIONAL NESTED OBJECT PROCESSING
+        # (case_identity, parties, cheque_details, legal_notice — unchanged)
         # ═══════════════════════════════════════════════════════════════════════
         
-        # Handle nested "transaction" object
-        if "transaction" in raw_data and isinstance(raw_data["transaction"], dict):
-            tx = raw_data["transaction"]
-            api_logger.info(f"Processing nested transaction object: {tx}")
+        # Handle nested "transaction" object (extended fields not covered above)
+        if transaction:
+            if transaction.get("payment_mode") and not normalized.get("case_description"):
+                normalized["case_description"] = to_string(transaction.get("payment_mode"), '')
             
-            # Extract financial data from transaction
-            if tx.get("debt_amount"):
-                normalized["cheque_amount"] = to_float(tx.get("debt_amount"), 0.0)
-                if normalized["cheque_amount"] > 0:
-                    normalized["debt_proven"] = True
-            
-            if tx.get("transaction_date"):
-                normalized["cheque_date"] = to_string(tx.get("transaction_date"), '')
-            
-            if tx.get("transaction_type"):
-                normalized["underlying_transaction"] = to_string(tx.get("transaction_type"), '')
-            
-            if tx.get("payment_mode"):
-                normalized["case_description"] = to_string(tx.get("payment_mode"), '')
-            
-            # 🔥 CRITICAL FIX: Map transaction.purpose to underlying_transaction
-            if tx.get("purpose"):
-                purpose = to_string(tx.get("purpose"), '')
-                if purpose:
-                    # If underlying_transaction is empty, set it to purpose
-                    if not normalized.get("underlying_transaction"):
-                        normalized["underlying_transaction"] = purpose
-                        api_logger.info(f"✅ Mapped transaction.purpose '{purpose}' → underlying_transaction")
-                    # Also add to case description for context
+            # purpose → enrich case_description if not already set
+            if transaction.get("purpose"):
+                purpose = to_string(transaction.get("purpose"), '')
+                if purpose and purpose not in normalized.get("case_description", ""):
                     desc = normalized.get("case_description", "")
-                    if desc:
-                        normalized["case_description"] = f"{desc} - Purpose: {purpose}"
-                    else:
-                        normalized["case_description"] = f"Transaction Purpose: {purpose}"
-            
-            # 🔥 CRITICAL FIX: Map transaction.supporting_documents to evidence_available
-            if tx.get("supporting_documents"):
-                docs = to_list(tx.get("supporting_documents"), [])
-                if docs:
-                    # Append to evidence_available instead of replacing
-                    current_evidence = normalized.get("evidence_available", [])
-                    if "oral_testimony" in current_evidence and len(current_evidence) == 1:
-                        # Replace default with actual documents
-                        normalized["evidence_available"] = ["documentary_evidence"]
-                    for doc in docs:
-                        if doc and doc not in normalized["evidence_available"]:
-                            normalized["evidence_available"].append(doc)
-                    api_logger.info(f"✅ Mapped transaction.supporting_documents → evidence_available: {normalized['evidence_available']}")
-            
-            # 🔥 CRITICAL FIX: Map transaction.debt_acknowledged to debt_proven
-            if tx.get("debt_acknowledged") is not None:
-                debt_ack = to_bool(tx.get("debt_acknowledged"), False)
-                if debt_ack:
-                    normalized["debt_proven"] = True
-                    api_logger.info(f"✅ Mapped transaction.debt_acknowledged=True → debt_proven=True")
+                    normalized["case_description"] = f"{desc} - Purpose: {purpose}".strip(" -")
+                    api_logger.info(f"✅ Enriched case_description with transaction.purpose: '{purpose}'")
         
         # Handle nested "case_identity" object
         if "case_identity" in raw_data and isinstance(raw_data["case_identity"], dict):
             ci = raw_data["case_identity"]
             api_logger.info(f"Processing nested case_identity object: {ci}")
             
-            # 🔥 FIX 2: Extract case_type for engine validation
             if ci.get("case_type"):
                 normalized["case_type"] = to_string(ci.get("case_type"), "Cheque Bounce")
-                # Also append to description for reference
                 normalized["case_description"] = normalized["case_type"] + " - " + normalized.get("case_description", "")
             
             if ci.get("case_number"):
@@ -36592,26 +36610,26 @@ def normalize_input(raw_data: dict) -> dict:
             cd = raw_data["cheque_details"]
             api_logger.info(f"Processing nested cheque_details object: {cd}")
             
-            if cd.get("cheque_number"):
+            if cd.get("cheque_number") and not normalized.get("cheque_number"):
                 normalized["cheque_number"] = to_string(cd.get("cheque_number"), '')
                 normalized["cheque_present"] = True
             
-            if cd.get("cheque_amount"):
+            if cd.get("cheque_amount") and not normalized.get("cheque_amount"):
                 normalized["cheque_amount"] = to_float(cd.get("cheque_amount"), 0.0)
             
-            if cd.get("cheque_date"):
+            if cd.get("cheque_date") and not normalized.get("cheque_date"):
                 normalized["cheque_date"] = to_string(cd.get("cheque_date"), '')
             
-            if cd.get("bank_name"):
+            if cd.get("bank_name") and not normalized.get("bank_name"):
                 normalized["bank_name"] = to_string(cd.get("bank_name"), '')
             
-            if cd.get("account_number"):
+            if cd.get("account_number") and not normalized.get("account_number"):
                 normalized["account_number"] = to_string(cd.get("account_number"), '')
             
-            if cd.get("dishonour_date"):
+            if cd.get("dishonour_date") and not normalized.get("dishonour_date"):
                 normalized["dishonour_date"] = to_string(cd.get("dishonour_date"), '')
             
-            if cd.get("dishonour_reason"):
+            if cd.get("dishonour_reason") and not normalized.get("dishonour_reason"):
                 normalized["dishonour_reason"] = to_string(cd.get("dishonour_reason"), 'Insufficient funds')
         
         # Handle nested "legal_notice" object
@@ -36622,61 +36640,17 @@ def normalize_input(raw_data: dict) -> dict:
             if ln.get("notice_sent"):
                 normalized["notice_sent"] = to_bool(ln.get("notice_sent"), False)
             
-            if ln.get("notice_date"):
+            if ln.get("notice_date") and not normalized.get("notice_date"):
                 normalized["notice_date"] = to_string(ln.get("notice_date"), '')
             
-            if ln.get("notice_mode"):
+            if ln.get("notice_mode") and not normalized.get("notice_mode"):
                 normalized["notice_mode"] = to_string(ln.get("notice_mode"), 'Registered Post')
             
             if ln.get("reply_received"):
                 normalized["notice_reply_received"] = to_bool(ln.get("reply_received"), False)
             
-            if ln.get("reply_content"):
+            if ln.get("reply_content") and not normalized.get("notice_reply_content"):
                 normalized["notice_reply_content"] = to_string(ln.get("reply_content"), '')
-        
-        # 🔥 CRITICAL FIX: Handle nested "cheque" object
-        if "cheque" in raw_data and isinstance(raw_data["cheque"], dict):
-            ch = raw_data["cheque"]
-            api_logger.info(f"Processing nested cheque object: {ch}")
-            
-            if ch.get("cheque_number"):
-                normalized["cheque_number"] = to_string(ch.get("cheque_number"), '')
-                normalized["cheque_present"] = True
-                api_logger.info(f"✅ Mapped cheque.cheque_number → cheque_number: {normalized['cheque_number']}")
-            
-            if ch.get("cheque_amount"):
-                normalized["cheque_amount"] = to_float(ch.get("cheque_amount"), 0.0)
-                normalized["cheque_present"] = True
-                api_logger.info(f"✅ Mapped cheque.cheque_amount → cheque_amount: {normalized['cheque_amount']}")
-            
-            if ch.get("cheque_date"):
-                normalized["cheque_date"] = to_string(ch.get("cheque_date"), '')
-                api_logger.info(f"✅ Mapped cheque.cheque_date → cheque_date: {normalized['cheque_date']}")
-            
-            if ch.get("bank_name"):
-                normalized["bank_name"] = to_string(ch.get("bank_name"), '')
-            
-            if ch.get("account_number"):
-                normalized["account_number"] = to_string(ch.get("account_number"), '')
-        
-        # 🔥 CRITICAL FIX: Handle nested "dishonour" object
-        if "dishonour" in raw_data and isinstance(raw_data["dishonour"], dict):
-            dh = raw_data["dishonour"]
-            api_logger.info(f"Processing nested dishonour object: {dh}")
-            
-            if dh.get("dishonour_date"):
-                normalized["dishonour_date"] = to_string(dh.get("dishonour_date"), '')
-                normalized["cheque_present"] = True  # If dishonoured, must have cheque
-                api_logger.info(f"✅ Mapped dishonour.dishonour_date → dishonour_date: {normalized['dishonour_date']}")
-            
-            if dh.get("dishonour_reason"):
-                normalized["dishonour_reason"] = to_string(dh.get("dishonour_reason"), 'Insufficient funds')
-            
-            if dh.get("memo_received") is not None:
-                memo_received = to_bool(dh.get("memo_received"), False)
-                if memo_received and "dishonour_memo" not in normalized.get("evidence_available", []):
-                    normalized["evidence_available"].append("dishonour_memo")
-                    api_logger.info(f"✅ Added dishonour_memo to evidence_available")
         
         # ═══════════════════════════════════════════════════════════════════════
         # 🔥 TASK 3: FORCE MINIMUM VALID SIGNAL
@@ -36703,34 +36677,106 @@ def normalize_input(raw_data: dict) -> dict:
             api_logger.info(f"✅ Auto-setting complaint_filed=True because complaint_date provided")
         
         # ═══════════════════════════════════════════════════════════════════════
-        # 🔥 STEP 2: SAFE FALLBACKS (MANDATORY - PREVENT DATA LOSS)
+        # 🔥 STEP 3: EVIDENCE ENRICHMENT (intelligent augmentation from flags)
         # ═══════════════════════════════════════════════════════════════════════
         
-        # If underlying_transaction is empty, try to infer from other fields
+        evidence = normalized.get("evidence_available", [])
+        evidence_enriched = []
+        
+        # cheque_present → add "cheque" evidence
+        if normalized.get("cheque_present") and "cheque" not in evidence:
+            evidence.append("cheque")
+            evidence_enriched.append("cheque")
+            api_logger.info("✅ STEP3: Added 'cheque' to evidence_available (cheque_present=True)")
+        
+        # dishonour_memo → add "dishonour_memo" evidence
+        if normalized.get("dishonour_memo") and "dishonour_memo" not in evidence:
+            evidence.append("dishonour_memo")
+            evidence_enriched.append("dishonour_memo")
+            api_logger.info("✅ STEP3: Added 'dishonour_memo' to evidence_available (dishonour_memo=True)")
+        
+        # dishonour.memo_received → add "dishonour_memo" evidence
+        if dishonour.get("memo_received") and "dishonour_memo" not in evidence:
+            evidence.append("dishonour_memo")
+            evidence_enriched.append("dishonour_memo")
+            api_logger.info("✅ STEP3: Added 'dishonour_memo' from dishonour.memo_received")
+        
+        # agreement_type == "Written" → add "signed_agreement"
+        agreement_type = normalized.get("agreement_type", "").lower()
+        if "written" in agreement_type and "signed_agreement" not in evidence:
+            evidence.append("signed_agreement")
+            evidence_enriched.append("signed_agreement")
+            api_logger.info("✅ STEP3: Added 'signed_agreement' (agreement_type is Written)")
+        
+        # notice_sent → add "notice" evidence
+        if normalized.get("notice_sent") and "notice" not in evidence:
+            evidence.append("notice")
+            evidence_enriched.append("notice")
+            api_logger.info("✅ STEP3: Added 'notice' to evidence_available (notice_sent=True)")
+        
+        if evidence_enriched:
+            api_logger.info(f"✅ STEP3: Evidence enrichment added: {evidence_enriched}")
+        
+        normalized["evidence_available"] = evidence
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 STEP 4: SAFE FALLBACKS (MANDATORY — PREVENT ANY EMPTY CRITICAL FIELDS)
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # underlying_transaction must NEVER be empty
         if not normalized.get("underlying_transaction"):
-            # Try to get from case_description or use generic fallback
             desc = normalized.get("case_description", "")
             if desc and len(desc) > 5:
-                # Extract first meaningful part as transaction type
                 normalized["underlying_transaction"] = desc.split("-")[0].strip()[:100]
-                api_logger.info(f"✅ FALLBACK: Set underlying_transaction from case_description: {normalized['underlying_transaction']}")
+                api_logger.info(f"✅ STEP4 FALLBACK: underlying_transaction from case_description: '{normalized['underlying_transaction']}'")
             else:
-                # Ultimate fallback
-                normalized["underlying_transaction"] = "loan"
-                api_logger.info(f"✅ FALLBACK: Set underlying_transaction to default: 'loan'")
+                normalized["underlying_transaction"] = "financial liability"
+                api_logger.info("✅ STEP4 FALLBACK: underlying_transaction set to 'financial liability'")
         
-        # If cheque_number is empty but cheque is present, set UNKNOWN
+        # cheque_number: if cheque present and number missing → UNKNOWN
         if normalized.get("cheque_present") and not normalized.get("cheque_number"):
             normalized["cheque_number"] = "UNKNOWN"
-            api_logger.info(f"✅ FALLBACK: Set cheque_number to 'UNKNOWN'")
+            api_logger.info("✅ STEP4 FALLBACK: cheque_number set to 'UNKNOWN'")
         
-        # If evidence_available is just default, ensure it's not empty
-        if not normalized.get("evidence_available") or normalized.get("evidence_available") == []:
+        # evidence_available must NEVER be empty
+        if not normalized.get("evidence_available"):
             normalized["evidence_available"] = ["oral_testimony"]
-            api_logger.info(f"✅ FALLBACK: Set evidence_available to ['oral_testimony']")
+            api_logger.info("✅ STEP4 FALLBACK: evidence_available set to ['oral_testimony']")
         
         # ═══════════════════════════════════════════════════════════════════════
-        # 🔥 STEP 3: ENRICH EVIDENCE LOGIC (INTELLIGENT DATA AUGMENTATION)
+        # 🔥 STEP 5: DATA TYPE SAFETY — enforce correct types on all fields
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # Lists
+        normalized['evidence_available'] = ensure_list(normalized.get('evidence_available', []))
+        normalized['defendant_claims']   = ensure_list(normalized.get('defendant_claims', []))
+        
+        # Booleans
+        for _bool_field in [
+            'cheque_present', 'notice_sent', 'notice_reply_received', 'complaint_filed',
+            'debt_proven', 'signature_disputed', 'limitation_complied', 'jurisdiction_proper',
+            'witness_available', 'payment_made', 'partial_payment', 'settlement_attempted',
+            'dishonour_memo'
+        ]:
+            normalized[_bool_field] = ensure_bool(normalized.get(_bool_field, False))
+        
+        # Numbers
+        normalized['cheque_amount'] = ensure_number(normalized.get('cheque_amount', 0))
+        
+        # Strings
+        for _str_field in [
+            'cheque_number', 'cheque_date', 'dishonour_date', 'dishonour_reason',
+            'notice_date', 'notice_mode', 'notice_reply_content', 'complaint_date',
+            'underlying_transaction', 'agreement_type', 'case_description',
+            'plaintiff_name', 'defendant_name', 'bank_name', 'account_number',
+            'witness_details', 'incident_date', 'case_id'
+        ]:
+            normalized[_str_field] = ensure_string(normalized.get(_str_field, ''))
+        
+        api_logger.info("✅ STEP5: Type safety enforcement complete")
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 LEGACY + EXTENDED EVIDENCE ENRICHMENT (consolidated)
         # ═══════════════════════════════════════════════════════════════════════
         
         evidence = normalized.get("evidence_available", [])
@@ -36741,129 +36787,160 @@ def normalize_input(raw_data: dict) -> dict:
             evidence.append("cheque")
             evidence_added.append("cheque")
         
-        # If dishonour_date exists, ensure dishonour_memo is listed
-        if normalized.get("dishonour_date") and "dishonour_memo" not in evidence:
+        # dishonour_memo flag or dishonour_date → add dishonour_memo evidence
+        if (normalized.get("dishonour_memo") or normalized.get("dishonour_date")) and "dishonour_memo" not in evidence:
             evidence.append("dishonour_memo")
             evidence_added.append("dishonour_memo")
         
         # If notice was sent, ensure notice is in evidence
-        if normalized.get("notice_sent") and "legal_notice" not in evidence:
+        if normalized.get("notice_sent") and "legal_notice" not in evidence and "notice" not in evidence:
             evidence.append("legal_notice")
             evidence_added.append("legal_notice")
         
-        # If we have written agreement type or debt_proven, add documentary evidence
-        case_desc = normalized.get("case_description", "").lower()
-        underlying = normalized.get("underlying_transaction", "").lower()
+        # written agreement → add signed_agreement / written_contract
+        case_desc     = normalized.get("case_description", "").lower()
+        underlying    = normalized.get("underlying_transaction", "").lower()
         agreement_type = normalized.get("agreement_type", "").lower()
         
-        # Check agreement_type for written agreements
-        if agreement_type in ["written agreement", "written", "contract", "formal agreement"]:
-            if "written_contract" not in evidence and "documentary_evidence" not in evidence:
-                evidence.append("written_contract")
-                evidence_added.append("written_contract")
-                api_logger.info(f"✅ Added 'written_contract' based on agreement_type='{agreement_type}'")
+        if agreement_type in ["written agreement", "written", "contract", "formal agreement"] or "written" in agreement_type:
+            if "written_contract" not in evidence and "documentary_evidence" not in evidence and "signed_agreement" not in evidence:
+                evidence.append("signed_agreement")
+                evidence_added.append("signed_agreement")
+                api_logger.info(f"✅ Added 'signed_agreement' based on agreement_type='{agreement_type}'")
         
-        # Also check in case_description and underlying_transaction
-        if "written" in case_desc or "agreement" in case_desc or "contract" in underlying or "written" in agreement_type:
-            if "written_contract" not in evidence and "documentary_evidence" not in evidence:
+        if "written" in case_desc or "agreement" in case_desc or "contract" in underlying:
+            if "written_contract" not in evidence and "documentary_evidence" not in evidence and "signed_agreement" not in evidence:
                 evidence.append("written_contract")
                 evidence_added.append("written_contract")
         
-        # If debt is proven or debt_amount exists, likely have documentary evidence
+        # debt proven or cheque_amount > 0 → documentary evidence
         if (normalized.get("debt_proven") or normalized.get("cheque_amount", 0) > 0):
             if "documentary_evidence" not in evidence and len([e for e in evidence if e != "oral_testimony"]) == 0:
-                # Only add if no other documentary evidence exists
                 evidence.append("documentary_evidence")
                 evidence_added.append("documentary_evidence")
         
         # Remove default oral_testimony if we have actual evidence
         if len(evidence) > 1 and "oral_testimony" in evidence:
             evidence.remove("oral_testimony")
-            api_logger.info(f"✅ Removed default 'oral_testimony' as actual evidence exists")
+            api_logger.info("✅ Removed default 'oral_testimony' as actual evidence exists")
         
         normalized["evidence_available"] = evidence
         
         if evidence_added:
             api_logger.info(f"✅ EVIDENCE ENRICHMENT: Added {evidence_added} to evidence_available")
-            api_logger.info(f"✅ Final evidence_available: {normalized['evidence_available']}")
+        api_logger.info(f"✅ Final evidence_available: {normalized['evidence_available']}")
         
         # ═══════════════════════════════════════════════════════════════════════
-        # 🔥 STEP 4: FIX TIMELINE GENERATION INPUT (ENSURE DATES NEVER EMPTY)
+        # 🔥 DATE FALLBACK — ENSURE TIMELINE HAS VALID DATES
         # ═══════════════════════════════════════════════════════════════════════
         
-        # Timeline requires dates - if critical dates are missing, provide intelligent defaults
         from datetime import datetime, timedelta
         today = datetime.now()
         
-        # If cheque is present but no cheque_date, estimate based on dishonour_date or use default
         if normalized.get("cheque_present") and not normalized.get("cheque_date"):
             if normalized.get("dishonour_date"):
-                # Cheque typically presented 30-60 days before dishonour
                 try:
                     dh_date = datetime.strptime(normalized["dishonour_date"], "%Y-%m-%d")
-                    estimated_cheque_date = (dh_date - timedelta(days=45)).strftime("%Y-%m-%d")
-                    normalized["cheque_date"] = estimated_cheque_date
-                    api_logger.info(f"✅ FALLBACK: Estimated cheque_date from dishonour_date: {estimated_cheque_date}")
+                    normalized["cheque_date"] = (dh_date - timedelta(days=45)).strftime("%Y-%m-%d")
                 except:
-                    # Use 90 days ago as fallback
                     normalized["cheque_date"] = (today - timedelta(days=90)).strftime("%Y-%m-%d")
-                    api_logger.info(f"✅ FALLBACK: Set default cheque_date (90 days ago)")
             else:
-                # Use 90 days ago as default
                 normalized["cheque_date"] = (today - timedelta(days=90)).strftime("%Y-%m-%d")
-                api_logger.info(f"✅ FALLBACK: Set default cheque_date (90 days ago)")
+            api_logger.info(f"✅ DATE FALLBACK: cheque_date set to {normalized['cheque_date']}")
         
-        # If dishonour_date is missing but cheque_date exists, estimate
         if normalized.get("cheque_present") and normalized.get("cheque_date") and not normalized.get("dishonour_date"):
             try:
                 ch_date = datetime.strptime(normalized["cheque_date"], "%Y-%m-%d")
-                # Typically dishonoured 30-60 days after issue
-                estimated_dishonour = (ch_date + timedelta(days=45)).strftime("%Y-%m-%d")
-                normalized["dishonour_date"] = estimated_dishonour
-                api_logger.info(f"✅ FALLBACK: Estimated dishonour_date from cheque_date: {estimated_dishonour}")
+                normalized["dishonour_date"] = (ch_date + timedelta(days=45)).strftime("%Y-%m-%d")
             except:
                 normalized["dishonour_date"] = (today - timedelta(days=45)).strftime("%Y-%m-%d")
-                api_logger.info(f"✅ FALLBACK: Set default dishonour_date (45 days ago)")
+            api_logger.info(f"✅ DATE FALLBACK: dishonour_date set to {normalized['dishonour_date']}")
         
-        # If notice_sent but no notice_date, estimate based on dishonour_date
         if normalized.get("notice_sent") and not normalized.get("notice_date"):
             if normalized.get("dishonour_date"):
                 try:
                     dh_date = datetime.strptime(normalized["dishonour_date"], "%Y-%m-%d")
-                    # Notice typically sent 15-20 days after dishonour
-                    estimated_notice = (dh_date + timedelta(days=18)).strftime("%Y-%m-%d")
-                    normalized["notice_date"] = estimated_notice
-                    api_logger.info(f"✅ FALLBACK: Estimated notice_date from dishonour_date: {estimated_notice}")
+                    normalized["notice_date"] = (dh_date + timedelta(days=18)).strftime("%Y-%m-%d")
                 except:
                     normalized["notice_date"] = (today - timedelta(days=20)).strftime("%Y-%m-%d")
-                    api_logger.info(f"✅ FALLBACK: Set default notice_date (20 days ago)")
             else:
                 normalized["notice_date"] = (today - timedelta(days=20)).strftime("%Y-%m-%d")
-                api_logger.info(f"✅ FALLBACK: Set default notice_date (20 days ago)")
+            api_logger.info(f"✅ DATE FALLBACK: notice_date set to {normalized['notice_date']}")
         
-        # Validate date consistency: cheque_date < dishonour_date < notice_date
+        # Date consistency: dishonour must be after cheque
         if normalized.get("cheque_date") and normalized.get("dishonour_date"):
             try:
                 ch_date = datetime.strptime(normalized["cheque_date"], "%Y-%m-%d")
                 dh_date = datetime.strptime(normalized["dishonour_date"], "%Y-%m-%d")
                 if dh_date <= ch_date:
-                    # Fix: dishonour should be after cheque issue
                     normalized["dishonour_date"] = (ch_date + timedelta(days=30)).strftime("%Y-%m-%d")
-                    api_logger.info(f"✅ CORRECTED: dishonour_date adjusted to be after cheque_date")
+                    api_logger.info("✅ DATE CORRECTED: dishonour_date moved after cheque_date")
             except:
                 pass
         
         # ═══════════════════════════════════════════════════════════════════════
-        # 🔥 TASK 4: DEBUG LOG - FINAL NORMALIZED DATA
+        # 🔥 STEP 6: DATA QUALITY CHECK — warn if key fields are missing
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        _missing_key_fields = []
+        if not normalized.get("cheque_number") or normalized.get("cheque_number") == "UNKNOWN":
+            _missing_key_fields.append("cheque_number")
+        if not normalized.get("dishonour_date"):
+            _missing_key_fields.append("dishonour_date")
+        if not normalized.get("underlying_transaction") or normalized.get("underlying_transaction") in ("financial liability", "loan"):
+            _missing_key_fields.append("underlying_transaction (using fallback)")
+        
+        if _missing_key_fields:
+            api_logger.warning(f"⚠️ LOW DATA QUALITY - WEAK ANALYSIS EXPECTED. Missing or fallback fields: {_missing_key_fields}")
+            print(f"\n⚠️ LOW DATA QUALITY - WEAK ANALYSIS EXPECTED\n   Missing/fallback: {_missing_key_fields}\n")
+        else:
+            api_logger.info("✅ STEP6: Data quality check PASSED — all key fields present")
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 STEP 7: PRESERVE RAW INPUT for engine traceability
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        normalized["raw_input"] = raw_data
+        api_logger.info("✅ STEP7: raw_input preserved in normalized_data")
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 STEP 8: ENSURE ALL ENGINE-REQUIRED FIELDS ARE PRESENT
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        _engine_required = {
+            "cheque_present":        False,
+            "cheque_number":         "UNKNOWN",
+            "cheque_amount":         0.0,
+            "cheque_date":           "",
+            "dishonour_date":        "",
+            "notice_sent":           False,
+            "underlying_transaction": "financial liability",
+            "evidence_available":    ["oral_testimony"],
+        }
+        _missing_engine_fields = []
+        for _field, _default in _engine_required.items():
+            if _field not in normalized or normalized[_field] is None:
+                normalized[_field] = _default
+                _missing_engine_fields.append(_field)
+        
+        if _missing_engine_fields:
+            api_logger.warning(f"⚠️ STEP8: Engine fields filled with defaults: {_missing_engine_fields}")
+        else:
+            api_logger.info("✅ STEP8: All engine-required fields confirmed present")
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 DEBUG LOG - FINAL NORMALIZED DATA
         # ═══════════════════════════════════════════════════════════════════════
         
         print("\n" + "=" * 80)
-        print("🔍 FINAL NORMALIZED DATA (BEFORE ENGINE):")
+        print("🔍 FINAL NORMALIZED DATA (BEFORE ENGINE) — JUDIQ v14 NORMALIZATION v2:")
         print("=" * 80)
-        print(json.dumps(normalized, indent=2, default=str))
+        # Log without raw_input to keep output readable
+        _log_data = {k: v for k, v in normalized.items() if k != "raw_input"}
+        print(json.dumps(_log_data, indent=2, default=str))
         print("=" * 80 + "\n")
         
-        api_logger.info(f"Normalized output: {json.dumps(normalized, default=str)[:500]}")
+        api_logger.info(f"Normalized output (summary): {json.dumps(_log_data, default=str)[:600]}")
         
         return normalized
         
@@ -36872,13 +36949,18 @@ def normalize_input(raw_data: dict) -> dict:
         api_logger.error(traceback.format_exc())
         # Return minimal valid structure on error
         return {
-            'cheque_present': False,
-            'notice_sent': False,
-            'debt_proven': False,
-            'cheque_amount': 0.0,
-            'evidence_available': ['oral_testimony'],
-            'defendant_claims': [],
-            'case_id': f"CASE_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            'cheque_present':        False,
+            'cheque_number':         'UNKNOWN',
+            'cheque_amount':         0.0,
+            'cheque_date':           '',
+            'dishonour_date':        '',
+            'notice_sent':           False,
+            'underlying_transaction': 'financial liability',
+            'debt_proven':           False,
+            'evidence_available':    ['oral_testimony'],
+            'defendant_claims':      [],
+            'case_id':               f"CASE_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            'raw_input':             raw_data if isinstance(raw_data, dict) else {}
         }
 
 # ════════════════════════════════════════════════════════════════════════════
