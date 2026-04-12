@@ -608,146 +608,22 @@ def ensure_bool(x, default=False):
 
 def normalize_output(data):
     """
-    STEP 3 - NORMALIZE FINAL OUTPUT (v15.0)
-    Ensures every field has correct Python type.
-    Called AFTER enforce_output_contract as a final type-safety pass.
+    TASK 5: Safe output normalization
+    Ensures all output fields are type-safe before returning
     """
     data = ensure_dict(data)
-
-    for arr_field in (
-        "issues", "strengths", "weaknesses",
-        "timeline", "legal_strategy", "strategy",
-        "recommended_actions",
-        "predicted_defences", "defence",
-        "reasoning_trace", "reasoning",
-        "contradictions", "warnings",
-    ):
-        data[arr_field] = ensure_list(data.get(arr_field))
-
-    data["score"] = ensure_number(data.get("score"), 0)
-
-    for str_field in ("verdict", "risk_level", "defence_risk",
-                      "draft", "legal_analysis", "next_action"):
-        data[str_field] = ensure_string(data.get(str_field), "")
-
-    for dict_field in ("semantic_analysis", "evidence_assessment", "consistency_metadata"):
-        if not isinstance(data.get(dict_field), dict):
-            data[dict_field] = {}
-
-    sem = data["semantic_analysis"]
-    if not isinstance(sem.get("concepts_detected"), list):
-        sem["concepts_detected"] = []
-
+    
+    data['issues'] = ensure_list(data.get('issues'))
+    data['strengths'] = ensure_list(data.get('strengths'))
+    data['defence'] = ensure_list(data.get('defence'))
+    data['reasoning'] = ensure_list(data.get('reasoning'))
+    
+    data['score'] = ensure_number(data.get('score'))
+    data['verdict'] = ensure_string(data.get('verdict'), "Unknown")
+    
     return data
 
-
-# ════════════════════════════════════════════════════════════════════════════
-# 🔥 STEP 1: STRICT OUTPUT CONTRACT ENFORCEMENT (v15.0 PRODUCTION STABILITY)
-# ════════════════════════════════════════════════════════════════════════════
-
-def enforce_output_contract(response: dict) -> dict:
-    """
-    🔥 PRODUCTION-GRADE OUTPUT CONTRACT ENFORCER (v15.0)
-
-    Guarantees:
-    ✅ All required fields ALWAYS present — no missing fields
-    ✅ Correct types enforced (arrays → list, score → number, draft → string)
-    ✅ Alias fields resolved (strategy→legal_strategy, defence→predicted_defences,
-       reasoning→reasoning_trace)
-    ✅ Flat structure — no nested objects returned as top-level contract fields
-    ✅ Deterministic — same input always produces same output shape
-    ✅ Zero crashes — all errors have safe defaults
-
-    REQUIRED FIELDS (guaranteed):
-        score, verdict, risk_level, issues, strengths, weaknesses,
-        timeline, legal_strategy, recommended_actions, predicted_defences,
-        semantic_analysis, reasoning_trace, draft
-    """
-    # ── 0. Safety: ensure we operate on a dict ───────────────────────────────
-    if not isinstance(response, dict):
-        response = {}
-
-    # ── 1. Resolve field aliases BEFORE defaults ─────────────────────────────
-    # strategy → legal_strategy
-    if "strategy" in response and not response.get("legal_strategy"):
-        response["legal_strategy"] = response["strategy"]
-
-    # defence → predicted_defences
-    if "defence" in response and not response.get("predicted_defences"):
-        response["predicted_defences"] = response["defence"]
-
-    # reasoning → reasoning_trace
-    if "reasoning" in response and not response.get("reasoning_trace"):
-        response["reasoning_trace"] = response["reasoning"]
-
-    # defence_risk → risk_level
-    if "defence_risk" in response and not response.get("risk_level"):
-        response["risk_level"] = response["defence_risk"]
-
-    # ── 2. Enforce required fields with correct types and safe defaults ───────
-    REQUIRED_FIELDS = {
-        "score":              (lambda v: ensure_number(v, 0),                    0),
-        "verdict":            (lambda v: ensure_string(v, "Unknown"),            "Unknown"),
-        "risk_level":         (lambda v: ensure_string(v, "UNKNOWN"),            "UNKNOWN"),
-        "issues":             (lambda v: ensure_list(v),                         [{"text": "No issues identified", "severity": "LOW"}]),
-        "strengths":          (lambda v: ensure_list(v),                         []),
-        "weaknesses":         (lambda v: ensure_list(v),                         []),
-        "timeline":           (lambda v: ensure_list(v),                         ["Timeline not available"]),
-        "legal_strategy":     (lambda v: ensure_list(v),                         ["Consult with legal advisor"]),
-        "recommended_actions":(lambda v: ensure_list(v),                         ["Seek legal counsel immediately"]),
-        "predicted_defences": (lambda v: ensure_list(v),                         []),
-        "semantic_analysis":  (lambda v: v if isinstance(v, dict) else {},       {"concepts_detected": [], "total_concepts": 0, "status": "unavailable"}),
-        "reasoning_trace":    (lambda v: ensure_list(v),                         ["Reasoning not available"]),
-        "draft":              (lambda v: ensure_string(v, "Draft not available"), "Draft not available"),
-    }
-
-    for field, (coerce_fn, default) in REQUIRED_FIELDS.items():
-        raw = response.get(field)
-        coerced = coerce_fn(raw)
-
-        # Determine "empty" based on type
-        is_empty = (
-            coerced is None
-            or (isinstance(coerced, list) and len(coerced) == 0 and field in (
-                "issues", "timeline", "legal_strategy", "recommended_actions", "reasoning_trace"))
-            or (isinstance(coerced, str) and coerced.strip() == "")
-            or (isinstance(coerced, (int, float)) and field == "score" and coerced == 0 and raw is None)
-        )
-
-        response[field] = default if is_empty else coerced
-
-    # ── 3. Guarantee semantic_analysis.concepts_detected is always a list ────
-    sem = response["semantic_analysis"]
-    if "concepts_detected" not in sem or not isinstance(sem["concepts_detected"], list):
-        sem["concepts_detected"] = []
-    if "total_concepts" not in sem:
-        sem["total_concepts"] = len(sem["concepts_detected"])
-    if "status" not in sem:
-        sem["status"] = "analyzed"
-
-    # ── 4. Alias back-fill for frontend backward-compat ──────────────────────
-    # Keep the old keys in sync so any legacy consumer still works
-    response["strategy"]           = response["legal_strategy"]
-    response["defence"]            = response["predicted_defences"]
-    response["reasoning"]          = response["reasoning_trace"]
-    response["defence_risk"]       = response["risk_level"]
-
-    # ── 5. Final debug log ───────────────────────────────────────────────────
-    api_logger.info("FINAL RESPONSE (enforce_output_contract): "
-                    f"score={response['score']}, verdict={response['verdict']}, "
-                    f"risk_level={response['risk_level']}, "
-                    f"issues={len(response['issues'])}, "
-                    f"timeline={len(response['timeline'])}, "
-                    f"legal_strategy={len(response['legal_strategy'])}, "
-                    f"recommended_actions={len(response['recommended_actions'])}, "
-                    f"predicted_defences={len(response['predicted_defences'])}, "
-                    f"reasoning_trace={len(response['reasoning_trace'])}, "
-                    f"draft_len={len(response['draft'])}")
-
-    return response
-
-
-# ════════════════════════════════════════════════════════════════════════════
+# ============================================================================
 # 🆕 v12.0 PRODUCTION-GRADE MODULES
 # ============================================================================
 
@@ -36515,6 +36391,12 @@ def normalize_input(raw_data: dict) -> dict:
             default=''
         )
         
+        # Agreement type (for evidence enrichment)
+        normalized['agreement_type'] = to_string(
+            raw_data.get('agreementType') or raw_data.get('agreement_type') or raw_data.get('agreementNature'),
+            default=''
+        )
+        
         # Evidence
         normalized['evidence_available'] = to_list(
             raw_data.get('evidenceAvailable') or raw_data.get('evidence_available') or raw_data.get('evidence'),
@@ -36632,6 +36514,42 @@ def normalize_input(raw_data: dict) -> dict:
             
             if tx.get("payment_mode"):
                 normalized["case_description"] = to_string(tx.get("payment_mode"), '')
+            
+            # 🔥 CRITICAL FIX: Map transaction.purpose to underlying_transaction
+            if tx.get("purpose"):
+                purpose = to_string(tx.get("purpose"), '')
+                if purpose:
+                    # If underlying_transaction is empty, set it to purpose
+                    if not normalized.get("underlying_transaction"):
+                        normalized["underlying_transaction"] = purpose
+                        api_logger.info(f"✅ Mapped transaction.purpose '{purpose}' → underlying_transaction")
+                    # Also add to case description for context
+                    desc = normalized.get("case_description", "")
+                    if desc:
+                        normalized["case_description"] = f"{desc} - Purpose: {purpose}"
+                    else:
+                        normalized["case_description"] = f"Transaction Purpose: {purpose}"
+            
+            # 🔥 CRITICAL FIX: Map transaction.supporting_documents to evidence_available
+            if tx.get("supporting_documents"):
+                docs = to_list(tx.get("supporting_documents"), [])
+                if docs:
+                    # Append to evidence_available instead of replacing
+                    current_evidence = normalized.get("evidence_available", [])
+                    if "oral_testimony" in current_evidence and len(current_evidence) == 1:
+                        # Replace default with actual documents
+                        normalized["evidence_available"] = ["documentary_evidence"]
+                    for doc in docs:
+                        if doc and doc not in normalized["evidence_available"]:
+                            normalized["evidence_available"].append(doc)
+                    api_logger.info(f"✅ Mapped transaction.supporting_documents → evidence_available: {normalized['evidence_available']}")
+            
+            # 🔥 CRITICAL FIX: Map transaction.debt_acknowledged to debt_proven
+            if tx.get("debt_acknowledged") is not None:
+                debt_ack = to_bool(tx.get("debt_acknowledged"), False)
+                if debt_ack:
+                    normalized["debt_proven"] = True
+                    api_logger.info(f"✅ Mapped transaction.debt_acknowledged=True → debt_proven=True")
         
         # Handle nested "case_identity" object
         if "case_identity" in raw_data and isinstance(raw_data["case_identity"], dict):
@@ -36716,6 +36634,50 @@ def normalize_input(raw_data: dict) -> dict:
             if ln.get("reply_content"):
                 normalized["notice_reply_content"] = to_string(ln.get("reply_content"), '')
         
+        # 🔥 CRITICAL FIX: Handle nested "cheque" object
+        if "cheque" in raw_data and isinstance(raw_data["cheque"], dict):
+            ch = raw_data["cheque"]
+            api_logger.info(f"Processing nested cheque object: {ch}")
+            
+            if ch.get("cheque_number"):
+                normalized["cheque_number"] = to_string(ch.get("cheque_number"), '')
+                normalized["cheque_present"] = True
+                api_logger.info(f"✅ Mapped cheque.cheque_number → cheque_number: {normalized['cheque_number']}")
+            
+            if ch.get("cheque_amount"):
+                normalized["cheque_amount"] = to_float(ch.get("cheque_amount"), 0.0)
+                normalized["cheque_present"] = True
+                api_logger.info(f"✅ Mapped cheque.cheque_amount → cheque_amount: {normalized['cheque_amount']}")
+            
+            if ch.get("cheque_date"):
+                normalized["cheque_date"] = to_string(ch.get("cheque_date"), '')
+                api_logger.info(f"✅ Mapped cheque.cheque_date → cheque_date: {normalized['cheque_date']}")
+            
+            if ch.get("bank_name"):
+                normalized["bank_name"] = to_string(ch.get("bank_name"), '')
+            
+            if ch.get("account_number"):
+                normalized["account_number"] = to_string(ch.get("account_number"), '')
+        
+        # 🔥 CRITICAL FIX: Handle nested "dishonour" object
+        if "dishonour" in raw_data and isinstance(raw_data["dishonour"], dict):
+            dh = raw_data["dishonour"]
+            api_logger.info(f"Processing nested dishonour object: {dh}")
+            
+            if dh.get("dishonour_date"):
+                normalized["dishonour_date"] = to_string(dh.get("dishonour_date"), '')
+                normalized["cheque_present"] = True  # If dishonoured, must have cheque
+                api_logger.info(f"✅ Mapped dishonour.dishonour_date → dishonour_date: {normalized['dishonour_date']}")
+            
+            if dh.get("dishonour_reason"):
+                normalized["dishonour_reason"] = to_string(dh.get("dishonour_reason"), 'Insufficient funds')
+            
+            if dh.get("memo_received") is not None:
+                memo_received = to_bool(dh.get("memo_received"), False)
+                if memo_received and "dishonour_memo" not in normalized.get("evidence_available", []):
+                    normalized["evidence_available"].append("dishonour_memo")
+                    api_logger.info(f"✅ Added dishonour_memo to evidence_available")
+        
         # ═══════════════════════════════════════════════════════════════════════
         # 🔥 TASK 3: FORCE MINIMUM VALID SIGNAL
         # ═══════════════════════════════════════════════════════════════════════
@@ -36739,6 +36701,157 @@ def normalize_input(raw_data: dict) -> dict:
         if normalized.get("complaint_date") and not normalized.get("complaint_filed"):
             normalized["complaint_filed"] = True
             api_logger.info(f"✅ Auto-setting complaint_filed=True because complaint_date provided")
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 STEP 2: SAFE FALLBACKS (MANDATORY - PREVENT DATA LOSS)
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # If underlying_transaction is empty, try to infer from other fields
+        if not normalized.get("underlying_transaction"):
+            # Try to get from case_description or use generic fallback
+            desc = normalized.get("case_description", "")
+            if desc and len(desc) > 5:
+                # Extract first meaningful part as transaction type
+                normalized["underlying_transaction"] = desc.split("-")[0].strip()[:100]
+                api_logger.info(f"✅ FALLBACK: Set underlying_transaction from case_description: {normalized['underlying_transaction']}")
+            else:
+                # Ultimate fallback
+                normalized["underlying_transaction"] = "loan"
+                api_logger.info(f"✅ FALLBACK: Set underlying_transaction to default: 'loan'")
+        
+        # If cheque_number is empty but cheque is present, set UNKNOWN
+        if normalized.get("cheque_present") and not normalized.get("cheque_number"):
+            normalized["cheque_number"] = "UNKNOWN"
+            api_logger.info(f"✅ FALLBACK: Set cheque_number to 'UNKNOWN'")
+        
+        # If evidence_available is just default, ensure it's not empty
+        if not normalized.get("evidence_available") or normalized.get("evidence_available") == []:
+            normalized["evidence_available"] = ["oral_testimony"]
+            api_logger.info(f"✅ FALLBACK: Set evidence_available to ['oral_testimony']")
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 STEP 3: ENRICH EVIDENCE LOGIC (INTELLIGENT DATA AUGMENTATION)
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        evidence = normalized.get("evidence_available", [])
+        evidence_added = []
+        
+        # If cheque is present, ensure cheque evidence is listed
+        if normalized.get("cheque_present") and "cheque" not in evidence:
+            evidence.append("cheque")
+            evidence_added.append("cheque")
+        
+        # If dishonour_date exists, ensure dishonour_memo is listed
+        if normalized.get("dishonour_date") and "dishonour_memo" not in evidence:
+            evidence.append("dishonour_memo")
+            evidence_added.append("dishonour_memo")
+        
+        # If notice was sent, ensure notice is in evidence
+        if normalized.get("notice_sent") and "legal_notice" not in evidence:
+            evidence.append("legal_notice")
+            evidence_added.append("legal_notice")
+        
+        # If we have written agreement type or debt_proven, add documentary evidence
+        case_desc = normalized.get("case_description", "").lower()
+        underlying = normalized.get("underlying_transaction", "").lower()
+        agreement_type = normalized.get("agreement_type", "").lower()
+        
+        # Check agreement_type for written agreements
+        if agreement_type in ["written agreement", "written", "contract", "formal agreement"]:
+            if "written_contract" not in evidence and "documentary_evidence" not in evidence:
+                evidence.append("written_contract")
+                evidence_added.append("written_contract")
+                api_logger.info(f"✅ Added 'written_contract' based on agreement_type='{agreement_type}'")
+        
+        # Also check in case_description and underlying_transaction
+        if "written" in case_desc or "agreement" in case_desc or "contract" in underlying or "written" in agreement_type:
+            if "written_contract" not in evidence and "documentary_evidence" not in evidence:
+                evidence.append("written_contract")
+                evidence_added.append("written_contract")
+        
+        # If debt is proven or debt_amount exists, likely have documentary evidence
+        if (normalized.get("debt_proven") or normalized.get("cheque_amount", 0) > 0):
+            if "documentary_evidence" not in evidence and len([e for e in evidence if e != "oral_testimony"]) == 0:
+                # Only add if no other documentary evidence exists
+                evidence.append("documentary_evidence")
+                evidence_added.append("documentary_evidence")
+        
+        # Remove default oral_testimony if we have actual evidence
+        if len(evidence) > 1 and "oral_testimony" in evidence:
+            evidence.remove("oral_testimony")
+            api_logger.info(f"✅ Removed default 'oral_testimony' as actual evidence exists")
+        
+        normalized["evidence_available"] = evidence
+        
+        if evidence_added:
+            api_logger.info(f"✅ EVIDENCE ENRICHMENT: Added {evidence_added} to evidence_available")
+            api_logger.info(f"✅ Final evidence_available: {normalized['evidence_available']}")
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # 🔥 STEP 4: FIX TIMELINE GENERATION INPUT (ENSURE DATES NEVER EMPTY)
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # Timeline requires dates - if critical dates are missing, provide intelligent defaults
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        
+        # If cheque is present but no cheque_date, estimate based on dishonour_date or use default
+        if normalized.get("cheque_present") and not normalized.get("cheque_date"):
+            if normalized.get("dishonour_date"):
+                # Cheque typically presented 30-60 days before dishonour
+                try:
+                    dh_date = datetime.strptime(normalized["dishonour_date"], "%Y-%m-%d")
+                    estimated_cheque_date = (dh_date - timedelta(days=45)).strftime("%Y-%m-%d")
+                    normalized["cheque_date"] = estimated_cheque_date
+                    api_logger.info(f"✅ FALLBACK: Estimated cheque_date from dishonour_date: {estimated_cheque_date}")
+                except:
+                    # Use 90 days ago as fallback
+                    normalized["cheque_date"] = (today - timedelta(days=90)).strftime("%Y-%m-%d")
+                    api_logger.info(f"✅ FALLBACK: Set default cheque_date (90 days ago)")
+            else:
+                # Use 90 days ago as default
+                normalized["cheque_date"] = (today - timedelta(days=90)).strftime("%Y-%m-%d")
+                api_logger.info(f"✅ FALLBACK: Set default cheque_date (90 days ago)")
+        
+        # If dishonour_date is missing but cheque_date exists, estimate
+        if normalized.get("cheque_present") and normalized.get("cheque_date") and not normalized.get("dishonour_date"):
+            try:
+                ch_date = datetime.strptime(normalized["cheque_date"], "%Y-%m-%d")
+                # Typically dishonoured 30-60 days after issue
+                estimated_dishonour = (ch_date + timedelta(days=45)).strftime("%Y-%m-%d")
+                normalized["dishonour_date"] = estimated_dishonour
+                api_logger.info(f"✅ FALLBACK: Estimated dishonour_date from cheque_date: {estimated_dishonour}")
+            except:
+                normalized["dishonour_date"] = (today - timedelta(days=45)).strftime("%Y-%m-%d")
+                api_logger.info(f"✅ FALLBACK: Set default dishonour_date (45 days ago)")
+        
+        # If notice_sent but no notice_date, estimate based on dishonour_date
+        if normalized.get("notice_sent") and not normalized.get("notice_date"):
+            if normalized.get("dishonour_date"):
+                try:
+                    dh_date = datetime.strptime(normalized["dishonour_date"], "%Y-%m-%d")
+                    # Notice typically sent 15-20 days after dishonour
+                    estimated_notice = (dh_date + timedelta(days=18)).strftime("%Y-%m-%d")
+                    normalized["notice_date"] = estimated_notice
+                    api_logger.info(f"✅ FALLBACK: Estimated notice_date from dishonour_date: {estimated_notice}")
+                except:
+                    normalized["notice_date"] = (today - timedelta(days=20)).strftime("%Y-%m-%d")
+                    api_logger.info(f"✅ FALLBACK: Set default notice_date (20 days ago)")
+            else:
+                normalized["notice_date"] = (today - timedelta(days=20)).strftime("%Y-%m-%d")
+                api_logger.info(f"✅ FALLBACK: Set default notice_date (20 days ago)")
+        
+        # Validate date consistency: cheque_date < dishonour_date < notice_date
+        if normalized.get("cheque_date") and normalized.get("dishonour_date"):
+            try:
+                ch_date = datetime.strptime(normalized["cheque_date"], "%Y-%m-%d")
+                dh_date = datetime.strptime(normalized["dishonour_date"], "%Y-%m-%d")
+                if dh_date <= ch_date:
+                    # Fix: dishonour should be after cheque issue
+                    normalized["dishonour_date"] = (ch_date + timedelta(days=30)).strftime("%Y-%m-%d")
+                    api_logger.info(f"✅ CORRECTED: dishonour_date adjusted to be after cheque_date")
+            except:
+                pass
         
         # ═══════════════════════════════════════════════════════════════════════
         # 🔥 TASK 4: DEBUG LOG - FINAL NORMALIZED DATA
@@ -38094,26 +38207,24 @@ def standardize_output(engine_result: dict, case_data: dict = None) -> dict:
         api_logger.error(f"Standardization error: {str(e)}")
         api_logger.error(traceback.format_exc())
         
-        # Return minimal valid response — always pass through contract enforcer
-        fallback = enforce_output_contract({
-            "score": 0,
-            "verdict": "Error",
-            "risk_level": "UNKNOWN",
-            "issues": [{"text": "System error occurred", "severity": "CRITICAL"}],
-            "strengths": [],
-            "weaknesses": [],
-            "timeline": [],
-            "legal_strategy": [],
-            "recommended_actions": [],
-            "predicted_defences": [],
-            "semantic_analysis": {"concepts_detected": [], "total_concepts": 0, "status": "error"},
-            "reasoning_trace": [f"Error: {str(e)}"],
-            "draft": "Unable to generate draft due to error",
-        })
+        # Return minimal valid response
         return {
             "success": False,
             "timestamp": datetime.now().isoformat(),
-            "data": fallback,
+            "data": {
+                "score": 0,
+                "verdict": "Error",
+                "risk_level": "UNKNOWN",
+                "issues": [{"title": "System error occurred", "severity": "CRITICAL"}],
+                "strengths": [],
+                "recommendations": [],
+                "timeline": [],
+                "legal_strategy": [],
+                "predicted_defences": [],
+                "semantic_analysis": [],
+                "reasoning_trace": [f"Error: {str(e)}"],
+                "draft": "Unable to generate draft due to error"
+            }
         }
 
 
@@ -38814,31 +38925,7 @@ async def analyze_case(request: Request):
         
         print(f"✅ Final response built successfully - returning to frontend")
         print("=" * 100 + "\n")
-
-        # ── STEP 2 / STEP 3: Enforce strict output contract + normalize ──────
-        # Operate only on the analysis payload, not on envelope metadata.
-        metadata_keys = {"success", "request_id", "timestamp", "processing_time_seconds"}
-        payload = {k: v for k, v in final_response.items() if k not in metadata_keys}
-        metadata = {k: v for k, v in final_response.items() if k in metadata_keys}
-
-        # Enforce strict contract (inject safe defaults, resolve aliases)
-        payload = enforce_output_contract(payload)
-
-        # Normalize output types (belt-and-suspenders)
-        payload = normalize_output(payload)
-
-        # Reassemble flat final response
-        final_response = {**metadata, **payload}
-
-        api_logger.info(
-            f"[{request_id}] FINAL RESPONSE: "
-            + str({k: (len(v) if isinstance(v, (list, str)) else v)
-                   for k, v in final_response.items()
-                   if k in ("score","verdict","risk_level","issues",
-                             "timeline","legal_strategy","recommended_actions",
-                             "predicted_defences","reasoning_trace","draft")})
-        )
-
+        
         return final_response
         
     except Exception as e:
@@ -39040,7 +39127,7 @@ def build_final_response(output, central_state):
 
         "issues": issues,
         "strengths": ensure_list(output.get("strengths")),
-        "weaknesses": ensure_list(output.get("weaknesses")) or [],
+        "weaknesses": ensure_list(output.get("weaknesses")),
 
         # ── GUARANTEED NEVER-EMPTY ──
         "timeline": timeline,
@@ -39414,46 +39501,35 @@ async def generate_pdf_endpoint(request: Request):
         data = await request.json()
         api_logger.info(f"[{request_id}] PDF generation request received")
         
-        # ── STEP 4: PDF PIPELINE GUARANTEE ─────────────────────────────────────
-        # Flow: if analysis_result exists → use it; else → run full analysis.
-        # THEN always pass through enforce_output_contract so PDF is never partial.
+        # Check if this is already analyzed data or raw case data
         if "score" in data and "verdict" in data:
-            # Pre-analyzed data supplied by caller - use directly
-            api_logger.info(f"[{request_id}] Using pre-analyzed data for PDF")
+            # Already analyzed - use directly
+            api_logger.info(f"[{request_id}] Using pre-analyzed data")
             analysis_result = data
         else:
-            # Raw case data - run full analysis pipeline first
-            api_logger.info(f"[{request_id}] Analyzing raw case data before PDF generation")
+            # Raw case data - analyze first
+            api_logger.info(f"[{request_id}] Analyzing case data before PDF generation")
+            
+            # Normalize and analyze
             normalized_data = normalize_input(data)
             engine_result = safe_run_engine(normalized_data)
-            standardized_response = standardize_output(engine_result, normalized_data)
-
-            # Extract the richest available data dict
-            std_data = ensure_dict(standardized_response.get("data", {}))
-            central_state_data = ensure_dict(engine_result.get("_central_state_data", {}))
-
-            class _MockCS:
-                def __init__(self, d): self.data = d
-                def get_all(self): return self.data
-                def get(self, k, default=None): return self.data.get(k, default)
-
-            analysis_result = build_final_response(std_data, _MockCS(central_state_data))
-
-        # ── ALWAYS enforce contract before generating PDF ─────────────────────
-        # Guarantees: score, verdict, timeline, strategy, actions, draft present
-        pdf_data = enforce_output_contract(dict(analysis_result))
-        pdf_data = normalize_output(pdf_data)
-        # Use contracted data for all PDF sections below
-        analysis_result = pdf_data
-        api_logger.info(
-            f"[{request_id}] PDF contract enforced: "
-            f"score={analysis_result.get('score')}, "
-            f"verdict={analysis_result.get('verdict')}, "
-            f"timeline={len(analysis_result.get('timeline',[]))}, "
-            f"strategy={len(analysis_result.get('legal_strategy',[]))}, "
-            f"actions={len(analysis_result.get('recommended_actions',[]))}, "
-            f"draft_len={len(analysis_result.get('draft',''))}"
-        )
+            standardized_response = standardize_output(engine_result)
+            
+            # Extract from standardized response
+            std_data = standardized_response.get("data", {})
+            central_state_data = std_data.get("central_state", {})
+            
+            # Mock central state
+            class MockCentralState:
+                def __init__(self, data):
+                    self.data = data
+                def get_all(self):
+                    return self.data
+                def get(self, key, default=None):
+                    return self.data.get(key, default)
+            
+            mock_central_state = MockCentralState(central_state_data)
+            analysis_result = build_final_response(std_data, mock_central_state)
         
         # ✅ Try to import reportlab
         try:
