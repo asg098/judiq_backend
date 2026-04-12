@@ -1728,12 +1728,25 @@ class ScoringEngineV12:
             )
             
             # Mark as fatal if critical
-            if risk in ["CRITICAL"] and confidence >= 0.7:
+            # 🔥 FIX: More selective CRITICAL marking - require higher confidence
+            # OLD: if risk in ["CRITICAL"] and confidence >= 0.7:
+            # NEW: Stricter thresholds to prevent over-penalization
+            if risk == "CRITICAL" and confidence >= 0.85:
+                # Very high confidence required for CRITICAL issues
                 fatal_conditions.append({
                     "concept": concept,
                     "severity": risk,
                     "confidence": confidence
                 })
+                logger.info(f"[FATAL DEBUG] Marked as CRITICAL: {concept} (confidence={confidence:.2f})")
+            elif risk == "HIGH" and confidence >= 0.90:
+                # Extremely high confidence required to elevate HIGH to fatal
+                fatal_conditions.append({
+                    "concept": concept,
+                    "severity": risk,
+                    "confidence": confidence
+                })
+                logger.info(f"[FATAL DEBUG] Marked HIGH as fatal: {concept} (confidence={confidence:.2f})")
         
         # Contradiction penalties
         if contradictions:
@@ -1747,15 +1760,46 @@ class ScoringEngineV12:
                     f"(severity: {severity}, type: {contra.get('type', 'unknown')})"
                 )
         
-        # Fatal condition capping - FIXED: cap at 40 instead of 10
+        # Fatal condition handling - FIXED: Dynamic penalties instead of hard cap
+        # 🔥 OLD BROKEN LOGIC: if fatal_conditions: score = min(score, 40)  # ❌ KILLS ALL SCORES
+        # 🔥 NEW FIXED LOGIC: Apply penalties based on severity and count, not hard cap
         if fatal_conditions:
             original_score = score
-            score = min(score, 40)  # Cap at 40 if fatal issues exist
-            if original_score > 10:
-                trace.append(
-                    f"Score capped to {score} due to {len(fatal_conditions)} fatal condition(s): "
-                    f"{', '.join([ensure_dict(f).get('concept', '') for f in ensure_list(fatal_conditions)])}"
-                )
+            
+            # Count fatal conditions by severity
+            critical_count = sum(1 for f in fatal_conditions if ensure_dict(f).get('severity') == 'CRITICAL')
+            high_count = sum(1 for f in fatal_conditions if ensure_dict(f).get('severity') == 'HIGH')
+            
+            logger.info(f"[FATAL DEBUG] Found {len(fatal_conditions)} fatal conditions: {critical_count} CRITICAL, {high_count} HIGH")
+            
+            # Apply dynamic penalties instead of hard cap
+            # Multiple critical issues → severe penalty
+            if critical_count >= 2:
+                penalty = -40
+                score += penalty
+                trace.append(f"{penalty} multiple CRITICAL issues detected ({critical_count} issues)")
+                logger.info(f"[FATAL DEBUG] Applied {penalty} for {critical_count} CRITICAL issues")
+            elif critical_count == 1:
+                # Single critical issue → moderate penalty, not death sentence
+                penalty = -20
+                score += penalty
+                critical_concept = next((ensure_dict(f).get('concept', 'unknown') for f in fatal_conditions if ensure_dict(f).get('severity') == 'CRITICAL'), 'unknown')
+                trace.append(f"{penalty} CRITICAL issue: {critical_concept.replace('_', ' ')}")
+                logger.info(f"[FATAL DEBUG] Applied {penalty} for single CRITICAL issue: {critical_concept}")
+            elif high_count >= 2:
+                # Multiple high-risk issues
+                penalty = -25
+                score += penalty
+                trace.append(f"{penalty} multiple HIGH risk issues detected ({high_count} issues)")
+                logger.info(f"[FATAL DEBUG] Applied {penalty} for {high_count} HIGH issues")
+            elif high_count == 1:
+                # Single high-risk issue already penalized in concept scoring
+                trace.append(f"HIGH risk issue noted (already penalized in concept scoring)")
+                logger.info(f"[FATAL DEBUG] Single HIGH issue - already penalized in concept scoring")
+            
+            logger.info(f"[FATAL DEBUG] Score before fatal penalties: {original_score} → after: {score}")
+            
+            # Note: NO HARD CAP! Let the score reflect actual case strength
         
         # Final bounds
         score = max(0, min(score, 100))
