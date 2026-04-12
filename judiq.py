@@ -36105,8 +36105,28 @@ def run_full_analysis_v12(case_data: Dict, case_id: str = None, fast_mode: bool 
 
     combined_text = " ".join(text_corpus)
     concepts_detected = SemanticEngineV12.detect_concepts(combined_text)
-    
-    logger.info(f"  ✅ Detected {len(concepts_detected)} legal concepts")
+
+    # ── HYBRID CONCEPT MERGE (STEP 2: Structured-field triggers) ────────────
+    # Merge pre-seeded concepts from the auto-inference layer so semantic
+    # results are NEVER zero when structured signals exist, even when the
+    # free-text description is empty or weak.
+    hybrid_concepts = ensure_list(case_data.get("_hybrid_concepts", []))
+    if hybrid_concepts:
+        existing_names = {ensure_dict(c).get("concept") for c in concepts_detected}
+        for hc in hybrid_concepts:
+            hc = ensure_dict(hc)
+            if hc.get("concept") and hc["concept"] not in existing_names:
+                concepts_detected.append(hc)
+                existing_names.add(hc["concept"])
+        # Re-sort by confidence descending
+        try:
+            concepts_detected.sort(key=lambda x: ensure_dict(x).get("confidence", 0), reverse=True)
+        except Exception:
+            pass
+        logger.info(
+            f"  ⚡ Hybrid merge: {len(hybrid_concepts)} structured concepts merged → "
+            f"{len(concepts_detected)} total"
+        )
     for concept in ensure_list(concepts_detected[:3]):  # Log top 3
         concept = ensure_dict(concept)
         logger.info(f"     - {ensure_string(concept.get('concept', 'unknown'))}: {ensure_number(concept.get('confidence', 0))} confidence")
@@ -37829,6 +37849,167 @@ def normalize_input(raw_data: dict) -> dict:
             api_logger.info(
                 "[NORMALIZE STEP 6] All engine fields present and correctly typed"
             )
+
+        # ════════════════════════════════════════════════════════════
+        # STEP 7 — AUTO-INFERENCE LAYER  (v15.4)
+        #
+        # Transform from "input-dependent analyzer" to "intelligent
+        # legal assistant with inference capability".
+        #
+        # Rules run AFTER normalization so they see clean typed data.
+        # All inferences are tagged with a confidence level so
+        # downstream engines can weight them appropriately.
+        # ════════════════════════════════════════════════════════════
+
+        inferred = normalized.setdefault("_inferred", {})   # audit log
+        evidence = normalized["evidence_available"]          # mutable list
+
+        # ── 7.1  Legal context tag ───────────────────────────────────
+        if normalized["cheque_present"]:
+            normalized["legal_context"] = "cheque_bounce_case"
+            inferred["legal_context"] = {"value": "cheque_bounce_case", "confidence": "HIGH"}
+
+        # ── 7.2  Dishonour memo: infer from dishonour_reason ─────────
+        if (normalized["cheque_present"]
+                and normalized.get("dishonour_reason")
+                and not normalized.get("dishonour_memo")):
+            normalized["dishonour_memo"] = True
+            inferred["dishonour_memo"] = {"value": True, "confidence": "MEDIUM",
+                                          "reason": "dishonour_reason field present"}
+            if "dishonour_memo" not in evidence:
+                evidence.append("dishonour_memo")
+
+        # ── 7.3  Debt: soft-infer when cheque present & field absent ──
+        raw_debt = raw_data.get("debt_proven") or raw_data.get("debtProven")
+        if normalized["cheque_present"] and raw_debt is None and not normalized["debt_proven"]:
+            normalized["debt_proven"] = True          # Section 139 presumption
+            inferred["debt_proven"] = {"value": True, "confidence": "LOW",
+                                       "reason": "S.139 NI Act presumption — cheque present"}
+
+        # ── 7.4  Notice compliance flag ──────────────────────────────
+        if normalized["notice_sent"]:
+            normalized["legal_notice_compliance"] = True
+            inferred["legal_notice_compliance"] = {"value": True, "confidence": "HIGH"}
+            if "legal_notice" not in evidence:
+                evidence.append("legal_notice")
+
+        # ── 7.5  Enrich evidence list from structured signals ─────────
+        if normalized["cheque_present"] and "cheque" not in evidence:
+            evidence.append("cheque")
+        if normalized["debt_proven"] and "documentary_evidence" not in evidence:
+            evidence.append("documentary_evidence")
+        if normalized.get("dishonour_memo") and "bank_memo" not in evidence:
+            evidence.append("bank_memo")
+
+        # ── 7.6  Hybrid concept triggers (STEP 2 from spec) ──────────
+        # Guarantee semantic concepts even when free text is empty.
+        # These are stored as pre-seeded concepts; the semantic engine
+        # will ADD to them, not overwrite them.
+        hybrid_concepts: list = normalized.setdefault("_hybrid_concepts", [])
+
+        if normalized["cheque_present"]:
+            hybrid_concepts.append({
+                "concept": "cheque_bounce",
+                "confidence": 0.95,
+                "matched_phrases": ["cheque present", "negotiable instrument"],
+                "legal_impact": "establishes core Section 138 NI Act offence",
+                "source": "structured_field"
+            })
+        if normalized["notice_sent"]:
+            hybrid_concepts.append({
+                "concept": "legal_notice_compliance",
+                "confidence": 0.90,
+                "matched_phrases": ["legal notice sent"],
+                "legal_impact": "satisfies mandatory notice requirement under S.138(b)",
+                "source": "structured_field"
+            })
+        if normalized["debt_proven"]:
+            hybrid_concepts.append({
+                "concept": "legally_enforceable_debt",
+                "confidence": 0.85 if inferred.get("debt_proven", {}).get("confidence") != "LOW" else 0.55,
+                "matched_phrases": ["debt proven", "legally enforceable liability"],
+                "legal_impact": "establishes legally enforceable liability under S.139",
+                "source": "structured_field"
+            })
+        if normalized.get("dishonour_memo"):
+            hybrid_concepts.append({
+                "concept": "dishonour_documented",
+                "confidence": 0.88,
+                "matched_phrases": ["bank dishonour memo", "return memo obtained"],
+                "legal_impact": "documentary proof of cheque dishonour",
+                "source": "structured_field"
+            })
+        if normalized.get("signature_disputed"):
+            hybrid_concepts.append({
+                "concept": "signature_dispute",
+                "confidence": 0.92,
+                "matched_phrases": ["signature disputed"],
+                "legal_impact": "challenges authenticity of negotiable instrument",
+                "source": "structured_field"
+            })
+
+        # ── 7.7  Smart description enrichment (STEP 4 from spec) ─────
+        # If description is still short after existing expansion, build
+        # a richer narrative from structured facts.
+        if len(normalized.get("case_description", "")) < 80:
+            _parts = []
+            if normalized["cheque_present"]:
+                _amt = f"Rs. {normalized['cheque_amount']:.0f}" if normalized["cheque_amount"] else "an amount"
+                _num = normalized["cheque_number"] if normalized["cheque_number"] not in ("UNKNOWN", "") else "a cheque"
+                _parts.append(
+                    f"A cheque ({_num}) for {_amt} was issued and subsequently dishonoured by the bank"
+                )
+            if normalized.get("dishonour_reason"):
+                _parts.append(
+                    f"The dishonour reason recorded is: {normalized['dishonour_reason']}"
+                )
+            if normalized["notice_sent"]:
+                _parts.append("A statutory legal notice under Section 138 NI Act was served on the accused")
+            else:
+                _parts.append("No legal notice has been issued to the accused as yet")
+            if normalized["debt_proven"]:
+                _parts.append("The underlying legally enforceable debt has been established")
+            else:
+                _parts.append("The legally enforceable debt requires further documentary support")
+            if normalized.get("signature_disputed"):
+                _parts.append("The accused has disputed the signature on the cheque")
+            if _parts:
+                normalized["case_description"] = ". ".join(_parts) + "."
+                api_logger.info(f"[INFER v15.4] Description synthesised: {normalized['case_description'][:200]}")
+
+        # ── 7.8  Analysis confidence scoring (STEP 8 from spec) ──────
+        _sig_fields = sum([
+            bool(normalized["cheque_present"]),
+            bool(normalized["notice_sent"]),
+            bool(normalized["debt_proven"]),
+            bool(normalized.get("dishonour_memo")),
+            bool(normalized["cheque_amount"] > 0),
+            bool(normalized["cheque_date"]),
+            bool(normalized["dishonour_date"]),
+            bool(len(normalized.get("case_description", "")) > 60),
+        ])
+        if _sig_fields >= 6:
+            normalized["analysis_confidence"] = "HIGH"
+        elif _sig_fields >= 3:
+            normalized["analysis_confidence"] = "MEDIUM"
+        else:
+            normalized["analysis_confidence"] = "LOW"
+        inferred["analysis_confidence"] = normalized["analysis_confidence"]
+
+        api_logger.info(
+            f"[INFER v15.4] confidence={normalized['analysis_confidence']} | "
+            f"hybrid_concepts={len(hybrid_concepts)} | "
+            f"evidence={evidence}"
+        )
+        print(
+            f"\n{'⚡' * 20}\n"
+            f"⚡ AUTO-INFERENCE v15.4 COMPLETE\n"
+            f"⚡ Analysis confidence : {normalized['analysis_confidence']}\n"
+            f"⚡ Hybrid concepts     : {[c['concept'] for c in hybrid_concepts]}\n"
+            f"⚡ Evidence list       : {evidence}\n"
+            f"⚡ Inferences made     : {list(inferred.keys())}\n"
+            f"{'⚡' * 20}\n"
+        )
 
         # ════════════════════════════════════════════════════════════
         # FINAL DEBUG LOG
@@ -40083,154 +40264,253 @@ def build_final_response(output, central_state):
                  ensure_list(cs.get("score_reasoning_trace")))
     contradictions = (ensure_list(output.get("contradictions")) or
                       ensure_list(cs.get("contradictions")))
-    
-    # ════════════════════════════════════════════════════════════════════════════
-    # 🔥 CRITICAL FIX v15.3: MAP REASONING → STRENGTHS/WEAKNESSES
-    # ════════════════════════════════════════════════════════════════════════════
-    
-    # 🔥 STEP 1: USE ENGINE RESULT, NOT RAW CASE_DATA
-    # Get engine output from result, not case_data
-    result = output  # This is the engine output that was passed in
-    
-    # 🔥 STEP 2: MAP REASONING → OUTPUT
-    strengths = []
-    weaknesses = []
-    
-    # Extract reasoning from engine result
-    reasoning_trace = ensure_list(reasoning)  # Already extracted above
-    
-    print("\n" + "=" * 100)
-    print("🔥 CRITICAL FIX v15.3 - REASONING → STRENGTHS/WEAKNESSES MAPPING")
-    print("=" * 100)
+
+    # ── STEP 3: DEFAULT REASONING GENERATION ─────────────────────────────────
+    # reasoning_trace must ALWAYS exist — generate base trace from structured
+    # case signals if the engine produced nothing.
+    if not reasoning:
+        _cd = output  # output carries case_data fields via standardize_output merge
+        _r = []
+        if _cd.get("cheque_present"):
+            _amt = _cd.get("cheque_amount", 0)
+            _amt_str = f"Rs. {_amt:.0f}" if ensure_number(_amt) > 0 else "a stated amount"
+            _r.append(f"Cheque for {_amt_str} issued — establishes financial liability under NI Act")
+        if _cd.get("dishonour_memo") or _cd.get("dishonour_date"):
+            _r.append("Cheque dishonour documented — foundational element of Section 138 offence satisfied")
+        if _cd.get("notice_sent"):
+            _r.append("Legal notice served on accused — mandatory statutory requirement under S.138(b) complied with")
+        else:
+            _r.append("Legal notice not yet served — Section 138 complaint cannot be filed until notice is sent and 15-day period expires")
+        if _cd.get("debt_proven"):
+            _r.append("Underlying legally enforceable debt established — Section 139 presumption in complainant's favour")
+        else:
+            _r.append("Legally enforceable debt requires further documentation — defence may raise S.139 rebuttal")
+        if _cd.get("signature_disputed"):
+            _r.append("Signature disputed by accused — handwriting expert evidence may be required to rebut")
+        _evid = ensure_list(_cd.get("evidence_available", []))
+        _r.append(f"Evidence quality assessed: {len(_evid)} item(s) available ({', '.join(str(e) for e in _evid[:4])})")
+        _r.append(f"Case strength derived from structured inputs — overall score: {round(score, 1)}/100")
+        reasoning = _r
+        print(f"[BUILD_RESPONSE v15.4] Generated {len(reasoning)} base reasoning items from structured fields")
+
+    # ════════════════════════════════════════════════════════════════════════
+    # 🔥 MAP REASONING → STRENGTHS / WEAKNESSES  (v15.3 + v15.4 upgrade)
+    # ════════════════════════════════════════════════════════════════════════
+    reasoning_trace = ensure_list(reasoning)
+    strengths: list = []
+    weaknesses: list = []
+
+    print(f"\n{'=' * 100}")
+    print("🔥 v15.4 — REASONING → STRENGTHS/WEAKNESSES MAPPING")
+    print(f"{'=' * 100}")
     print(f"DEBUG → reasoning_trace length: {len(reasoning_trace)}")
-    
-    # Map reasoning to strengths and weaknesses
+
+    # Map reasoning items to strengths / weaknesses by keyword signal
     for r in reasoning_trace:
         text = str(r).lower()
-        
-        # Positive indicators → Strengths
-        if any(word in text for word in ["strong", "evidence", "valid", "proven", "documented", 
-                                          "present", "complied", "proper", "available", "signed",
-                                          "advantage", "favorable", "supporting"]):
+        if any(w in text for w in ["strong", "evidence", "valid", "proven", "documented",
+                                    "present", "complied", "proper", "available", "signed",
+                                    "establishes", "satisfied", "served", "presumption",
+                                    "advantage", "favorable", "supporting", "obtained"]):
             strengths.append({"title": str(r), "source": "engine_reasoning"})
-        
-        # Negative indicators → Weaknesses  
-        if any(word in text for word in ["missing", "weak", "defect", "risk", "not sent",
-                                          "not proven", "disputed", "lacking", "insufficient",
-                                          "absent", "penalty", "deduction", "negative"]):
+        if any(w in text for w in ["missing", "weak", "defect", "risk", "not sent",
+                                    "not yet", "not proven", "disputed", "lacking",
+                                    "insufficient", "absent", "penalty", "deduction",
+                                    "negative", "cannot be filed", "requires further",
+                                    "rebuttal", "required"]):
             weaknesses.append({"title": str(r), "source": "engine_reasoning"})
-    
-    # 🔥 STEP 3: FORCE NON-EMPTY OUTPUT
-    # If reasoning exists but strengths/weaknesses still empty, add defaults
-    if reasoning_trace and not strengths:
-        strengths.append({"title": "Evidence and transaction records present", "source": "fallback"})
-    
-    # If NO reasoning at all, check output for pre-built strengths/weaknesses
-    if not strengths:
-        strengths = ensure_list(output.get("strengths"))
-    if not weaknesses:
-        weaknesses = ensure_list(output.get("weaknesses"))
-    
-    # 🔥 FIX ISSUE 3: SPECIFIC, CASE-DATA-AWARE WEAKNESSES (not generic fallback)
-    # Pull case facts from the output/central-state to generate meaningful weaknesses
-    if reasoning_trace and not weaknesses:
-        _case = ensure_dict(output)
-        # Cheque details
-        if not _case.get("dishonour_date") and not any(
-                "dishonour" in str(r).lower() for r in reasoning_trace):
-            weaknesses.append({"title": "Dishonour date not clearly established in records",
-                                "severity": "MEDIUM", "source": "case_analysis"})
-        cheque_number = ensure_string(_case.get("cheque_number", ""), "")
-        if cheque_number.upper() in ("UNKNOWN", "", "N/A"):
-            weaknesses.append({"title": "Cheque number/details incomplete — affects instrument identification",
-                                "severity": "MEDIUM", "source": "case_analysis"})
-        # Notice timing
-        if any("notice" in str(r).lower() and "not" in str(r).lower() for r in reasoning_trace):
-            weaknesses.append({"title": "Legal notice deficiency detected — may be fatal to complaint",
-                                "severity": "HIGH", "source": "reasoning_trace"})
-        # Debt proof
-        if any("debt" in str(r).lower() and ("not" in str(r).lower() or "weak" in str(r).lower())
-               for r in reasoning_trace):
-            weaknesses.append({"title": "Legally enforceable debt not sufficiently documented",
-                                "severity": "HIGH", "source": "reasoning_trace"})
-        # Score-based gap (strong case still has risk areas)
-        if score >= 70 and not weaknesses:
-            weaknesses.append({"title": "Accused may raise security cheque / part-payment defence",
-                                "severity": "LOW", "source": "predictive_analysis"})
-        elif score >= 45 and not weaknesses:
-            weaknesses.append({"title": "Evidence bundle has gaps that defence counsel will exploit",
-                                "severity": "MEDIUM", "source": "predictive_analysis"})
 
-    # Final fallback only when absolutely no data available
+    # ── STEP 5: EVIDENCE-BASED BOOSTING ──────────────────────────────────────
+    # Add specific strengths directly from evidence list signals,
+    # independent of free-text reasoning quality.
+    _evidence_list = ensure_list(output.get("evidence_available") or cs.get("evidence_available") or [])
+    _strength_titles = {s["title"] if isinstance(s, dict) else str(s) for s in strengths}
+
+    _evidence_strength_map = {
+        "cheque":               "Negotiable instrument (cheque) present — core evidence under Section 138 NI Act",
+        "bank_memo":            "Bank dishonour memo obtained — documentary proof of cheque dishonour",
+        "documentary_evidence": "Documentary evidence available — strengthens evidentiary basis of case",
+        "legal_notice":         "Proof of legal notice available — procedural compliance demonstrated",
+        "signed_agreement":     "Signed agreement on record — establishes legally enforceable debt",
+        "bank_statement":       "Bank statements available — corroborates transaction history",
+        "dishonour_memo":       "Official dishonour memo present — satisfies return memo requirement",
+        "registered_agreement": "Registered agreement available — strongest form of debt documentation",
+    }
+    for ev_key, ev_title in _evidence_strength_map.items():
+        if ev_key in _evidence_list and ev_title not in _strength_titles:
+            strengths.append({"title": ev_title, "source": "evidence_boosting"})
+            _strength_titles.add(ev_title)
+
+    # ── STEP 6: INTELLIGENT (NOT GENERIC) FALLBACKS ───────────────────────────
+    # Replace generic "no strong points" with specific legal statements
     if not strengths:
-        strengths = [{"title": "Limited legal advantages from available data", "source": "final_fallback"}]
+        _fallbacks = []
+        if output.get("cheque_present") or cs.get("score", 0) > 0:
+            _fallbacks.append({
+                "title": "Cheque presence provides foundational legal strength under Section 138 NI Act",
+                "source": "intelligent_fallback"
+            })
+        else:
+            _fallbacks.append({
+                "title": "Case requires additional documentary evidence to establish legal strength",
+                "source": "intelligent_fallback"
+            })
+        strengths = _fallbacks
+
     if not weaknesses:
-        weaknesses = [{"title": "No critical weaknesses detected from available data", "source": "final_fallback"}]
-    
-    # 🔥 STEP 4: DEFENCE GENERATION FIX
-    # Generate defences from engine analysis if not already present
-    if not defence or len(defence) == 0:
-        # Check if cheque is present in the analysis
-        cheque_mentioned = any("cheque" in str(r).lower() for r in reasoning_trace)
-        if cheque_mentioned:
-            defence.append({
-                "defence": "Cheque misuse or security cheque claim",
-                "probability": "MEDIUM",
-                "source": "engine_analysis"
+        _weak_fallbacks = []
+        if not (output.get("debt_proven") or cs.get("score", 0) >= 70):
+            _weak_fallbacks.append({
+                "title": "Lack of debt proof documentation may weaken enforceability under Section 139",
+                "source": "intelligent_fallback"
             })
-        
-        # Check for weak evidence
-        weak_evidence = any("weak" in str(r).lower() or "not proven" in str(r).lower() 
-                           for r in reasoning_trace)
-        if weak_evidence:
-            defence.append({
-                "defence": "Insufficient evidence to prove debt",
-                "probability": "HIGH",
-                "source": "engine_analysis"
+        if not output.get("notice_sent"):
+            _weak_fallbacks.append({
+                "title": "Absence of legal notice is a statutory bar to filing complaint under Section 138",
+                "source": "intelligent_fallback"
             })
-        
-        # Ensure at least one defence
-        if not defence:
-            defence = [{"defence": "Technical procedural defects", "probability": "LOW", "source": "fallback"}]
-    
-    # 🔥 STEP 5: LOG DEBUG
+        if not _weak_fallbacks:
+            # Strong case — flag predictive defence risk
+            _weak_fallbacks.append({
+                "title": "Accused may raise security cheque or part-payment defence — prepare counter-evidence",
+                "source": "intelligent_fallback"
+            })
+        weaknesses = _weak_fallbacks
+
+    # ── STEP 9: CASE-DATA-AWARE SPECIFIC WEAKNESSES ───────────────────────────
+    # Even when reasoning-derived weaknesses exist, add specific ones
+    # from direct case-data signals that reasoning might not have captured.
+    _weakness_titles = {w["title"] if isinstance(w, dict) else str(w) for w in weaknesses}
+    _case_out = ensure_dict(output)
+
+    if not _case_out.get("notice_sent"):
+        _t = "Legal notice not sent — Section 138 complaint is not yet maintainable"
+        if _t not in _weakness_titles:
+            weaknesses.append({"title": _t, "severity": "CRITICAL", "source": "case_signal"})
+
+    if not _case_out.get("debt_proven"):
+        _t = "Legally enforceable debt not sufficiently documented — defence will challenge under Section 139"
+        if _t not in _weakness_titles:
+            weaknesses.append({"title": _t, "severity": "HIGH", "source": "case_signal"})
+
+    _cheque_num = ensure_string(_case_out.get("cheque_number", ""), "")
+    if _cheque_num.upper() in ("UNKNOWN", "", "N/A"):
+        _t = "Cheque number/details incomplete — affects instrument identification in court"
+        if _t not in _weakness_titles:
+            weaknesses.append({"title": _t, "severity": "MEDIUM", "source": "case_signal"})
+
+    if _case_out.get("signature_disputed"):
+        _t = "Signature on cheque disputed — handwriting expert evidence will be required"
+        if _t not in _weakness_titles:
+            weaknesses.append({"title": _t, "severity": "HIGH", "source": "case_signal"})
+
     print(f"DEBUG → strengths count: {len(strengths)}")
     print(f"DEBUG → weaknesses count: {len(weaknesses)}")
-    print(f"DEBUG → defences count: {len(defence)}")
     if strengths:
         print(f"DEBUG → First strength: {strengths[0]}")
     if weaknesses:
         print(f"DEBUG → First weakness: {weaknesses[0]}")
-    print("=" * 100 + "\n")
+    print(f"{'=' * 100}\n")
+
+    # ── DEFENCE GENERATION (from reasoning signals) ──────────────────────────
+    if not defence:
+        _rt_text = " ".join(str(r).lower() for r in reasoning_trace)
+        if "cheque" in _rt_text:
+            defence.append({
+                "defence": "Cheque given as security — not towards discharge of legally enforceable debt",
+                "probability": "MEDIUM", "source": "engine_analysis"
+            })
+        if "debt" in _rt_text and ("not proven" in _rt_text or "requires further" in _rt_text):
+            defence.append({
+                "defence": "Denial of legally enforceable debt — S.139 presumption rebuttal",
+                "probability": "HIGH", "source": "engine_analysis"
+            })
+        if "notice" in _rt_text and ("not" in _rt_text or "cannot" in _rt_text):
+            defence.append({
+                "defence": "Non-receipt / defective legal notice — fatal procedural defect",
+                "probability": "HIGH", "source": "engine_analysis"
+            })
+        if not defence:
+            defence = [{"defence": "Technical procedural defects in complaint",
+                        "probability": "LOW", "source": "fallback"}]
+
+    # ── STEP 7: STRATEGY GENERATION from case conditions ─────────────────────
+    # Applied on top of the score-based fallback — inject condition-specific
+    # steps that are more specific than score alone can produce.
+    _strat_titles = {s.get("step", "") if isinstance(s, dict) else str(s) for s in strategy}
+    _out = ensure_dict(output)
+    if not _out.get("notice_sent") and "Send legal notice" not in " ".join(_strat_titles):
+        strategy.insert(0, {
+            "step": "Send legal notice within statutory timeline (30 days of dishonour)",
+            "priority": "CRITICAL",
+            "reason": "Section 138 complaint cannot be filed without prior notice — this is mandatory"
+        })
+    if not _out.get("debt_proven") and "documentary evidence" not in " ".join(_strat_titles).lower():
+        strategy.append({
+            "step": "Collect documentary evidence to establish legally enforceable debt",
+            "priority": "HIGH",
+            "reason": "Section 139 presumption can be rebutted — written proof of debt is essential"
+        })
+    if _out.get("cheque_present") and "Section 138" not in " ".join(_strat_titles):
+        strategy.append({
+            "step": "Proceed under Section 138 NI Act once all conditions are satisfied",
+            "priority": "HIGH",
+            "reason": "Cheque bounce offence is established — file complaint in jurisdictionally correct court"
+        })
+
+    # ── STEP 8: Analysis confidence — pull from input or derive ──────────────
+    analysis_confidence = (
+        ensure_string(output.get("analysis_confidence"), "") or
+        ensure_string(cs.get("analysis_confidence"), "")
+    )
+    if not analysis_confidence:
+        _sig = sum([
+            bool(_out.get("cheque_present")),
+            bool(_out.get("notice_sent")),
+            bool(_out.get("debt_proven")),
+            bool(_out.get("dishonour_memo")),
+            bool(ensure_number(_out.get("cheque_amount", 0)) > 0),
+            bool(_out.get("cheque_date")),
+            bool(_out.get("dishonour_date")),
+            len(reasoning_trace) >= 3,
+        ])
+        if _sig >= 6:
+            analysis_confidence = "HIGH"
+        elif _sig >= 3:
+            analysis_confidence = "MEDIUM"
+        else:
+            analysis_confidence = "LOW"
 
     # ── 10. Assemble final response ──────────────────────────────────────────
-    # 🔥 CRITICAL FIX v15.3: Return FLAT structure using ENGINE-DERIVED strengths/weaknesses
     final_response = {
         "score": round(score, 1),
         "verdict": verdict,
-        "risk_level": defence_risk,  # Add risk_level as alias for frontend
+        "risk_level": defence_risk,
 
         "issues": issues,
-        "strengths": strengths,  # 🔥 FIXED: Use engine-derived strengths
-        "weaknesses": weaknesses,  # 🔥 FIXED: Use engine-derived weaknesses
+        "strengths": strengths,
+        "weaknesses": weaknesses,
+
+        # ── CONFIDENCE (STEP 8) ──
+        "analysis_confidence": analysis_confidence,
 
         # ── GUARANTEED NEVER-EMPTY ──
         "timeline": timeline,
-        "legal_strategy": strategy,  # Frontend expects "legal_strategy" 
-        "strategy": strategy,  # Keep both for compatibility
+        "legal_strategy": strategy,
+        "strategy": strategy,
         "recommended_actions": recommended_actions,
 
         # ── DEFENCE ──
-        "predicted_defences": defence,  # Frontend expects "predicted_defences"
-        "defence": defence,  # Keep both for compatibility
+        "predicted_defences": defence,
+        "defence": defence,
         "defence_risk": defence_risk,
 
         # ── SEMANTIC ──
         "semantic_analysis": semantic_analysis,
 
         # ── REASONING / CONTRADICTIONS ──
-        "reasoning_trace": reasoning,  # Frontend expects "reasoning_trace"
-        "reasoning": reasoning,  # Keep both for compatibility
+        "reasoning_trace": reasoning,
+        "reasoning": reasoning,
         "contradictions": contradictions,
 
         # ── DRAFT / LEGAL ANALYSIS ──
@@ -40246,10 +40526,11 @@ def build_final_response(output, central_state):
 
     # ── 11. Debug logging ────────────────────────────────────────────────────
     print("\n" + "=" * 100)
-    print("🔥 FINAL RESPONSE BUILDER - OUTPUT VERIFICATION")
+    print("🔥 FINAL RESPONSE BUILDER v15.4 - OUTPUT VERIFICATION")
     print("=" * 100)
     print(f"✅ Score:               {final_response['score']}")
     print(f"✅ Verdict:             {final_response['verdict']}")
+    print(f"✅ Confidence:          {final_response['analysis_confidence']}")
     print(f"✅ Issues count:        {len(final_response['issues'])}")
     print(f"✅ Strengths count:     {len(final_response['strengths'])}")
     print(f"✅ Weaknesses count:    {len(final_response['weaknesses'])}")
@@ -40259,6 +40540,7 @@ def build_final_response(output, central_state):
     print(f"✅ Defence count:       {len(final_response['defence'])}")
     print(f"✅ Defence risk:        {final_response['defence_risk']}")
     print(f"✅ Semantic concepts:   {len(ensure_list(final_response['semantic_analysis'].get('concepts_detected')))}")
+    print(f"✅ Concept names:       {final_response['semantic_analysis'].get('concept_names', [])}")
     print(f"✅ Reasoning count:     {len(final_response['reasoning'])}")
     print(f"✅ Contradictions:      {len(final_response['contradictions'])}")
     print(f"✅ Draft length:        {len(final_response['draft'])} chars")
