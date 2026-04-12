@@ -38873,311 +38873,6 @@ def detect_critical_consistency_issues(case_data: dict, engine_result: dict) -> 
     api_logger.info(f"[CONSISTENCY] Detected {len(deduplicated)} unique issues from {len(critical_issues)} total")
     return deduplicated
 
-def build_final_response(central_state: dict, case_data: dict = None) -> dict:
-    """
-    PHASE 2: UNIFIED RESPONSE BUILDER
-    Returns flat structure (NO nesting in 'data')
-    ALWAYS returns complete structure with all fields
-    """
-    if case_data is None:
-        case_data = {}
-    
-    # Extract from central state
-    score = ensure_number(central_state.get('score', 50), 50)
-    verdict = ensure_string(central_state.get('verdict', 'Unknown'), 'Unknown')
-    
-    # Build issues list
-    issues = []
-    if not case_data.get('cheque_present'):
-        issues.append({"title": "No cheque present", "severity": "HIGH"})
-    if not case_data.get('notice_sent'):
-        issues.append({"title": "Legal notice not sent", "severity": "HIGH"})
-    if not case_data.get('debt_proven'):
-        issues.append({"title": "Debt not proven with documentation", "severity": "MEDIUM"})
-    
-    if not issues:
-        issues.append({"title": "No major issues detected", "severity": "LOW"})
-    
-    # Build strengths - ENHANCED VERSION v15.2
-    strengths = []
-    
-    # Evidence-based strengths
-    if case_data.get('cheque_present'):
-        strengths.append({"title": "Negotiable instrument (cheque) present", "category": "evidence"})
-    
-    if case_data.get('notice_sent'):
-        strengths.append({"title": "Legal notice sent as per Section 138", "category": "procedural"})
-    
-    if case_data.get('dishonour_memo'):
-        strengths.append({"title": "Bank dishonour memo available", "category": "evidence"})
-    
-    if case_data.get('debt_proven'):
-        strengths.append({"title": "Underlying debt proven with documentation", "category": "evidence"})
-    
-    # Agreement type
-    agreement_type = case_data.get('agreement_type', '')
-    if agreement_type and any(word in agreement_type.lower() for word in ['written', 'contract', 'formal']):
-        strengths.append({"title": "Written agreement exists", "category": "evidence"})
-    
-    # Evidence available
-    evidence_list = case_data.get('evidence_available', [])
-    if 'documentary_evidence' in evidence_list:
-        strengths.append({"title": "Documentary evidence available", "category": "evidence"})
-    if 'signed_agreement' in evidence_list:
-        strengths.append({"title": "Signed agreement on record", "category": "evidence"})
-    if 'legal_notice' in evidence_list:
-        strengths.append({"title": "Legal notice documentation present", "category": "procedural"})
-    
-    # Timeline compliance
-    if case_data.get('limitation_complied'):
-        strengths.append({"title": "Limitation period complied with", "category": "procedural"})
-    
-    if case_data.get('jurisdiction_proper'):
-        strengths.append({"title": "Proper jurisdiction established", "category": "procedural"})
-    
-    # Remove duplicates based on title
-    seen = set()
-    unique_strengths = []
-    for s in strengths:
-        if s['title'] not in seen:
-            seen.add(s['title'])
-            unique_strengths.append(s)
-    
-    strengths = unique_strengths
-    
-    # Add disclaimer only if truly empty
-    if not strengths:
-        strengths.append({"title": "Limited legal advantages from available data", "category": "general"})
-    
-    # Build weaknesses - NEW SECTION v15.2
-    weaknesses = []
-    
-    # Critical missing elements
-    if not case_data.get('notice_sent'):
-        weaknesses.append({
-            "title": "Legal notice not sent (Section 138 requirement)", 
-            "severity": "CRITICAL",
-            "category": "procedural"
-        })
-    
-    if not case_data.get('debt_proven'):
-        weaknesses.append({
-            "title": "Underlying debt not proven with documentation", 
-            "severity": "HIGH",
-            "category": "evidence"
-        })
-    
-    if not case_data.get('cheque_present'):
-        weaknesses.append({
-            "title": "No cheque presented as evidence", 
-            "severity": "CRITICAL",
-            "category": "evidence"
-        })
-    
-    if not case_data.get('dishonour_memo'):
-        weaknesses.append({
-            "title": "Bank dishonour memo not obtained", 
-            "severity": "HIGH",
-            "category": "evidence"
-        })
-    
-    # Agreement issues
-    agreement_type = case_data.get('agreement_type', '')
-    if not agreement_type or agreement_type == "financial transaction":
-        weaknesses.append({
-            "title": "No formal written agreement documented", 
-            "severity": "MEDIUM",
-            "category": "evidence"
-        })
-    
-    # Signature issues
-    if case_data.get('signature_disputed'):
-        weaknesses.append({
-            "title": "Signature on cheque is disputed by accused", 
-            "severity": "HIGH",
-            "category": "defence_risk"
-        })
-    
-    # Timeline issues
-    if not case_data.get('limitation_complied'):
-        weaknesses.append({
-            "title": "Limitation period may not be complied with", 
-            "severity": "CRITICAL",
-            "category": "procedural"
-        })
-    
-    if not case_data.get('jurisdiction_proper'):
-        weaknesses.append({
-            "title": "Jurisdiction may be improper", 
-            "severity": "HIGH",
-            "category": "procedural"
-        })
-    
-    # Evidence quality
-    evidence_list = case_data.get('evidence_available', [])
-    if 'oral_testimony' in evidence_list and len(evidence_list) == 1:
-        weaknesses.append({
-            "title": "Only oral testimony available - no documentary evidence", 
-            "severity": "HIGH",
-            "category": "evidence"
-        })
-    
-    # Remove duplicates
-    seen_weak = set()
-    unique_weaknesses = []
-    for w in weaknesses:
-        if w['title'] not in seen_weak:
-            seen_weak.add(w['title'])
-            unique_weaknesses.append(w)
-    
-    weaknesses = unique_weaknesses
-    
-    # Add safe default if truly empty
-    if not weaknesses:
-        weaknesses.append({
-            "title": "No critical weaknesses detected from available data", 
-            "severity": "LOW",
-            "category": "general"
-        })
-    
-    # Risk level based on score
-    if score >= 70:
-        risk_level = "LOW"
-    elif score >= 50:
-        risk_level = "MEDIUM"
-    elif score >= 30:
-        risk_level = "HIGH"
-    else:
-        risk_level = "CRITICAL"
-    
-    # Timeline
-    timeline = []
-    if case_data.get('cheque_date'):
-        timeline.append({"event": f"Cheque issued", "date": case_data.get('cheque_date')})
-    if case_data.get('dishonour_date'):
-        timeline.append({"event": f"Cheque dishonoured", "date": case_data.get('dishonour_date')})
-    if case_data.get('notice_date'):
-        timeline.append({"event": f"Legal notice sent", "date": case_data.get('notice_date')})
-    
-    if not timeline:
-        timeline.append({"event": "Timeline data insufficient", "date": "N/A"})
-    
-    # Legal strategy
-    legal_strategy = []
-    if score >= 60:
-        legal_strategy.append({"step": "Proceed with complaint filing", "priority": "HIGH"})
-        legal_strategy.append({"step": "Compile all documentary evidence", "priority": "HIGH"})
-    elif score >= 40:
-        legal_strategy.append({"step": "Strengthen evidence before filing", "priority": "HIGH"})
-        legal_strategy.append({"step": "Consider settlement negotiation", "priority": "MEDIUM"})
-    else:
-        legal_strategy.append({"step": "Address critical defects immediately", "priority": "CRITICAL"})
-        legal_strategy.append({"step": "Consult legal expert for case viability", "priority": "CRITICAL"})
-    
-    # Recommendations
-    recommendations = []
-    if not case_data.get('debt_proven'):
-        recommendations.append({"text": "Gather written loan agreement or debt acknowledgment", "priority": "HIGH"})
-    if not case_data.get('notice_sent'):
-        recommendations.append({"text": "Send legal notice via registered post immediately", "priority": "CRITICAL"})
-    if not case_data.get('dishonour_memo'):
-        recommendations.append({"text": "Obtain dishonour memo from bank with official stamp", "priority": "HIGH"})
-    
-    if not recommendations:
-        recommendations.append({"text": "Maintain all current documentation and proceed as planned", "priority": "MEDIUM"})
-    
-    # Predicted defences
-    predicted_defences = []
-    if not case_data.get('debt_proven'):
-        predicted_defences.append({"defence": "No underlying debt exists", "probability": "HIGH"})
-    if case_data.get('signature_disputed'):
-        predicted_defences.append({"defence": "Signature on cheque is forged", "probability": "MEDIUM"})
-    
-    if not predicted_defences:
-        predicted_defences.append({"defence": "Technical procedural defects", "probability": "LOW"})
-    
-    # Semantic analysis
-    semantic_analysis = central_state.get('concepts_detected', [])
-    if not semantic_analysis:
-        semantic_analysis = ["Section 138 NI Act applicable", "Cheque dishonour case"]
-    
-    # Reasoning trace
-    reasoning_trace = central_state.get('score_reasoning_trace', [])
-    if not reasoning_trace:
-        reasoning_trace = [
-            f"Base score: 50",
-            f"Final score: {score}",
-            f"Verdict: {verdict}"
-        ]
-    
-    # Draft
-    draft = central_state.get('draft', '')
-    if not draft:
-        draft = f"""COMPLAINT UNDER SECTION 138 OF NEGOTIABLE INSTRUMENTS ACT, 1881
-
-TO: THE JUDICIAL MAGISTRATE
-
-COMPLAINANT: {case_data.get('plaintiff_name', '[Name]')}
-ACCUSED: {case_data.get('defendant_name', '[Name]')}
-
-FACTS OF THE CASE:
-The complainant issued a cheque for Rs. {case_data.get('cheque_amount', '[Amount]')} which was dishonoured.
-Legal notice was {'sent' if case_data.get('notice_sent') else 'not sent'}.
-
-SCORE: {score}/100
-CASE STRENGTH: {verdict}
-
-PRAYER: Grant appropriate relief under Section 138 NI Act.
-"""
-    
-    # ════════════════════════════════════════════════════════════
-    # VALIDATION v15.2: Prevent [{}] bugs and ensure data quality
-    # ════════════════════════════════════════════════════════════
-    
-    # Validate legal_strategy - prevent empty dicts
-    if legal_strategy and isinstance(legal_strategy[0], dict) and not legal_strategy[0]:
-        # If first item is empty dict, regenerate
-        legal_strategy = [
-            {"step": "Strengthen documentation and evidence", "priority": "HIGH"},
-            {"step": "Address procedural defects identified", "priority": "MEDIUM"},
-            {"step": "Consult legal expert for strategy review", "priority": "MEDIUM"}
-        ]
-        api_logger.warning("[VALIDATION v15.2] Fixed empty legal_strategy")
-    
-    # Ensure no empty dicts in predicted_defences
-    predicted_defences = [d for d in predicted_defences if d and isinstance(d, dict) and d.get('defence')]
-    if not predicted_defences:
-        predicted_defences = [{"defence": "Technical procedural defects", "probability": "LOW"}]
-    
-    # Ensure timeline has valid entries
-    timeline = [t for t in timeline if t and isinstance(t, dict) and t.get('event')]
-    if not timeline:
-        timeline = [{"event": "Timeline data insufficient", "date": "N/A"}]
-    
-    # Log validation warnings
-    if reasoning_trace and len(reasoning_trace) > 0:
-        if not strengths or len(strengths) == 0:
-            api_logger.warning("[VALIDATION v15.2] ⚠️ reasoning_trace exists but strengths is empty - data flow broken")
-        if not weaknesses or len(weaknesses) == 0:
-            api_logger.warning("[VALIDATION v15.2] ⚠️ reasoning_trace exists but weaknesses is empty - data flow broken")
-    
-    return {
-        "score": round(score, 1),
-        "verdict": verdict,
-        "risk_level": risk_level,
-        "issues": issues,
-        "strengths": strengths,
-        "weaknesses": weaknesses,  # ← FIX: Added weaknesses field
-        "recommendations": recommendations,
-        "timeline": timeline,
-        "legal_strategy": legal_strategy,
-        "predicted_defences": predicted_defences,
-        "semantic_analysis": semantic_analysis,
-        "reasoning_trace": reasoning_trace,
-        "draft": draft,
-        "contradictions": []  # ← FIX: Added for frontend compatibility
-    }
-
 
 def generate_pdf(report_data: dict, output_path: str = None) -> str:
     """
@@ -39947,8 +39642,13 @@ async def analyze_case(request: Request):
             standardized_response["processing_time_seconds"] = round(time.time() - start_time, 3)
         except Exception as std_err:
             api_logger.error(f"[{request_id}] ❌ Standardization failed: {str(std_err)}")
-            # Emergency fallback using unified builder
-            fallback_data = build_final_response({}, normalized_data)
+            # Emergency fallback using unified builder — match new signature (output, central_state)
+            class _FallbackCentralState:
+                def __init__(self, d): self.data = ensure_dict(d)
+                def get_all(self): return self.data
+                def get(self, key, default=None): return self.data.get(key, default)
+            _fallback_cs = _FallbackCentralState(engine_result.get('_central_state_data', {}))
+            fallback_data = build_final_response(ensure_dict(normalized_data), _fallback_cs)
             standardized_response = {
                 "success": False,
                 "request_id": request_id,
@@ -40005,35 +39705,46 @@ async def analyze_case(request: Request):
         # timeline, strategy, defence, semantic_analysis, reasoning, etc.
         final_data = build_final_response(std_data, mock_central_state)
         
-        # 🔥 CRITICAL FIX: Wrap in metadata but keep data structure flat
+        # 🔥 STEP 5: FIX RESPONSE FORMAT — wrap in {"success": True, "data": ...}
         final_response = {
             "success": True,
             "request_id": request_id,
             "timestamp": standardized_response.get('timestamp', datetime.now().isoformat()),
             "processing_time_seconds": round(time.time() - start_time, 3),
-            **final_data  # Merge all data fields at root level
+            "data": final_data  # All analysis fields nested under "data" key
         }
         
         # 🔥 ENHANCED LOGGING: Verify all critical fields before return
         api_logger.info("=" * 100)
         api_logger.info(f"[{request_id}] 🔥 FINAL RESPONSE VERIFICATION")
         api_logger.info("=" * 100)
-        api_logger.info(f"✅ Response structure: FLAT (no nested 'data')")
-        api_logger.info(f"✅ Score: {final_response.get('score', 'MISSING')}")
-        api_logger.info(f"✅ Verdict: {final_response.get('verdict', 'MISSING')}")
-        api_logger.info(f"✅ Risk Level: {final_response.get('risk_level', 'MISSING')}")
-        api_logger.info(f"✅ Issues: {len(final_response.get('issues', []))} items")
-        api_logger.info(f"✅ Timeline: {len(final_response.get('timeline', []))} events")
-        api_logger.info(f"✅ Legal Strategy: {len(final_response.get('legal_strategy', []))} items")
-        api_logger.info(f"✅ Recommended Actions: {len(final_response.get('recommended_actions', []))} items")
-        api_logger.info(f"✅ Predicted Defences: {len(final_response.get('predicted_defences', []))} items")
-        api_logger.info(f"✅ Reasoning Trace: {len(final_response.get('reasoning_trace', []))} items")
-        api_logger.info(f"✅ Draft length: {len(final_response.get('draft', ''))} chars")
+        api_logger.info(f"✅ Response structure: success=True, data={{...}}")
+        api_logger.info(f"✅ Score: {final_response['data'].get('score', 'MISSING')}")
+        api_logger.info(f"✅ Verdict: {final_response['data'].get('verdict', 'MISSING')}")
+        api_logger.info(f"✅ Risk Level: {final_response['data'].get('risk_level', 'MISSING')}")
+        api_logger.info(f"✅ Issues: {len(final_response['data'].get('issues', []))} items")
+        api_logger.info(f"✅ Timeline: {len(final_response['data'].get('timeline', []))} events")
+        api_logger.info(f"✅ Legal Strategy: {len(final_response['data'].get('legal_strategy', []))} items")
+        api_logger.info(f"✅ Recommended Actions: {len(final_response['data'].get('recommended_actions', []))} items")
+        api_logger.info(f"✅ Predicted Defences: {len(final_response['data'].get('predicted_defences', []))} items")
+        api_logger.info(f"✅ Reasoning Trace: {len(final_response['data'].get('reasoning_trace', []))} items")
+        api_logger.info(f"✅ Draft length: {len(final_response['data'].get('draft', ''))} chars")
         api_logger.info(f"✅ Processing time: {final_response.get('processing_time_seconds', 0):.3f}s")
         api_logger.info("=" * 100)
-        
-        print(f"✅ Final response built successfully - returning to frontend")
-        print("=" * 100 + "\n")
+
+        # 🔥 STEP 3: DEBUG PRINT before return
+        print("DEBUG FINAL RESPONSE:", {
+            "success": final_response["success"],
+            "score": final_response["data"].get("score"),
+            "verdict": final_response["data"].get("verdict"),
+            "strengths_count": len(final_response["data"].get("strengths", [])),
+            "weaknesses_count": len(final_response["data"].get("weaknesses", [])),
+            "legal_strategy_count": len(final_response["data"].get("legal_strategy", [])),
+            "predicted_defences_count": len(final_response["data"].get("predicted_defences", [])),
+            "keys": list(final_response["data"].keys()),
+        })
+        print("✅ Final response built successfully - returning to frontend")
+        print("=" * 100)
         
         return final_response
         
