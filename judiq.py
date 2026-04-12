@@ -3230,6 +3230,15 @@ def calculate_base_strength_score(case_data: Dict) -> Tuple[float, Dict]:
         breakdown['timeline_compliance']['details'].append("Limitation compliance unclear (0)")
     
     # ============ DOCUMENTARY PROOF (20 points max) ============
+    # 🔥 FIX: Filter and validate evidence_available before using
+    evidence_available = case_data.get('evidence_available', [])
+    if evidence_available and not isinstance(evidence_available, list):
+        evidence_available = []
+    valid_evidence = [e for e in evidence_available if e and isinstance(e, str) and e.strip() != ""]
+    
+    logger.info(f"[SCORING DEBUG] evidence_available raw: {evidence_available}")
+    logger.info(f"[SCORING DEBUG] valid_evidence filtered: {valid_evidence}")
+    
     if case_data.get('written_agreement') or case_data.get('loan_agreement'):
         points = 10
         breakdown['documentary_proof']['score'] += points
@@ -3243,6 +3252,14 @@ def calculate_base_strength_score(case_data: Dict) -> Tuple[float, Dict]:
         breakdown['documentary_proof']['details'].append(f"Debt proof available (+{points})")
     else:
         breakdown['documentary_proof']['details'].append("No debt documentation (-10)")
+    
+    # 🔥 FIX: Add points for evidence_available (this was completely missing!)
+    if valid_evidence and len(valid_evidence) > 0:
+        # Award points based on evidence count and quality
+        evidence_points = min(15, len(valid_evidence) * 3)  # 3 points per evidence, max 15
+        breakdown['documentary_proof']['score'] += evidence_points
+        breakdown['documentary_proof']['details'].append(f"Evidence available: {', '.join(valid_evidence)} (+{evidence_points})")
+        logger.info(f"[SCORING DEBUG] Added {evidence_points} points for {len(valid_evidence)} pieces of evidence")
     
     # ============ PROCEDURAL STRENGTH (10 points max) ============
     if case_data.get('proper_service') or case_data.get('notice_served'):
@@ -31848,15 +31865,41 @@ class NonLinearScoringEngine:
         
         # ========== FATAL COMBINATIONS (override everything) ==========
         
+        # 🔥 FIX: Check for truly empty evidence and timeline before applying fatal rule
+        evidence_available = case_data.get('evidence_available', [])
+        if evidence_available and not isinstance(evidence_available, list):
+            evidence_available = []
+        valid_evidence = [e for e in evidence_available if e and isinstance(e, str) and e.strip() != ""]
+        
+        timeline_items = case_data.get('timeline', [])
+        if timeline_items and not isinstance(timeline_items, list):
+            timeline_items = []
+        valid_timeline = [t for t in timeline_items if t and isinstance(t, dict)]
+        
+        logger.info(f"[FATAL CHECK DEBUG] valid_evidence: {valid_evidence}")
+        logger.info(f"[FATAL CHECK DEBUG] valid_timeline: {valid_timeline}")
+        logger.info(f"[FATAL CHECK DEBUG] timeline_compliance score: {breakdown['timeline_compliance']['score']}")
+        logger.info(f"[FATAL CHECK DEBUG] documentary_proof score: {breakdown['documentary_proof']['score']}")
+        
         # No notice + no documents (case cannot proceed)
-        if (breakdown['timeline_compliance']['score'] < 8 and 
-            breakdown['documentary_proof']['score'] < 8):
+        # 🔥 FIX: Only trigger if BOTH conditions are true:
+        #   1. Timeline score is very low AND no timeline items exist
+        #   2. Documentary score is very low AND no valid evidence exists
+        has_no_timeline = (breakdown['timeline_compliance']['score'] < 8 and 
+                          (not valid_timeline or len(valid_timeline) == 0))
+        has_no_evidence = (breakdown['documentary_proof']['score'] < 8 and 
+                          (not valid_evidence or len(valid_evidence) == 0))
+        
+        if has_no_timeline and has_no_evidence:
             adjustments['fatal_combinations'].append({
                 'type': 'procedural_evidentiary_collapse',
                 'override_score': 15,
                 'reason': 'Neither procedure nor evidence - case fundamentally flawed'
             })
             linear_score = min(linear_score, 15)
+            logger.info("[FATAL] procedural_evidentiary_collapse TRIGGERED - truly no evidence and no timeline")
+        else:
+            logger.info(f"[FATAL] procedural_evidentiary_collapse NOT triggered - has_no_timeline={has_no_timeline}, has_no_evidence={has_no_evidence}")
         
         # Ensure bounds
         final_score = max(0, min(100, linear_score))
