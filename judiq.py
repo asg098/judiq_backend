@@ -40105,446 +40105,750 @@ async def validate_input(request: Request):
 
 def build_final_response(output, central_state):
     """
-    🔥 CRITICAL FIX v15.3: Build complete final response with ENGINE INTELLIGENCE.
-    
-    CRITICAL CHANGES:
-    ✅ Uses ENGINE RESULT (reasoning_trace) instead of raw case_data
-    ✅ Maps reasoning to strengths/weaknesses intelligently
-    ✅ Forces non-empty outputs when reasoning exists
-    ✅ Generates defences from engine analysis
-    
-    Uses the already-standardized `output` (from standardize_output) as the
-    PRIMARY source of truth for all rich data fields.  The `central_state`
-    dict is used only as a supplementary fallback for fields that are genuinely
-    absent from `output`.
+    ════════════════════════════════════════════════════════════════════════════
+    JUDIQ v15.5 — PROFESSIONAL LEGAL ANALYSIS RESPONSE BUILDER
+    ════════════════════════════════════════════════════════════════════════════
 
-    GUARANTEES:
-    ✅ score               - always numeric, never null
-    ✅ verdict             - always string, aligned with score
-    ✅ issues              - always list, never empty
-    ✅ strengths           - always list (MAPPED FROM REASONING)
-    ✅ weaknesses          - always list (MAPPED FROM REASONING)
-    ✅ timeline            - always list, never empty
-    ✅ strategy            - always list, never empty
-    ✅ recommended_actions - always list, never empty
-    ✅ defence             - always list (GENERATED FROM ENGINE)
-    ✅ defence_risk        - always string
-    ✅ semantic_analysis   - always dict with concepts_detected list
-    ✅ reasoning           - always list
-    ✅ contradictions      - always list
-    ✅ draft               - always non-empty string
-    ✅ legal_analysis      - always string
+    Transforms raw engine output into a lawyer-grade analysis report for
+    Section 138 NI Act (Cheque Bounce) cases.
+
+    DESIGN PRINCIPLES:
+    ✅ NOT a decision-making system — never says "case will win/lose"
+    ✅ Reasoning-driven output, not verdict-driven logic
+    ✅ Strict NI Act rule enforcement
+    ✅ Humanised language throughout
+    ✅ Deduplicated, clean strengths / weaknesses with hard separation
+    ✅ Executive summary at top of every response
+    ✅ Missing data flagged transparently
+    ✅ Mandatory legal disclaimer on every response
+    ✅ analysis_confidence computed from input completeness + concepts
+    ✅ Strategy generated strictly from weakness conditions
+    ✅ All 11 output fields always present and never empty
     """
 
-    # ── 1. Normalise inputs ──────────────────────────────────────────────────
+    # ════════════════════════════════════════════════════════════════════
+    # 0. NORMALISE INPUTS
+    # ════════════════════════════════════════════════════════════════════
     output = ensure_dict(output)
     cs = central_state.get_all() if hasattr(central_state, "get_all") else {}
     cs = ensure_dict(cs)
 
-    # ── 2. Score & verdict ───────────────────────────────────────────────────
-    # output already carries the consistency-enforced score from standardize_output
-    score = ensure_number(output.get("score") or cs.get("score"), 0)
+    # Convenience accessor — reads output first, falls back to cs
+    def _get(key, default=None):
+        v = output.get(key)
+        if v is None or v == "" or v == [] or v == {}:
+            v = cs.get(key, default)
+        return v if v is not None else default
 
-    # Use the verdict already computed by enforce_final_consistency when present,
-    # otherwise derive from score so the two stay aligned.
-    raw_verdict = ensure_string(output.get("verdict") or cs.get("verdict"), "")
-    if raw_verdict in ("VERY_WEAK", "WEAK", "MODERATE", "STRONG",
-                       "Very Weak", "Weak", "Moderate", "Strong",
-                       "Strong Case", "Moderate Case", "Weak Case"):
-        verdict = raw_verdict
-    else:
-        if score < 30:
-            verdict = "VERY_WEAK"
-        elif score < 60:
-            verdict = "WEAK"
-        elif score < 80:
-            verdict = "MODERATE"
+    # ════════════════════════════════════════════════════════════════════
+    # 1. SCORE — numeric only, never drives tone
+    # ════════════════════════════════════════════════════════════════════
+    score = ensure_number(_get("score", 0), 0)
+
+    # STEP 1: case_overview uses reasoning-driven language, not verdict labels
+    def _score_label(s):
+        if s >= 75:  return "relatively strong"
+        if s >= 55:  return "moderately positioned"
+        if s >= 35:  return "requiring significant attention"
+        return "significantly challenged"
+
+    # ════════════════════════════════════════════════════════════════════
+    # 2. CORE CASE-DATA FLAGS (STEP 2: Strict NI Act Rule Enforcement)
+    # ════════════════════════════════════════════════════════════════════
+    cheque_present  = bool(_get("cheque_present", False))
+    notice_sent     = bool(_get("notice_sent", False))
+    debt_proven     = bool(_get("debt_proven", False))
+    dishonour_memo  = bool(_get("dishonour_memo", False))
+    sig_disputed    = bool(_get("signature_disputed", False))
+    limitation_ok   = bool(_get("limitation_complied", True))
+    cheque_amount   = ensure_number(_get("cheque_amount", 0), 0)
+    cheque_number   = ensure_string(_get("cheque_number", ""), "")
+    cheque_date     = ensure_string(_get("cheque_date", ""), "")
+    dishonour_date  = ensure_string(_get("dishonour_date", ""), "")
+    notice_date     = ensure_string(_get("notice_date", ""), "")
+    evidence_list   = ensure_list(_get("evidence_available", []))
+    plaintiff_name  = ensure_string(_get("plaintiff_name", "Complainant"), "Complainant")
+    defendant_name  = ensure_string(_get("defendant_name", "Accused"), "Accused")
+
+    # STEP 9: Track missing fields transparently
+    missing_data_notes: list = []
+    if cheque_present and not cheque_date:
+        missing_data_notes.append("Cheque date not provided — timeline analysis is limited.")
+    if cheque_present and cheque_number.upper() in ("", "UNKNOWN"):
+        missing_data_notes.append("Cheque number not provided — instrument identification may be incomplete.")
+    if cheque_present and not dishonour_date:
+        missing_data_notes.append("Dishonour date not provided — limitation period calculation is unavailable.")
+    if notice_sent and not notice_date:
+        missing_data_notes.append("Notice date not provided — statutory compliance timeline cannot be verified.")
+    if not cheque_amount:
+        missing_data_notes.append("Cheque amount not provided — quantum of liability is unquantified.")
+
+    # STEP 2: Outside-scope detection
+    if not cheque_present:
+        # Return a minimal scoped-out response immediately
+        return {
+            "score": 0,
+            "analysis_confidence": "LOW",
+            "summary": {
+                "case_overview": (
+                    "Based on the information provided, no cheque is present in this matter. "
+                    "Section 138 of the Negotiable Instruments Act applies exclusively to "
+                    "dishonoured cheques. This case, as described, does not appear to fall "
+                    "within the scope of Section 138 proceedings."
+                ),
+                "key_risk": "Absence of a cheque removes the foundational element of a Section 138 offence.",
+                "key_strength": "Not applicable — case falls outside Section 138 scope.",
+                "recommended_action": "Explore alternative legal remedies such as civil suit for recovery of money, IBC proceedings, or consumer forum if applicable.",
+            },
+            "strengths": [],
+            "weaknesses": [
+                {"title": "No cheque present — case is outside the scope of Section 138 NI Act.",
+                 "severity": "CRITICAL", "source": "rule_enforcement"}
+            ],
+            "issues": [
+                {"text": "Case does not meet the threshold requirement of Section 138 NI Act — no cheque detected.",
+                 "severity": "CRITICAL", "source": "rule_enforcement"}
+            ],
+            "strategy": [
+                {"step": "Explore alternative civil remedies for recovery of the claimed amount.",
+                 "priority": "HIGH", "reason": "Section 138 is not applicable without a cheque."}
+            ],
+            "recommended_actions": [
+                "Consider filing a civil suit for recovery of money under CPC.",
+                "Evaluate IBC/NCLT route if the debtor is a company.",
+                "Consult a qualified advocate to identify the most appropriate legal forum."
+            ],
+            "predicted_defences": [],
+            "defence": [],
+            "defence_risk": "N/A",
+            "semantic_analysis": {"concepts_detected": [], "total_concepts": 0, "concept_names": []},
+            "reasoning_trace": ["No cheque detected — Section 138 analysis cannot proceed."],
+            "reasoning": ["No cheque detected — Section 138 analysis cannot proceed."],
+            "contradictions": [],
+            "timeline": [],
+            "legal_strategy": [
+                {"step": "Explore alternative civil remedies.", "priority": "HIGH",
+                 "reason": "Section 138 is not applicable."}
+            ],
+            "missing_data_notes": missing_data_notes,
+            "draft": "Draft not applicable — case falls outside Section 138 scope.",
+            "legal_analysis": "Section 138 NI Act requires a cheque as the foundational instrument. No cheque has been identified in this matter.",
+            "next_action": "Consult a qualified advocate for alternative legal remedies.",
+            "evidence_assessment": {},
+            "consistency_metadata": {},
+            "warnings": ["Case outside Section 138 NI Act scope."],
+            "disclaimer": (
+                "This analysis is AI-assisted and does not constitute legal advice. "
+                "Users should consult a qualified legal professional before taking any action."
+            ),
+        }
+
+    # ════════════════════════════════════════════════════════════════════
+    # 3. REASONING TRACE — always non-empty
+    # ════════════════════════════════════════════════════════════════════
+    reasoning = (ensure_list(_get("reasoning")) or
+                 ensure_list(cs.get("score_reasoning_trace")))
+
+    if not reasoning:
+        # STEP 3: Generate base reasoning from structured fields
+        _r = []
+        _amt_str = f"Rs. {cheque_amount:.0f}" if cheque_amount > 0 else "a stated amount"
+        _r.append(
+            f"A cheque for {_amt_str} was issued by {defendant_name} in favour of "
+            f"{plaintiff_name}, establishing a prima facie financial obligation."
+        )
+        if dishonour_date or dishonour_memo:
+            _r.append(
+                "The cheque was dishonoured by the drawee bank, which constitutes the "
+                "foundational triggering event for an offence under Section 138 NI Act."
+            )
+        if notice_sent:
+            _r.append(
+                "A statutory demand notice was issued to the accused as required under "
+                "Section 138(b) NI Act, satisfying the mandatory pre-complaint condition."
+            )
         else:
-            verdict = "STRONG"
+            _r.append(
+                "A statutory demand notice has not yet been issued to the accused. "
+                "This is a mandatory prerequisite under Section 138(b) and its absence "
+                "currently bars the filing of a criminal complaint."
+            )
+        if debt_proven:
+            _r.append(
+                "The underlying legally enforceable debt has been established through "
+                "documentary evidence, supporting the Section 139 presumption in favour "
+                "of the complainant."
+            )
+        else:
+            _r.append(
+                "The legally enforceable nature of the underlying debt has not been "
+                "sufficiently documented. The accused may seek to rebut the Section 139 "
+                "presumption, and the complainant should strengthen this aspect."
+            )
+        if sig_disputed:
+            _r.append(
+                "The accused has disputed the signature on the cheque. This raises a "
+                "significant evidentiary issue that will require handwriting expert "
+                "testimony under the Indian Evidence Act."
+            )
+        if not limitation_ok:
+            _r.append(
+                "There are indications that the complaint may not have been filed within "
+                "the mandatory limitation period under Section 142 NI Act. This is a "
+                "jurisdictional bar and must be addressed urgently."
+            )
+        _evid_count = len(evidence_list)
+        _r.append(
+            f"The available evidence corpus consists of {_evid_count} documented item(s): "
+            f"{', '.join(str(e) for e in evidence_list[:5])}. "
+            f"The overall analytical score for this matter is {round(score, 1)}/100."
+        )
+        reasoning = _r
 
-    # ── 3. Issues ────────────────────────────────────────────────────────────
-    issues = ensure_list(output.get("issues"))
+    reasoning_trace = ensure_list(reasoning)
+
+    # ════════════════════════════════════════════════════════════════════
+    # 4. STRENGTHS — positive signals only, deduplicated, humanised
+    #    STEP 3: strict separation — no negative content in strengths
+    # ════════════════════════════════════════════════════════════════════
+    _POS_SIGNALS = [
+        "establishes", "satisfied", "served", "presumption", "complied",
+        "obtained", "documented", "present", "available", "proven",
+        "valid", "signed", "proper", "supporting", "advantage",
+        "favorable", "strong", "evidence"
+    ]
+    _NEG_SIGNALS = [
+        "not", "missing", "absent", "defect", "disputed", "lacking",
+        "insufficient", "cannot", "requires further", "rebuttal",
+        "not yet", "not proven", "not sent", "not established",
+        "not provided", "not filed", "penalty", "deduction", "risk",
+        "barred", "expired", "time-barred", "beyond"
+    ]
+
+    def _is_positive(text: str) -> bool:
+        t = text.lower()
+        has_pos = any(w in t for w in _POS_SIGNALS)
+        has_neg = any(w in t for w in _NEG_SIGNALS)
+        return has_pos and not has_neg
+
+    def _is_negative(text: str) -> bool:
+        t = text.lower()
+        return any(w in t for w in _NEG_SIGNALS)
+
+    raw_strengths: list = []
+    raw_weaknesses: list = []
+
+    for r in reasoning_trace:
+        text = str(r)
+        if _is_positive(text) and not _is_negative(text):
+            raw_strengths.append(text)
+        elif _is_negative(text):
+            raw_weaknesses.append(text)
+
+    # STEP 5: Evidence-based strength boosting (independent of text quality)
+    _evidence_strength_map = {
+        "cheque":               "The negotiable instrument (cheque) is present, forming the "
+                                "core evidentiary foundation for a Section 138 NI Act complaint.",
+        "bank_memo":            "An official bank dishonour memo has been obtained, providing "
+                                "documentary proof of the cheque's dishonour.",
+        "documentary_evidence": "Documentary evidence is available, significantly strengthening "
+                                "the evidentiary basis of the complainant's case.",
+        "legal_notice":         "Proof of the statutory legal notice is available, demonstrating "
+                                "compliance with the mandatory pre-complaint procedural requirement.",
+        "signed_agreement":     "A signed agreement is on record, establishing the legally "
+                                "enforceable nature of the underlying debt or liability.",
+        "bank_statement":       "Bank statements have been obtained and corroborate the "
+                                "transaction history relevant to this matter.",
+        "dishonour_memo":       "The official bank dishonour memo satisfies the return memo "
+                                "requirement and proves the triggering event under Section 138.",
+        "registered_agreement": "A registered agreement provides the strongest available form "
+                                "of documentation for the underlying debt.",
+    }
+    _existing_strength_texts = set(raw_strengths)
+    for ev_key, ev_text in _evidence_strength_map.items():
+        if ev_key in evidence_list and ev_text not in _existing_strength_texts:
+            raw_strengths.append(ev_text)
+            _existing_strength_texts.add(ev_text)
+
+    # STEP 2 NI Act rule: cheque present is always a strength
+    _cheque_strength = (
+        "The presence of a cheque establishes the foundational instrument required "
+        "for a Section 138 NI Act complaint, creating a prima facie case of dishonour."
+    )
+    if cheque_present and _cheque_strength not in _existing_strength_texts:
+        raw_strengths.insert(0, _cheque_strength)
+
+    if notice_sent:
+        _ns = ("Legal notice has been served on the accused, satisfying the mandatory "
+               "statutory condition precedent under Section 138(b) NI Act.")
+        if _ns not in set(raw_strengths):
+            raw_strengths.append(_ns)
+
+    if debt_proven:
+        _dp = ("The legally enforceable debt has been established, supporting the "
+               "Section 139 presumption in favour of the complainant.")
+        if _dp not in set(raw_strengths):
+            raw_strengths.append(_dp)
+
+    # STEP 4: Deduplicate — remove near-duplicates by normalised first 60 chars
+    def _dedup(items: list) -> list:
+        seen = set()
+        out = []
+        for item in items:
+            key = " ".join(str(item).lower().split())[:60]
+            if key not in seen:
+                seen.add(key)
+                out.append(item)
+        return out
+
+    raw_strengths = _dedup(raw_strengths)
+
+    # Convert to structured dicts
+    strengths = [
+        {"title": s, "severity": "POSITIVE", "source": "analysis_v15.5"}
+        for s in raw_strengths if s
+    ]
+    if not strengths:
+        strengths = [{
+            "title": ("The presence of a cheque provides the foundational legal basis "
+                      "for a Section 138 NI Act proceeding."),
+            "severity": "POSITIVE", "source": "intelligent_fallback"
+        }]
+
+    # ════════════════════════════════════════════════════════════════════
+    # 5. WEAKNESSES — negative signals + NI Act mandatory rules
+    #    STEP 2: strict rule enforcement; STEP 6: humanised language
+    # ════════════════════════════════════════════════════════════════════
+    raw_weaknesses = _dedup(raw_weaknesses)
+
+    # STEP 2: NI Act mandatory rule enforcement — always add if violated
+    _ni_rules: list = []
+
+    if not notice_sent:
+        _ni_rules.append((
+            "A legal notice has not been sent to the accused. This is a mandatory "
+            "statutory requirement under Section 138(b) of the Negotiable Instruments Act. "
+            "Without it, a criminal complaint cannot be filed, regardless of the strength "
+            "of other evidence.",
+            "CRITICAL"
+        ))
+        # STEP 2: Score reduction for missing notice
+        score = min(score, 40)
+
+    if not debt_proven:
+        _ni_rules.append((
+            "The legally enforceable nature of the underlying debt has not been "
+            "sufficiently established. The accused may rebut the presumption under "
+            "Section 139 NI Act, potentially undermining the entire case.",
+            "HIGH"
+        ))
+
+    if sig_disputed:
+        _ni_rules.append((
+            "The accused has disputed the signature on the cheque. This creates a "
+            "significant evidentiary challenge, as the burden to prove genuineness "
+            "shifts, and expert handwriting evidence will likely be required.",
+            "HIGH"
+        ))
+
+    if not limitation_ok:
+        _ni_rules.append((
+            "The complaint may have been filed beyond the mandatory limitation period "
+            "under Section 142 NI Act. This is a jurisdictional bar and, if established, "
+            "would be fatal to the proceedings.",
+            "CRITICAL"
+        ))
+        score = min(score, 30)
+
+    if cheque_number.upper() in ("", "UNKNOWN"):
+        _ni_rules.append((
+            "The cheque number has not been provided or is unknown. Precise instrument "
+            "identification is required in a Section 138 complaint, and its absence may "
+            "create difficulties in evidence presentation.",
+            "MEDIUM"
+        ))
+
+    # Build weaknesses list — NI Act rules first, then reasoning-derived
+    weaknesses = []
+    _weakness_seen = set()
+
+    for text, severity in _ni_rules:
+        key = " ".join(text.lower().split())[:60]
+        if key not in _weakness_seen:
+            weaknesses.append({"title": text, "severity": severity, "source": "ni_act_rule"})
+            _weakness_seen.add(key)
+
+    for text in raw_weaknesses:
+        key = " ".join(str(text).lower().split())[:60]
+        if key not in _weakness_seen:
+            weaknesses.append({"title": str(text), "severity": "MEDIUM", "source": "engine_reasoning"})
+            _weakness_seen.add(key)
+
+    # Intelligent fallback if still empty after all checks
+    if not weaknesses:
+        weaknesses = [{
+            "title": ("While no critical statutory defects have been identified, the accused "
+                      "may raise a security cheque defence or dispute the quantum of liability. "
+                      "Prepare counter-evidence accordingly."),
+            "severity": "LOW", "source": "intelligent_fallback"
+        }]
+
+    # ════════════════════════════════════════════════════════════════════
+    # 6. ISSUES — distinct from weaknesses; procedural/factual problems
+    # ════════════════════════════════════════════════════════════════════
+    issues = ensure_list(_get("issues"))
+    issues = [i for i in issues if i and (not isinstance(i, dict) or any(i.values()))]
     if not issues:
-        issues = [{"text": "No critical issues identified from available data",
-                   "severity": "LOW", "source": "fallback"}]
+        if not notice_sent:
+            issues.append({"text": "Mandatory legal notice under Section 138(b) not yet sent.",
+                           "severity": "CRITICAL", "source": "rule_enforcement"})
+        if not debt_proven:
+            issues.append({"text": "Legally enforceable debt not sufficiently established.",
+                           "severity": "HIGH", "source": "rule_enforcement"})
+        if not issues:
+            issues.append({"text": "No critical procedural issues identified from available data.",
+                           "severity": "LOW", "source": "fallback"})
 
-    # ── 4. TASK 7: Verdict-issue consistency enforcement ─────────────────────
-    high_issues = [i for i in issues
-                   if isinstance(i, dict) and i.get("severity") in ("HIGH", "CRITICAL")
-                   or (isinstance(i, str) and any(w in i.upper() for w in ("FATAL", "CRITICAL", "HIGH")))]
-    if high_issues and verdict in ("STRONG", "MODERATE", "Strong Case", "Moderate Case"):
-        verdict = "WEAK"
-        score = min(score, 55)
-
-    # ── 5. TASK 8: Draft / issues alignment ──────────────────────────────────
-    draft = ensure_string(output.get("draft"), "")
-    if "FATAL DEFECTS" in draft.upper() and not issues:
-        issues = [{"text": "Fatal defects detected in case — see draft for details",
-                   "severity": "HIGH", "source": "draft_alignment"}]
-    if not draft:
-        draft = "No draft generated"
-
-    # ── 6. Timeline, strategy, actions (output is primary, cs is fallback) ───
-    timeline = ensure_list(output.get("timeline")) or ensure_list(cs.get("timeline"))
-    if not timeline:
-        timeline = ["No timeline generated"]
-
-    strategy = ensure_list(output.get("strategy")) or ensure_list(cs.get("strategy"))
-    # Filter out empty dicts that produce [{}] UX bug
+    # ════════════════════════════════════════════════════════════════════
+    # 7. STRATEGY — STEP 8: condition-driven, clean, no empty dicts
+    # ════════════════════════════════════════════════════════════════════
+    strategy = ensure_list(_get("strategy") or _get("legal_strategy"))
     strategy = [s for s in strategy if s and (not isinstance(s, dict) or any(s.values()))]
+
+    # Inject condition-specific steps regardless of existing strategy
+    _strat_text_pool = " ".join(
+        s.get("step", str(s)) if isinstance(s, dict) else str(s) for s in strategy
+    ).lower()
+
+    if not notice_sent and "legal notice" not in _strat_text_pool:
+        strategy.insert(0, {
+            "step": "Send a statutory legal notice to the accused within 30 days of dishonour.",
+            "priority": "CRITICAL",
+            "reason": (
+                "Section 138(b) NI Act mandates a written demand notice before filing a "
+                "complaint. This is a strict procedural prerequisite and cannot be waived."
+            )
+        })
+
+    if not debt_proven and "documentary evidence" not in _strat_text_pool:
+        strategy.append({
+            "step": "Collect and organise documentary evidence to establish the legally enforceable debt.",
+            "priority": "HIGH",
+            "reason": (
+                "The Section 139 presumption in favour of the complainant can be rebutted "
+                "by the accused. A written agreement, invoice, or loan acknowledgment "
+                "significantly strengthens the evidentiary foundation."
+            )
+        })
+
+    if cheque_present and "section 138" not in _strat_text_pool:
+        strategy.append({
+            "step": "File a complaint under Section 138 NI Act before the appropriate Magistrate once all statutory conditions are met.",
+            "priority": "HIGH" if notice_sent else "MEDIUM",
+            "reason": (
+                "Once the 15-day notice period expires without payment, the complaint must "
+                "be filed within 1 month as required by Section 142 NI Act."
+            )
+        })
+
+    # Score-based base strategy if still empty
     if not strategy:
-        # Score-aware fallback strategy steps
-        if score >= 70:
+        if score >= 65:
             strategy = [
-                {"step": "Proceed with complaint filing under Section 138 NI Act", "priority": "HIGH",
-                 "reason": "Strong case — all procedural requirements appear satisfied"},
-                {"step": "Compile complete documentary evidence bundle", "priority": "HIGH",
-                 "reason": "Strengthen evidentiary record before first hearing"},
-                {"step": "Prepare witness list and examination-in-chief affidavit", "priority": "MEDIUM",
-                 "reason": "Proactive preparation reduces hearing delays"}
-            ]
-        elif score >= 45:
-            strategy = [
-                {"step": "Strengthen evidence before filing complaint", "priority": "HIGH",
-                 "reason": "Moderate case — gaps in documentation must be addressed first"},
-                {"step": "Obtain missing procedural documents (dishonour memo, notice proof)", "priority": "HIGH",
-                 "reason": "Procedural compliance is mandatory under Section 138"},
-                {"step": "Evaluate settlement negotiation with accused", "priority": "MEDIUM",
-                 "reason": "Risk-adjusted settlement may be preferable to protracted litigation"}
+                {"step": "Proceed with complaint filing under Section 138 NI Act.",
+                 "priority": "HIGH",
+                 "reason": "The available evidence supports proceeding to the Magistrate's court."},
+                {"step": "Compile a complete evidence bundle including cheque, dishonour memo, and notice proof.",
+                 "priority": "HIGH",
+                 "reason": "A well-organised evidence bundle reduces procedural delays at first hearing."},
             ]
         else:
             strategy = [
-                {"step": "Address all critical defects before filing", "priority": "CRITICAL",
-                 "reason": "Weak case — filing now risks dismissal in limine"},
-                {"step": "Consult senior legal counsel for case viability review", "priority": "CRITICAL",
-                 "reason": "Independent expert review essential before proceeding"},
-                {"step": "Consider alternative dispute resolution or settlement", "priority": "HIGH",
-                 "reason": "Litigation risk outweighs potential recovery at current case strength"}
+                {"step": "Address all statutory compliance gaps before filing the complaint.",
+                 "priority": "CRITICAL",
+                 "reason": "Filing prematurely on an incomplete record risks dismissal at the threshold stage."},
+                {"step": "Consult a qualified advocate experienced in NI Act matters to review the case.",
+                 "priority": "HIGH",
+                 "reason": "Professional legal review will identify remedial steps and optimise the filing strategy."},
             ]
 
-    recommended_actions = (ensure_list(output.get("recommended_actions")) or
-                           ensure_list(cs.get("recommended_actions")))
-    if not recommended_actions:
-        recommended_actions = ["No actions available"]
+    # ════════════════════════════════════════════════════════════════════
+    # 8. RECOMMENDED ACTIONS
+    # ════════════════════════════════════════════════════════════════════
+    recommended_actions = ensure_list(_get("recommended_actions"))
+    if not recommended_actions or recommended_actions == ["No actions available"]:
+        recommended_actions = []
+        if not notice_sent:
+            recommended_actions.append(
+                "Draft and dispatch a statutory demand notice via registered post/speed post "
+                "within 30 days of the date of dishonour."
+            )
+        if not debt_proven:
+            recommended_actions.append(
+                "Obtain or reconstruct documentary evidence of the underlying debt: "
+                "loan agreement, invoices, bank transfer records, or debt acknowledgment."
+            )
+        if cheque_present and notice_sent:
+            recommended_actions.append(
+                "Monitor the 15-day notice period and, upon expiry without payment, "
+                "file the complaint within 1 month to preserve the limitation period."
+            )
+        if sig_disputed:
+            recommended_actions.append(
+                "Engage a qualified handwriting expert and preserve all original cheque "
+                "specimens for forensic analysis."
+            )
+        if not recommended_actions:
+            recommended_actions.append(
+                "Maintain and organise all case documentation, and consult a qualified "
+                "advocate before taking further legal steps."
+            )
 
-    # ── 7. Defence ────────────────────────────────────────────────────────────
-    defence = (ensure_list(output.get("defence")) or
-               ensure_list(cs.get("defences_ranked")))
-    defence_risk = (ensure_string(output.get("defence_risk"), "") or
-                    ensure_string(cs.get("defence_risk"), "UNKNOWN"))
+    # ════════════════════════════════════════════════════════════════════
+    # 9. DEFENCE ANALYSIS
+    # ════════════════════════════════════════════════════════════════════
+    defence = ensure_list(_get("defence") or _get("predicted_defences") or cs.get("defences_ranked"))
+    defence_risk = ensure_string(_get("defence_risk") or cs.get("defence_risk"), "MEDIUM")
 
-    # ── 8. Semantic analysis ─────────────────────────────────────────────────
-    # Prefer the fully-enriched semantic_analysis dict already in output.
-    raw_semantic = output.get("semantic_analysis")
+    if not defence:
+        _rt_text = " ".join(str(r).lower() for r in reasoning_trace)
+        if "security cheque" in _rt_text or cheque_present:
+            defence.append({
+                "defence": "Cheque issued as security, not for discharge of a legally enforceable debt.",
+                "probability": "MEDIUM",
+                "counter": "Produce written agreement or correspondence confirming the transaction purpose."
+            })
+        if not debt_proven:
+            defence.append({
+                "defence": "Denial of legally enforceable debt — rebuttal of Section 139 presumption.",
+                "probability": "HIGH",
+                "counter": "Establish debt with documentary evidence predating the cheque issuance."
+            })
+        if not notice_sent:
+            defence.append({
+                "defence": "Non-receipt or defect in statutory demand notice — fatal procedural bar.",
+                "probability": "HIGH",
+                "counter": "Ensure notice is properly served and proof of delivery is preserved."
+            })
+        if sig_disputed:
+            defence.append({
+                "defence": "Signature on cheque is disputed — alleged forgery or misuse.",
+                "probability": "HIGH",
+                "counter": "Engage handwriting expert; cross-examine on specimen signatures."
+            })
+        if not defence:
+            defence.append({
+                "defence": "Technical procedural objections to complaint maintainability.",
+                "probability": "LOW",
+                "counter": "Ensure strict compliance with all procedural requirements under Section 138-142 NI Act."
+            })
+
+    # ════════════════════════════════════════════════════════════════════
+    # 10. SEMANTIC ANALYSIS
+    # ════════════════════════════════════════════════════════════════════
+    raw_semantic = _get("semantic_analysis")
     if isinstance(raw_semantic, dict) and raw_semantic:
         semantic_analysis = raw_semantic
-        # Guarantee concepts_detected key exists
         if "concepts_detected" not in semantic_analysis:
             semantic_analysis["concepts_detected"] = ensure_list(
-                semantic_analysis.get("concepts") or cs.get("concepts_detected")
+                semantic_analysis.get("concepts") or cs.get("concepts_detected", [])
             )
     else:
-        concepts_from_cs = ensure_list(cs.get("concepts_detected"))
-        semantic_analysis = {
-            "concepts_detected": concepts_from_cs,
-            "total_concepts": len(concepts_from_cs),
-            "status": "analyzed"
-        }
-    # Always keep total_concepts in sync with actual list length
+        concepts_from_cs = ensure_list(cs.get("concepts_detected", []))
+        semantic_analysis = {"concepts_detected": concepts_from_cs, "status": "analyzed"}
+
     _concepts = ensure_list(semantic_analysis.get("concepts_detected"))
     semantic_analysis["total_concepts"] = len(_concepts)
-    # Add human-readable concept_names list for frontend display
     semantic_analysis["concept_names"] = [
         ensure_dict(c).get("concept", str(c)) if isinstance(c, dict) else str(c)
         for c in _concepts
     ]
 
-    # ── 9. Reasoning & contradictions ────────────────────────────────────────
-    reasoning = (ensure_list(output.get("reasoning")) or
-                 ensure_list(cs.get("score_reasoning_trace")))
-    contradictions = (ensure_list(output.get("contradictions")) or
-                      ensure_list(cs.get("contradictions")))
-
-    # ── STEP 3: DEFAULT REASONING GENERATION ─────────────────────────────────
-    # reasoning_trace must ALWAYS exist — generate base trace from structured
-    # case signals if the engine produced nothing.
-    if not reasoning:
-        _cd = output  # output carries case_data fields via standardize_output merge
-        _r = []
-        if _cd.get("cheque_present"):
-            _amt = _cd.get("cheque_amount", 0)
-            _amt_str = f"Rs. {_amt:.0f}" if ensure_number(_amt) > 0 else "a stated amount"
-            _r.append(f"Cheque for {_amt_str} issued — establishes financial liability under NI Act")
-        if _cd.get("dishonour_memo") or _cd.get("dishonour_date"):
-            _r.append("Cheque dishonour documented — foundational element of Section 138 offence satisfied")
-        if _cd.get("notice_sent"):
-            _r.append("Legal notice served on accused — mandatory statutory requirement under S.138(b) complied with")
-        else:
-            _r.append("Legal notice not yet served — Section 138 complaint cannot be filed until notice is sent and 15-day period expires")
-        if _cd.get("debt_proven"):
-            _r.append("Underlying legally enforceable debt established — Section 139 presumption in complainant's favour")
-        else:
-            _r.append("Legally enforceable debt requires further documentation — defence may raise S.139 rebuttal")
-        if _cd.get("signature_disputed"):
-            _r.append("Signature disputed by accused — handwriting expert evidence may be required to rebut")
-        _evid = ensure_list(_cd.get("evidence_available", []))
-        _r.append(f"Evidence quality assessed: {len(_evid)} item(s) available ({', '.join(str(e) for e in _evid[:4])})")
-        _r.append(f"Case strength derived from structured inputs — overall score: {round(score, 1)}/100")
-        reasoning = _r
-        print(f"[BUILD_RESPONSE v15.4] Generated {len(reasoning)} base reasoning items from structured fields")
-
-    # ════════════════════════════════════════════════════════════════════════
-    # 🔥 MAP REASONING → STRENGTHS / WEAKNESSES  (v15.3 + v15.4 upgrade)
-    # ════════════════════════════════════════════════════════════════════════
-    reasoning_trace = ensure_list(reasoning)
-    strengths: list = []
-    weaknesses: list = []
-
-    print(f"\n{'=' * 100}")
-    print("🔥 v15.4 — REASONING → STRENGTHS/WEAKNESSES MAPPING")
-    print(f"{'=' * 100}")
-    print(f"DEBUG → reasoning_trace length: {len(reasoning_trace)}")
-
-    # Map reasoning items to strengths / weaknesses by keyword signal
-    for r in reasoning_trace:
-        text = str(r).lower()
-        if any(w in text for w in ["strong", "evidence", "valid", "proven", "documented",
-                                    "present", "complied", "proper", "available", "signed",
-                                    "establishes", "satisfied", "served", "presumption",
-                                    "advantage", "favorable", "supporting", "obtained"]):
-            strengths.append({"title": str(r), "source": "engine_reasoning"})
-        if any(w in text for w in ["missing", "weak", "defect", "risk", "not sent",
-                                    "not yet", "not proven", "disputed", "lacking",
-                                    "insufficient", "absent", "penalty", "deduction",
-                                    "negative", "cannot be filed", "requires further",
-                                    "rebuttal", "required"]):
-            weaknesses.append({"title": str(r), "source": "engine_reasoning"})
-
-    # ── STEP 5: EVIDENCE-BASED BOOSTING ──────────────────────────────────────
-    # Add specific strengths directly from evidence list signals,
-    # independent of free-text reasoning quality.
-    _evidence_list = ensure_list(output.get("evidence_available") or cs.get("evidence_available") or [])
-    _strength_titles = {s["title"] if isinstance(s, dict) else str(s) for s in strengths}
-
-    _evidence_strength_map = {
-        "cheque":               "Negotiable instrument (cheque) present — core evidence under Section 138 NI Act",
-        "bank_memo":            "Bank dishonour memo obtained — documentary proof of cheque dishonour",
-        "documentary_evidence": "Documentary evidence available — strengthens evidentiary basis of case",
-        "legal_notice":         "Proof of legal notice available — procedural compliance demonstrated",
-        "signed_agreement":     "Signed agreement on record — establishes legally enforceable debt",
-        "bank_statement":       "Bank statements available — corroborates transaction history",
-        "dishonour_memo":       "Official dishonour memo present — satisfies return memo requirement",
-        "registered_agreement": "Registered agreement available — strongest form of debt documentation",
-    }
-    for ev_key, ev_title in _evidence_strength_map.items():
-        if ev_key in _evidence_list and ev_title not in _strength_titles:
-            strengths.append({"title": ev_title, "source": "evidence_boosting"})
-            _strength_titles.add(ev_title)
-
-    # ── STEP 6: INTELLIGENT (NOT GENERIC) FALLBACKS ───────────────────────────
-    # Replace generic "no strong points" with specific legal statements
-    if not strengths:
-        _fallbacks = []
-        if output.get("cheque_present") or cs.get("score", 0) > 0:
-            _fallbacks.append({
-                "title": "Cheque presence provides foundational legal strength under Section 138 NI Act",
-                "source": "intelligent_fallback"
-            })
-        else:
-            _fallbacks.append({
-                "title": "Case requires additional documentary evidence to establish legal strength",
-                "source": "intelligent_fallback"
-            })
-        strengths = _fallbacks
-
-    if not weaknesses:
-        _weak_fallbacks = []
-        if not (output.get("debt_proven") or cs.get("score", 0) >= 70):
-            _weak_fallbacks.append({
-                "title": "Lack of debt proof documentation may weaken enforceability under Section 139",
-                "source": "intelligent_fallback"
-            })
-        if not output.get("notice_sent"):
-            _weak_fallbacks.append({
-                "title": "Absence of legal notice is a statutory bar to filing complaint under Section 138",
-                "source": "intelligent_fallback"
-            })
-        if not _weak_fallbacks:
-            # Strong case — flag predictive defence risk
-            _weak_fallbacks.append({
-                "title": "Accused may raise security cheque or part-payment defence — prepare counter-evidence",
-                "source": "intelligent_fallback"
-            })
-        weaknesses = _weak_fallbacks
-
-    # ── STEP 9: CASE-DATA-AWARE SPECIFIC WEAKNESSES ───────────────────────────
-    # Even when reasoning-derived weaknesses exist, add specific ones
-    # from direct case-data signals that reasoning might not have captured.
-    _weakness_titles = {w["title"] if isinstance(w, dict) else str(w) for w in weaknesses}
-    _case_out = ensure_dict(output)
-
-    if not _case_out.get("notice_sent"):
-        _t = "Legal notice not sent — Section 138 complaint is not yet maintainable"
-        if _t not in _weakness_titles:
-            weaknesses.append({"title": _t, "severity": "CRITICAL", "source": "case_signal"})
-
-    if not _case_out.get("debt_proven"):
-        _t = "Legally enforceable debt not sufficiently documented — defence will challenge under Section 139"
-        if _t not in _weakness_titles:
-            weaknesses.append({"title": _t, "severity": "HIGH", "source": "case_signal"})
-
-    _cheque_num = ensure_string(_case_out.get("cheque_number", ""), "")
-    if _cheque_num.upper() in ("UNKNOWN", "", "N/A"):
-        _t = "Cheque number/details incomplete — affects instrument identification in court"
-        if _t not in _weakness_titles:
-            weaknesses.append({"title": _t, "severity": "MEDIUM", "source": "case_signal"})
-
-    if _case_out.get("signature_disputed"):
-        _t = "Signature on cheque disputed — handwriting expert evidence will be required"
-        if _t not in _weakness_titles:
-            weaknesses.append({"title": _t, "severity": "HIGH", "source": "case_signal"})
-
-    print(f"DEBUG → strengths count: {len(strengths)}")
-    print(f"DEBUG → weaknesses count: {len(weaknesses)}")
-    if strengths:
-        print(f"DEBUG → First strength: {strengths[0]}")
-    if weaknesses:
-        print(f"DEBUG → First weakness: {weaknesses[0]}")
-    print(f"{'=' * 100}\n")
-
-    # ── DEFENCE GENERATION (from reasoning signals) ──────────────────────────
-    if not defence:
-        _rt_text = " ".join(str(r).lower() for r in reasoning_trace)
-        if "cheque" in _rt_text:
-            defence.append({
-                "defence": "Cheque given as security — not towards discharge of legally enforceable debt",
-                "probability": "MEDIUM", "source": "engine_analysis"
-            })
-        if "debt" in _rt_text and ("not proven" in _rt_text or "requires further" in _rt_text):
-            defence.append({
-                "defence": "Denial of legally enforceable debt — S.139 presumption rebuttal",
-                "probability": "HIGH", "source": "engine_analysis"
-            })
-        if "notice" in _rt_text and ("not" in _rt_text or "cannot" in _rt_text):
-            defence.append({
-                "defence": "Non-receipt / defective legal notice — fatal procedural defect",
-                "probability": "HIGH", "source": "engine_analysis"
-            })
-        if not defence:
-            defence = [{"defence": "Technical procedural defects in complaint",
-                        "probability": "LOW", "source": "fallback"}]
-
-    # ── STEP 7: STRATEGY GENERATION from case conditions ─────────────────────
-    # Applied on top of the score-based fallback — inject condition-specific
-    # steps that are more specific than score alone can produce.
-    _strat_titles = {s.get("step", "") if isinstance(s, dict) else str(s) for s in strategy}
-    _out = ensure_dict(output)
-    if not _out.get("notice_sent") and "Send legal notice" not in " ".join(_strat_titles):
-        strategy.insert(0, {
-            "step": "Send legal notice within statutory timeline (30 days of dishonour)",
-            "priority": "CRITICAL",
-            "reason": "Section 138 complaint cannot be filed without prior notice — this is mandatory"
-        })
-    if not _out.get("debt_proven") and "documentary evidence" not in " ".join(_strat_titles).lower():
-        strategy.append({
-            "step": "Collect documentary evidence to establish legally enforceable debt",
-            "priority": "HIGH",
-            "reason": "Section 139 presumption can be rebutted — written proof of debt is essential"
-        })
-    if _out.get("cheque_present") and "Section 138" not in " ".join(_strat_titles):
-        strategy.append({
-            "step": "Proceed under Section 138 NI Act once all conditions are satisfied",
-            "priority": "HIGH",
-            "reason": "Cheque bounce offence is established — file complaint in jurisdictionally correct court"
-        })
-
-    # ── STEP 8: Analysis confidence — pull from input or derive ──────────────
-    analysis_confidence = (
-        ensure_string(output.get("analysis_confidence"), "") or
-        ensure_string(cs.get("analysis_confidence"), "")
+    # ════════════════════════════════════════════════════════════════════
+    # 11. ANALYSIS CONFIDENCE (STEP 7)
+    # ════════════════════════════════════════════════════════════════════
+    analysis_confidence = ensure_string(
+        _get("analysis_confidence") or cs.get("analysis_confidence"), ""
     )
     if not analysis_confidence:
         _sig = sum([
-            bool(_out.get("cheque_present")),
-            bool(_out.get("notice_sent")),
-            bool(_out.get("debt_proven")),
-            bool(_out.get("dishonour_memo")),
-            bool(ensure_number(_out.get("cheque_amount", 0)) > 0),
-            bool(_out.get("cheque_date")),
-            bool(_out.get("dishonour_date")),
-            len(reasoning_trace) >= 3,
+            cheque_present,
+            notice_sent,
+            debt_proven,
+            dishonour_memo,
+            cheque_amount > 0,
+            bool(cheque_date),
+            bool(dishonour_date),
+            len(reasoning_trace) >= 4,
+            len(_concepts) >= 2,
+            len(evidence_list) >= 2,
         ])
-        if _sig >= 6:
+        if _sig >= 7:
             analysis_confidence = "HIGH"
-        elif _sig >= 3:
+        elif _sig >= 4:
             analysis_confidence = "MEDIUM"
         else:
             analysis_confidence = "LOW"
 
-    # ── 10. Assemble final response ──────────────────────────────────────────
-    final_response = {
-        "score": round(score, 1),
-        "verdict": verdict,
-        "risk_level": defence_risk,
+    # ════════════════════════════════════════════════════════════════════
+    # 12. TIMELINE, DRAFT, LEGAL ANALYSIS, CONTRADICTIONS
+    # ════════════════════════════════════════════════════════════════════
+    timeline = ensure_list(_get("timeline") or cs.get("timeline"))
+    if not timeline and cheque_date:
+        timeline = [
+            {"event": "Cheque issued", "date": cheque_date},
+        ]
+        if dishonour_date:
+            timeline.append({"event": "Cheque dishonoured by bank", "date": dishonour_date})
+        if notice_sent and notice_date:
+            timeline.append({"event": "Statutory demand notice served", "date": notice_date})
+    if not timeline:
+        timeline = [{"event": "Insufficient date information to construct timeline.", "date": "N/A"}]
 
-        "issues": issues,
-        "strengths": strengths,
-        "weaknesses": weaknesses,
+    draft = ensure_string(_get("draft"), "")
+    if not draft:
+        _amt_d = f"Rs. {cheque_amount:.0f}" if cheque_amount else "[Amount]"
+        draft = (
+            f"COMPLAINT UNDER SECTION 138, NEGOTIABLE INSTRUMENTS ACT, 1881\n\n"
+            f"Before the Jurisdictionally Competent Magistrate\n\n"
+            f"Complainant: {plaintiff_name}\nAccused:      {defendant_name}\n\n"
+            f"BRIEF FACTS:\nThe accused issued a cheque for {_amt_d} in favour of the complainant "
+            f"towards discharge of a legally enforceable liability. The said cheque was presented "
+            f"for encashment and was returned dishonoured by the drawee bank. "
+            f"{'A statutory demand notice was served upon the accused as required under Section 138(b). ' if notice_sent else 'A statutory demand notice is yet to be served upon the accused. '}"
+            f"The accused has failed to make payment of the cheque amount within the stipulated period.\n\n"
+            f"SCORE: {round(score, 1)}/100 | CONFIDENCE: {analysis_confidence}\n\n"
+            f"PRAYER:\nThe complainant respectfully prays that this Hon'ble Court be pleased to "
+            f"take cognisance of the offence under Section 138 NI Act and grant appropriate relief."
+        )
 
-        # ── CONFIDENCE (STEP 8) ──
-        "analysis_confidence": analysis_confidence,
+    legal_analysis = ensure_string(_get("legal_analysis"), "")
+    if not legal_analysis or legal_analysis == "Not available":
+        legal_analysis = (
+            f"Based on the available inputs, this matter presents as a Section 138 NI Act "
+            f"(cheque dishonour) case. The case is analytically {_score_label(score)}, "
+            f"with an analysis confidence of {analysis_confidence}. "
+            f"{'The mandatory legal notice has been served, satisfying a critical procedural requirement. ' if notice_sent else 'The mandatory legal notice has not yet been served, which is a critical gap that must be addressed before filing. '}"
+            f"{'The underlying debt has been established. ' if debt_proven else 'The legally enforceable nature of the debt requires further documentation. '}"
+            f"The identified defence risks include: "
+            f"{'; '.join(d.get('defence', str(d)) if isinstance(d, dict) else str(d) for d in defence[:2])}."
+        )
 
-        # ── GUARANTEED NEVER-EMPTY ──
-        "timeline": timeline,
-        "legal_strategy": strategy,
-        "strategy": strategy,
-        "recommended_actions": recommended_actions,
+    contradictions = ensure_list(_get("contradictions") or cs.get("contradictions"))
 
-        # ── DEFENCE ──
-        "predicted_defences": defence,
-        "defence": defence,
-        "defence_risk": defence_risk,
+    # ════════════════════════════════════════════════════════════════════
+    # 13. EXECUTIVE SUMMARY (STEP 5 — mandatory at top of every response)
+    # ════════════════════════════════════════════════════════════════════
+    _key_strength = strengths[0]["title"] if strengths else "Cheque presence establishes threshold requirement."
+    _key_weakness = weaknesses[0]["title"] if weaknesses else "No critical weaknesses identified."
+    _next_step = strategy[0].get("step", str(strategy[0])) if strategy else "Consult a qualified legal advocate."
 
-        # ── SEMANTIC ──
-        "semantic_analysis": semantic_analysis,
-
-        # ── REASONING / CONTRADICTIONS ──
-        "reasoning_trace": reasoning,
-        "reasoning": reasoning,
-        "contradictions": contradictions,
-
-        # ── DRAFT / LEGAL ANALYSIS ──
-        "draft": draft,
-        "legal_analysis": ensure_string(output.get("legal_analysis"), "Not available") or "Not available",
-
-        # ── EXTRA FIELDS (backward-compat) ──
-        "next_action": ensure_string(output.get("next_action"), "") or "Consult with legal advisor",
-        "evidence_assessment": ensure_dict(output.get("evidence_assessment")),
-        "consistency_metadata": ensure_dict(output.get("consistency_metadata")),
-        "warnings": ensure_list(output.get("warnings")),
+    summary = {
+        "case_overview": (
+            f"Based on the information provided, this {_score_label(score)} Section 138 NI Act matter "
+            f"involves a dishonoured cheque issued by {defendant_name} in favour of {plaintiff_name}. "
+            f"{'All mandatory statutory conditions appear to have been met. ' if notice_sent and debt_proven else ''}"
+            f"{'A critical procedural step — the statutory demand notice — remains outstanding. ' if not notice_sent else ''}"
+            f"The analysis reflects an overall case strength score of {round(score, 1)}/100 "
+            f"with {analysis_confidence.lower()} confidence based on the completeness of available data."
+        ),
+        "key_risk": _key_weakness,
+        "key_strength": _key_strength,
+        "recommended_action": _next_step,
     }
 
-    # ── 11. Debug logging ────────────────────────────────────────────────────
+    # ════════════════════════════════════════════════════════════════════
+    # 14. DISCLAIMER (STEP 10 — mandatory on every response)
+    # ════════════════════════════════════════════════════════════════════
+    DISCLAIMER = (
+        "This analysis is AI-assisted and does not constitute legal advice. "
+        "The assessments, risk evaluations, and strategic recommendations provided "
+        "herein are based solely on the information supplied and are intended for "
+        "informational purposes only. Users should consult a qualified legal "
+        "professional before taking any action in reliance on this report. "
+        "JUDIQ and its operators accept no liability for decisions made on the "
+        "basis of this analysis."
+    )
+
+    # ════════════════════════════════════════════════════════════════════
+    # 15. ASSEMBLE & LOG (STEP 11 — all 11 fields always present)
+    # ════════════════════════════════════════════════════════════════════
+    final_response = {
+        # ── TOP-LEVEL METADATA ──
+        "score": round(score, 1),
+        "analysis_confidence": analysis_confidence,
+
+        # ── STEP 5: Executive Summary ──
+        "summary": summary,
+
+        # ── CORE ANALYSIS FIELDS ──
+        "strengths":          strengths,
+        "weaknesses":         weaknesses,
+        "issues":             issues,
+
+        # ── STRATEGY & ACTIONS (STEP 8) ──
+        "strategy":           strategy,
+        "legal_strategy":     strategy,   # alias for frontend compatibility
+        "recommended_actions": recommended_actions,
+
+        # ── DEFENCE ANALYSIS ──
+        "predicted_defences": defence,
+        "defence":            defence,    # alias for frontend compatibility
+        "defence_risk":       defence_risk,
+
+        # ── SEMANTIC ANALYSIS ──
+        "semantic_analysis":  semantic_analysis,
+
+        # ── REASONING ──
+        "reasoning_trace":    reasoning_trace,
+        "reasoning":          reasoning_trace,  # alias for frontend compatibility
+        "contradictions":     contradictions,
+
+        # ── TIMELINE ──
+        "timeline":           timeline,
+
+        # ── DOCUMENTS ──
+        "draft":              draft,
+        "legal_analysis":     legal_analysis,
+
+        # ── STEP 9: Missing data transparency ──
+        "missing_data_notes": missing_data_notes,
+
+        # ── BACKWARD COMPAT FIELDS ──
+        "verdict":            (
+            "STRONG" if score >= 75 else
+            "MODERATE" if score >= 55 else
+            "WEAK" if score >= 35 else "VERY_WEAK"
+        ),
+        "risk_level":         defence_risk,
+        "next_action":        _next_step,
+        "evidence_assessment": ensure_dict(_get("evidence_assessment")),
+        "consistency_metadata": ensure_dict(_get("consistency_metadata")),
+        "warnings":           ensure_list(_get("warnings")),
+
+        # ── STEP 10: Disclaimer (mandatory) ──
+        "disclaimer": DISCLAIMER,
+    }
+
+    # ── Debug log ──────────────────────────────────────────────────────
     print("\n" + "=" * 100)
-    print("🔥 FINAL RESPONSE BUILDER v15.4 - OUTPUT VERIFICATION")
+    print("🔥 BUILD_FINAL_RESPONSE v15.5 — OUTPUT VERIFICATION")
     print("=" * 100)
     print(f"✅ Score:               {final_response['score']}")
-    print(f"✅ Verdict:             {final_response['verdict']}")
     print(f"✅ Confidence:          {final_response['analysis_confidence']}")
-    print(f"✅ Issues count:        {len(final_response['issues'])}")
-    print(f"✅ Strengths count:     {len(final_response['strengths'])}")
-    print(f"✅ Weaknesses count:    {len(final_response['weaknesses'])}")
-    print(f"✅ Timeline count:      {len(final_response['timeline'])}")
-    print(f"✅ Strategy count:      {len(final_response['strategy'])}")
-    print(f"✅ Actions count:       {len(final_response['recommended_actions'])}")
-    print(f"✅ Defence count:       {len(final_response['defence'])}")
-    print(f"✅ Defence risk:        {final_response['defence_risk']}")
-    print(f"✅ Semantic concepts:   {len(ensure_list(final_response['semantic_analysis'].get('concepts_detected')))}")
-    print(f"✅ Concept names:       {final_response['semantic_analysis'].get('concept_names', [])}")
-    print(f"✅ Reasoning count:     {len(final_response['reasoning'])}")
-    print(f"✅ Contradictions:      {len(final_response['contradictions'])}")
-    print(f"✅ Draft length:        {len(final_response['draft'])} chars")
-    print(f"✅ Legal analysis:      {len(final_response['legal_analysis'])} chars")
+    print(f"✅ Summary present:     {bool(final_response['summary'].get('case_overview'))}")
+    print(f"✅ Strengths:           {len(final_response['strengths'])}")
+    print(f"✅ Weaknesses:          {len(final_response['weaknesses'])}")
+    print(f"✅ Issues:              {len(final_response['issues'])}")
+    print(f"✅ Strategy steps:      {len(final_response['strategy'])}")
+    print(f"✅ Actions:             {len(final_response['recommended_actions'])}")
+    print(f"✅ Defence items:       {len(final_response['defence'])}")
+    print(f"✅ Semantic concepts:   {semantic_analysis['total_concepts']}")
+    print(f"✅ Concept names:       {semantic_analysis.get('concept_names', [])}")
+    print(f"✅ Reasoning items:     {len(final_response['reasoning_trace'])}")
+    print(f"✅ Timeline items:      {len(final_response['timeline'])}")
+    print(f"✅ Missing data notes:  {len(final_response['missing_data_notes'])}")
+    print(f"✅ Disclaimer present:  {bool(final_response['disclaimer'])}")
     print("=" * 100 + "\n")
 
     return final_response
