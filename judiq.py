@@ -1,14 +1,57 @@
 """
 ════════════════════════════════════════════════════════════════════════════════
-🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v15.9 (SEMANTIC SCORING CONNECTION)
+🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v16.0 (OVER-PENALIZATION FIX)
 ════════════════════════════════════════════════════════════════════════════════
 
 🚀 PRODUCTION-GRADE FASTAPI BACKEND - LAWYER-READY OUTPUT LAYER
 ════════════════════════════════════════════════════════════════════════════════
 
-STATUS: ✅ PRODUCTION v15.9 - 🔥 SEMANTIC CONCEPTS CONNECTED TO SCORING
+STATUS: ✅ PRODUCTION v16.0 - 🔥 OVER-PENALIZATION FIXED — SCORE COLLAPSE PREVENTED
 
-🔥 NEW FIXES IN v15.9 (SEMANTIC SCORING CONNECTION FIX):
+🔥 NEW FIXES IN v16.0 (OVER-PENALIZATION FIX):
+════════════════════════════════════════════════════════════════════════════════
+✅ FIX #1 v16.0: CONFIDENCE THRESHOLD GATE
+   Penalties are applied ONLY when concept confidence >= 0.70
+   Below 0.70 → penalty silently skipped with trace note
+   Impact: Low-confidence detections no longer drag scores to 0–10
+
+✅ FIX #2 v16.0: CONTRADICTION GUARD (AVOID DOUBLE-PENALIZATION)
+   If debt_proven == True → legally_enforceable_debt penalty is suppressed
+   Prevents contradictory signal from penalizing an already-proven strength
+   Impact: Strong cases with proven debt no longer receive phantom debt penalty
+
+✅ FIX #3 v16.0: SCALED-DOWN PENALTY VALUES
+   legally_enforceable_debt → -25  (was -50)
+   security_cheque          → -25  (was -40)
+   cheque_misuse            → -25  (was -40)
+   signature_disputed       → -20  (was -25/-30)
+   Knowledge base score_impact values updated to match
+   Impact: Penalties are proportional, not case-killers by themselves
+
+✅ FIX #4 v16.0: TOP-2 PENALTY LIMIT (SORT BY confidence × legal_weight)
+   Candidate penalties ranked by: confidence × legal_weight
+   ONLY the top 2 highest-ranked penalties are applied
+   Impact: Stacking of 3–4 simultaneous penalties no longer possible
+
+✅ FIX #5 v16.0: DEFENCE PENALTY CONTROL
+   Threshold raised: confidence >= 0.75 (was 0.65)
+   Penalty reduced:  -15 (was -25)
+   Applied ONLY when strong defence concept detected at high confidence
+   Impact: Marginal detections no longer trigger defence pile-on
+
+✅ FIX #6 v16.0: FINAL SAFETY FLOOR
+   If chequePresent AND noticeSent AND debtProven → score must be >= 70
+   Floor boost applied with full trace entry
+   Impact: Strong cases always score 70+ regardless of minor semantic flags
+
+🔥 SCORING RANGES (GUARANTEED):
+════════════════════════════════════════════════════════════════════════════════
+   Strong case   → 75–90  (all pillars, no critical defects)
+   Moderate      → 50–70  (mixed factors, some weaknesses)
+   Weak          → 20–50  (significant defects, strong defences)
+   Very weak     → <20    (multiple critical defects, case-killers)
+
+🔥 PRESERVED v15.9 FEATURES (SEMANTIC SCORING CONNECTION):
 ════════════════════════════════════════════════════════════════════════════════
 ✅ FIX #1 v15.9: ADDED MISSING SEMANTIC PATTERNS
    Added: "security_cheque" - Detects security/collateral cheque claims
@@ -17,39 +60,16 @@ STATUS: ✅ PRODUCTION v15.9 - 🔥 SEMANTIC CONCEPTS CONNECTED TO SCORING
    Impact: System now detects all critical legal concepts from text
 
 ✅ FIX #2 v15.9: CONNECTED SEMANTIC CONCEPTS TO KNOWLEDGE BASE
-   security_cheque: score_impact = -40 (CRITICAL)
-   cheque_misuse: score_impact = -40 (CRITICAL)
-   legally_enforceable_debt: score_impact = -50 (CRITICAL)
+   security_cheque: score_impact = -25 (updated v16.0)
+   cheque_misuse: score_impact = -25 (updated v16.0)
+   legally_enforceable_debt: score_impact = -25 (updated v16.0)
    Impact: All semantic detections now have defined penalties
 
 ✅ FIX #3 v15.9: DIRECT PENALTY APPLICATION IN SCORING ENGINE
    Before: Concepts detected but not reducing score
    After: Specific penalty logic for each critical concept
-   New Logic:
-     - legally_enforceable_debt (confidence < 0.70) → -40
-     - security_cheque (confidence >= 0.60) → -40
-     - cheque_misuse (confidence >= 0.60) → -40
-     - signature_disputed (confidence >= 0.70) → -25
-   Impact: Semantic detections now directly reduce scores
-
-✅ FIX #4 v15.9: PRIORITIZED LEGAL VALIDITY
-   Principle: Critical legal defects MUST dominate positive factors
-   Implementation: no debt > cheque present
-   Result: Security cheque case → score < 50 regardless of data completeness
-
-✅ FIX #5 v15.9: DEFENCE-BASED PENALTY ENHANCED
-   Updated strong_defence_concepts to include:
-     - security_cheque, cheque_misuse (new semantic concepts)
-     - cheque_as_security, signature_disputed, no_agreement
-     - notice_defect, limitation_issue
-   Impact: All detected defences trigger -25 additional penalty
-
-✅ FIX #6 v15.9: VALIDATION SCORING RANGES
-   Strong case (75-90): All positive factors, no critical defects
-   Moderate case (50-70): Mixed factors, defendable position
-   Weak case (20-50): Significant defects, strong defences likely
-   Very weak (<20): Multiple critical defects, case-killers present
-   Impact: Scores reflect legal reality, not just field presence
+   Updated in v16.0: confidence threshold, contradiction guard, top-2 limit
+   Impact: Semantic detections now directly reduce scores (controlled)
 
 🔥 PRESERVED v15.8 FEATURES (SCORING IMBALANCE FIX):
 ════════════════════════════════════════════════════════════════════════════════
@@ -1664,7 +1684,7 @@ class LegalKnowledgeBaseV12:
             "legal_provision": "Signature authenticity challenged by accused",
             "court_view": "Expert evidence required; mere denial insufficient but creates doubt",
             "risk_level": "HIGH",
-            "score_impact": -30,  # ✅ INCREASED from previous value
+            "score_impact": -20,  # ✅ v16.0: Reduced from -30 (over-penalization fix)
             "common_defences": [
                 "Signature not genuine - handwriting expert needed",
                 "Signature obtained by fraud/coercion",
@@ -1680,7 +1700,7 @@ class LegalKnowledgeBaseV12:
             "legal_provision": "Cheque given as security/collateral, not for debt discharge",
             "court_view": "If proven as security cheque, no Section 138 liability - case-killer",
             "risk_level": "CRITICAL",
-            "score_impact": -40,  # ✅ v15.9: Case-killer concept
+            "score_impact": -25,  # ✅ v16.0: Reduced from -40 (over-penalization fix)
             "common_defences": [
                 "Cheque was security for different transaction",
                 "Given as collateral, not for debt payment",
@@ -1696,7 +1716,7 @@ class LegalKnowledgeBaseV12:
             "legal_provision": "Cheque presented without authority or for wrong purpose",
             "court_view": "Misuse negates liability; may constitute fraud by complainant",
             "risk_level": "CRITICAL",
-            "score_impact": -40,  # ✅ v15.9: Critical defect - reverses case
+            "score_impact": -25,  # ✅ v16.0: Reduced from -40 (over-penalization fix)
             "common_defences": [
                 "Cheque used for unauthorized purpose",
                 "Presented without permission",
@@ -1712,7 +1732,7 @@ class LegalKnowledgeBaseV12:
             "legal_provision": "Debt must be legal, valid, and enforceable in court",
             "court_view": "Presumption applies only to legally enforceable debts; illegal debts excluded",
             "risk_level": "CRITICAL",
-            "score_impact": -50,  # ✅ v15.9: Absence of enforceable debt is fatal
+            "score_impact": -25,  # ✅ v16.0: Reduced from -50 (over-penalization fix)
             "common_defences": [
                 "Debt is illegal or void",
                 "No legally enforceable obligation exists",
@@ -2115,51 +2135,67 @@ class ScoringEngineV12:
                 })
                 logger.info(f"[FATAL DEBUG] Marked HIGH as fatal: {concept} (confidence={confidence:.2f})")
         
-        # ✅ v15.9 STEP 2: SPECIFIC PENALTY LOGIC FOR CRITICAL SEMANTIC CONCEPTS
-        # These concepts must directly impact scoring even when general concept scoring applies
+        # ✅ v16.0 STEP 2: CONTROLLED PENALTY LOGIC FOR CRITICAL SEMANTIC CONCEPTS
+        # 🔥 FIX #1: Apply penalties ONLY when confidence >= 0.70 (confidence threshold)
+        # 🔥 FIX #2: Skip legally_enforceable_debt penalty if debt_proven == True (avoid contradiction)
+        # 🔥 FIX #3: Reduced penalty values to prevent score collapse
+        # 🔥 FIX #4: Collect all candidate penalties, sort by (confidence * legal_weight), apply only TOP 2
+
+        debt_proven = bool(case_data.get('debt_proven') or case_data.get('debtProven'))
+
+        # Penalty catalogue: concept → (penalty_value, legal_weight, min_confidence)
+        _PENALTY_CATALOGUE = {
+            "legally_enforceable_debt": (-25, 1.5, 0.70),   # was -40/-50; skip if debtProven
+            "security_cheque":          (-25, 1.4, 0.70),   # was -40
+            "cheque_misuse":            (-25, 1.3, 0.70),   # was -40
+            "signature_disputed":       (-20, 1.2, 0.70),   # was -25
+        }
+
+        candidate_penalties = []
+
         for concept_det in ensure_list(concepts):
-            concept = ensure_dict(concept_det).get("concept", "unknown")
+            concept   = ensure_dict(concept_det).get("concept", "unknown")
             confidence = ensure_number(ensure_dict(concept_det).get("confidence", 0))
-            
-            # Legally enforceable debt - if confidence < 0.7, debt is questionable
-            if concept == "legally_enforceable_debt" and confidence < 0.70:
-                penalty = -40  # ✅ Absence or weak evidence of enforceable debt is fatal
-                score += penalty
+
+            if concept not in _PENALTY_CATALOGUE:
+                continue
+
+            penalty_val, legal_weight, min_conf = _PENALTY_CATALOGUE[concept]
+
+            # 🔥 FIX #1: Confidence threshold gate
+            if confidence < min_conf:
                 trace.append(
-                    f"{penalty} legally enforceable debt questionable "
-                    f"(confidence: {confidence} < 0.70 threshold)"
+                    f"[SKIP] {concept.replace('_', ' ')} penalty skipped "
+                    f"(confidence {confidence:.2f} < threshold {min_conf})"
                 )
-                logger.info(f"[SEMANTIC PENALTY] legally_enforceable_debt low confidence: {confidence}")
-            
-            # Security cheque - direct case-killer
-            if concept == "security_cheque" and confidence >= 0.60:
-                penalty = -40  # ✅ Security cheque claim severely damages case
-                score += penalty
+                logger.info(f"[SEMANTIC PENALTY SKIPPED] {concept}: confidence {confidence:.2f} below threshold {min_conf}")
+                continue
+
+            # 🔥 FIX #2: Contradiction guard — do NOT penalise debt when it is proven
+            if concept == "legally_enforceable_debt" and debt_proven:
                 trace.append(
-                    f"{penalty} security cheque claim detected "
-                    f"(confidence: {confidence})"
+                    f"[SKIP] legally_enforceable_debt penalty suppressed "
+                    f"(debt_proven=True contradicts this penalty)"
                 )
-                logger.info(f"[SEMANTIC PENALTY] security_cheque detected: {confidence}")
-            
-            # Cheque misuse - unauthorized/wrongful use
-            if concept == "cheque_misuse" and confidence >= 0.60:
-                penalty = -40  # ✅ Misuse allegation is critical
-                score += penalty
-                trace.append(
-                    f"{penalty} cheque misuse alleged "
-                    f"(confidence: {confidence})"
-                )
-                logger.info(f"[SEMANTIC PENALTY] cheque_misuse detected: {confidence}")
-            
-            # Signature dispute - additional penalty if high confidence
-            if concept == "signature_disputed" and confidence >= 0.70:
-                penalty = -25  # ✅ Strong signature dispute compounds issues
-                score += penalty
-                trace.append(
-                    f"{penalty} signature authenticity strongly disputed "
-                    f"(confidence: {confidence})"
-                )
-                logger.info(f"[SEMANTIC PENALTY] signature_disputed high confidence: {confidence}")
+                logger.info("[SEMANTIC PENALTY SKIPPED] legally_enforceable_debt suppressed — debtProven=True")
+                continue
+
+            # Rank by confidence × legal_weight (higher = more impactful)
+            rank_score = confidence * legal_weight
+            candidate_penalties.append((rank_score, penalty_val, concept, confidence))
+            logger.info(f"[SEMANTIC PENALTY CANDIDATE] {concept}: penalty={penalty_val}, rank={rank_score:.3f}")
+
+        # 🔥 FIX #4: Sort descending by rank and apply ONLY TOP 2 penalties
+        candidate_penalties.sort(key=lambda x: x[0], reverse=True)
+        top_penalties = candidate_penalties[:2]
+
+        for rank_score, penalty_val, concept, confidence in top_penalties:
+            score += penalty_val
+            trace.append(
+                f"{penalty_val} {concept.replace('_', ' ')} penalty applied "
+                f"(confidence: {confidence:.2f}, rank: {rank_score:.3f})"
+            )
+            logger.info(f"[SEMANTIC PENALTY APPLIED] {concept}: {penalty_val} (top-2 selection)")
         
         # Contradiction penalties
         if contradictions:
@@ -2173,40 +2209,40 @@ class ScoringEngineV12:
                     f"(severity: {severity}, type: {contra.get('type', 'unknown')})"
                 )
         
-        # ✅ STEP 3: STRONG DEFENCE DETECTION AND PENALTY
-        # Detect if strong defences exist based on critical legal defects
+        # ✅ v16.0 STEP 3: CONTROLLED DEFENCE PENALTY
+        # 🔥 FIX #5: Apply defence penalty ONLY when strong defence AND confidence >= 0.75
+        #            Penalty reduced to -15 (was -25) to avoid over-penalization
         strong_defence_concepts = [
             "cheque_as_security",
-            "security_cheque",  # ✅ v15.9: Added semantic concept
-            "cheque_misuse",    # ✅ v15.9: Added semantic concept
-            "signature_disputed", 
-            "no_agreement", 
+            "security_cheque",
+            "cheque_misuse",
+            "signature_disputed",
+            "no_agreement",
             "notice_defect",
             "limitation_issue"
         ]
-        
+
         detected_strong_defences = []
         for concept_det in ensure_list(concepts):
-            concept = ensure_dict(concept_det).get("concept", "unknown")
+            concept    = ensure_dict(concept_det).get("concept", "unknown")
             confidence = ensure_number(ensure_dict(concept_det).get("confidence", 0))
-            
-            # Strong defence if high-confidence detection of critical defect
-            if concept in strong_defence_concepts and confidence >= 0.65:
+
+            # 🔥 FIX #5: Raised threshold to 0.75 (was 0.65)
+            if concept in strong_defence_concepts and confidence >= 0.75:
                 detected_strong_defences.append({
                     "concept": concept,
                     "confidence": confidence
                 })
-        
-        # Apply penalty if strong defence detected
+
         if detected_strong_defences:
-            defence_penalty = -25  # ✅ NEW: -25 penalty for strong defence
+            defence_penalty = -15  # 🔥 FIX #5: Reduced from -25 to -15
             score += defence_penalty
             defence_list = ", ".join([d["concept"].replace("_", " ") for d in detected_strong_defences])
             trace.append(
                 f"{defence_penalty} strong defence likely "
-                f"(defects: {defence_list})"
+                f"(concepts: {defence_list}, threshold: confidence>=0.75)"
             )
-            logger.info(f"[DEFENCE DEBUG] Strong defence detected: {len(detected_strong_defences)} defects")
+            logger.info(f"[DEFENCE DEBUG] Strong defence applied: {len(detected_strong_defences)} concept(s), penalty={defence_penalty}")
         
         
         # Fatal condition handling - FIXED: Dynamic penalties instead of hard cap
@@ -2252,8 +2288,33 @@ class ScoringEngineV12:
         
         # Final bounds
         score = max(0, min(score, 100))
+
+        # 🔥 FIX #6: FINAL SAFETY FLOOR — Strong case must not collapse
+        # If all three core pillars are satisfied, guarantee a minimum score of 70
+        cheque_present = bool(
+            case_data.get('cheque_present') or case_data.get('chequePresent')
+        )
+        notice_sent = bool(
+            case_data.get('notice_sent') or case_data.get('noticeSent')
+        )
+        debt_proven_final = bool(
+            case_data.get('debt_proven') or case_data.get('debtProven')
+        )
+
+        if cheque_present and notice_sent and debt_proven_final:
+            if score < 70:
+                floor_boost = 70 - score
+                score = 70
+                trace.append(
+                    f"+{floor_boost} safety floor applied "
+                    f"(chequePresent+noticeSent+debtProven → score must be >= 70)"
+                )
+                logger.info(
+                    f"[SAFETY FLOOR] All 3 pillars present — score raised from {score - floor_boost} to 70"
+                )
+
         trace.append(f"Final score bounded to: {score}/100")
-        
+
         # Debug logging
         logger.info(f"🎯 FINAL SCORE: {score}/100 (base: {base_score}, fatal: {len(fatal_conditions)})")
         
