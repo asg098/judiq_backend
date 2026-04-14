@@ -37134,14 +37134,39 @@ def normalize_input(raw_data: dict) -> dict:
         )
 
         # ── notice_sent ──────────────────────────────────────────────
+        # Priority chain (most-specific first):
+        #   flat camelCase  → flat snake_case  → flat aliases
+        #   → legal_notice nested object       → notice nested object
+        #   → notice nested object (sent key)  → default False
+        # Handles ALL known frontend payload shapes:
+        #   { "noticeSent": true }
+        #   { "notice_sent": true }
+        #   { "legalNoticeSent": true }
+        #   { "hasNotice": true }
+        #   { "legal_notice": { "notice_sent": true } }
+        #   { "notice": { "notice_sent": true } }
+        #   { "notice": { "sent": true } }
+        _notice_nested = ensure_dict(raw_data.get("notice"))
         normalized["notice_sent"] = _first_bool(
             raw_data.get("noticeSent"),
             raw_data.get("notice_sent"),
             raw_data.get("legalNoticeSent"),
             raw_data.get("hasNotice"),
+            raw_data.get("legal_notice_sent"),
+            raw_data.get("notice_issued"),
             legal_notice.get("notice_sent"),
+            legal_notice.get("sent"),
+            legal_notice.get("issued"),
+            _notice_nested.get("notice_sent"),
+            _notice_nested.get("sent"),
+            _notice_nested.get("issued"),
             default=False,
         )
+        print(f"DEBUG NORMALIZE: notice_sent = {normalized['notice_sent']} "
+              f"(raw flat={raw_data.get('notice_sent')!r}, "
+              f"camel={raw_data.get('noticeSent')!r}, "
+              f"legal_notice={legal_notice.get('notice_sent')!r}, "
+              f"notice_nested={_notice_nested.get('notice_sent')!r})")
 
         # ── notice_date ──────────────────────────────────────────────
         normalized["notice_date"] = _first_str(
@@ -37556,11 +37581,45 @@ def normalize_input(raw_data: dict) -> dict:
                     )
                 
                 # NOTICE NOT SENT
+                # v15.7 FIX: Only apply semantic override when no explicit
+                # structured input for notice_sent was provided.
+                # If the user sent notice_sent=True / noticeSent=True /
+                # legal_notice.notice_sent=True, that structured field WINS
+                # over text-description inference — never let a phrase in the
+                # case description silently overwrite an explicit boolean flag.
                 elif concept == "notice_not_sent":
-                    normalized["notice_sent"] = False
-                    if "legal_notice" in normalized["evidence_available"]:
-                        normalized["evidence_available"].remove("legal_notice")
-                    api_logger.warning(f"[SEMANTIC v15.1] 🚨 CRITICAL: Notice not sent (conf={confidence:.2f})")
+                    _explicit_notice = (
+                        raw_data.get("noticeSent") is not None
+                        or raw_data.get("notice_sent") is not None
+                        or raw_data.get("legalNoticeSent") is not None
+                        or raw_data.get("hasNotice") is not None
+                        or raw_data.get("legal_notice_sent") is not None
+                        or raw_data.get("notice_issued") is not None
+                        or ensure_dict(raw_data.get("legal_notice")).get("notice_sent") is not None
+                        or ensure_dict(raw_data.get("legal_notice")).get("sent") is not None
+                        or ensure_dict(raw_data.get("notice")).get("notice_sent") is not None
+                        or ensure_dict(raw_data.get("notice")).get("sent") is not None
+                    )
+                    if _explicit_notice:
+                        # Structured input takes priority — do NOT override
+                        api_logger.info(
+                            f"[SEMANTIC v15.7] ⚠️  notice_not_sent detected in text "
+                            f"(conf={confidence:.2f}) but explicit structured field present "
+                            f"(notice_sent={normalized['notice_sent']}) — structured input wins, "
+                            f"semantic override SKIPPED"
+                        )
+                        print(f"DEBUG NORMALIZE: notice_not_sent semantic signal SUPPRESSED "
+                              f"— explicit notice_sent={normalized['notice_sent']} takes priority")
+                    else:
+                        normalized["notice_sent"] = False
+                        if "legal_notice" in normalized["evidence_available"]:
+                            normalized["evidence_available"].remove("legal_notice")
+                        api_logger.warning(
+                            f"[SEMANTIC v15.7] 🚨 notice_not_sent detected (conf={confidence:.2f}) "
+                            f"— no explicit structured field present, applying override"
+                        )
+                        print(f"DEBUG NORMALIZE: notice_not_sent semantic override applied "
+                              f"(conf={confidence:.2f}) — notice_sent set to False")
                 
                 # SIGNATURE DISPUTED
                 elif concept == "signature_disputed":
@@ -37730,8 +37789,13 @@ def normalize_input(raw_data: dict) -> dict:
                     expansion_parts.append(f"Legal notice sent on {normalized['notice_date']}")
                 else:
                     expansion_parts.append("Legal notice sent")
-            else:
-                expansion_parts.append("No legal notice sent yet")
+            # v15.7 FIX: Do NOT append "No legal notice sent yet" into the
+            # auto-expanded description.  That phrase matches the semantic
+            # notice_not_sent pattern and causes a self-reinforcing loop:
+            #   notice_sent=False → expand → "No legal notice sent yet"
+            #   → semantic engine → notice_not_sent detected
+            #   → notice_sent forced False again (even if input had True)
+            # Absence of a positive phrase is enough; no negative phrase needed.
             
             if normalized["debt_proven"]:
                 expansion_parts.append("Debt acknowledged by accused")
