@@ -41051,7 +41051,98 @@ def build_final_response(output, central_state):
         print(f"DEBUG SCORING: deterministic trace = {_ds_trace}")
     else:
         _fallback_scorer_used = False  # v15.7: engine score — output-layer penalties apply
-        print(f"DEBUG SCORING: engine score={score} accepted — no recompute needed")
+        # ✅ BUG REMOVED: "engine score accepted — no recompute needed" guard eliminated.
+        # Semantic defect penalties ALWAYS apply on top of the engine base score.
+        print(f"DEBUG SCORING: engine score={score} — applying semantic defect penalties on top")
+
+    # ════════════════════════════════════════════════════════════════════
+    # v16.2 SANKATMOCHAN FIX — SEMANTIC DEFECT PENALTY ENGINE
+    # Runs AFTER engine/fallback score regardless of which path was taken.
+    # ════════════════════════════════════════════════════════════════════
+
+    # STEP 1: Collect _hybrid_concepts (structured field triggers)
+    _hybrid_concepts = ensure_list(
+        output.get("_hybrid_concepts") or
+        cs.get("_hybrid_concepts") or
+        ensure_dict(output.get("semantic_analysis", {})).get("concepts_detected") or
+        []
+    )
+
+    # STEP 2: Run EnhancedSemanticExtractor on case description for raw defect concepts
+    _case_desc = ensure_string(
+        _get("case_description") or _get("case_facts") or _get("description") or "", ""
+    )
+    _semantic_raw_concepts = []
+    if _case_desc and len(_case_desc) > 10:
+        try:
+            _sem_result = EnhancedSemanticExtractor.extract_concepts(_case_desc, threshold=0.5)
+            _semantic_raw_concepts = ensure_list(
+                ensure_dict(_sem_result).get("concepts_detected", [])
+            )
+            print(f"DEBUG SCORING: EnhancedSemanticExtractor found {len(_semantic_raw_concepts)} concepts")
+        except Exception as _sem_err:
+            print(f"DEBUG SCORING: EnhancedSemanticExtractor error — {_sem_err}")
+
+    # STEP 2 cont: Merge both streams, deduplicate by concept name (hybrid takes priority)
+    _all_concepts = []
+    _seen_concepts = set()
+    for _c in ensure_list(_hybrid_concepts):
+        _c = ensure_dict(_c)
+        _cname = _c.get("concept", "")
+        if _cname and _cname not in _seen_concepts:
+            _all_concepts.append(_c)
+            _seen_concepts.add(_cname)
+    for _c in _semantic_raw_concepts:
+        _c = ensure_dict(_c)
+        _cname = _c.get("concept", "")
+        if _cname and _cname not in _seen_concepts:
+            _all_concepts.append(_c)
+            _seen_concepts.add(_cname)
+    print(f"DEBUG SCORING: merged concept stream — {len(_all_concepts)} total concepts")
+
+    # STEP 3 & 4: Defect filter + penalty application
+    _SANKAT_DEFECT_PENALTIES = {
+        "security_cheque":    -35,
+        "cheque_misuse":      -30,
+        "no_agreement":       -25,
+        "no_debt_proof":      -30,
+        "signature_disputed": -25,
+        "notice_not_sent":    -30,
+    }
+    _critical_detected_sankat = []
+    for _c in _all_concepts:
+        _cname = _c.get("concept", "unknown")
+        if _cname not in _SANKAT_DEFECT_PENALTIES:
+            continue
+        _conf = ensure_number(_c.get("confidence", 0))
+        if _conf < 0.60:
+            print(f"DEBUG SCORING: [{_cname}] skipped — confidence {_conf:.2f} < 0.60")
+            continue
+        _penalty = _SANKAT_DEFECT_PENALTIES[_cname]
+        if _conf < 0.75:
+            _penalty = int(_penalty * 0.7)   # mid-confidence: 70% scaling
+            _band = "mid(×0.70)"
+        else:
+            _band = "full(×1.00)"
+        score += _penalty
+        if _cname in ("security_cheque", "cheque_misuse"):
+            _critical_detected_sankat.append(_cname)
+        print(
+            f"DEBUG SCORING: SANKAT PENALTY [{_cname}] {_penalty} applied "
+            f"(conf={_conf:.2f}, band={_band}) → score now {score}"
+        )
+
+    # STEP 5: Critical defect hard caps
+    if "security_cheque" in _critical_detected_sankat and score > 50:
+        print(f"DEBUG SCORING: CRITICAL CAP — security_cheque → score {score} → 50")
+        score = min(score, 50)
+    elif "cheque_misuse" in _critical_detected_sankat and score > 45:
+        print(f"DEBUG SCORING: CRITICAL CAP — cheque_misuse → score {score} → 45")
+        score = min(score, 45)
+
+    # Re-clamp after all penalties
+    score = max(10, min(score, 100))   # floor 10: courts rarely give absolute zero
+    print(f"DEBUG SCORING: post-SANKAT score (clamped) = {score}")
 
     print(f"DEBUG SCORING: base score after engine/fallback = {score}")
 
