@@ -1751,6 +1751,12 @@ class ScoringEngineV12:
         score = base_score
         fatal_conditions = []
         
+        # 🔥 DEBUG: Track score calculation
+        print(f"\n{'='*80}")
+        print(f"DEBUG SCORING ENGINE: Starting score calculation")
+        print(f"DEBUG: Base score = {base_score}")
+        print(f"{'='*80}")
+        
         trace.append(f"Base score: {base_score}")
         
         # Strengths
@@ -1758,37 +1764,44 @@ class ScoringEngineV12:
             cheque_boost = 15
             trace.append(f"+{cheque_boost} cheque present (negotiable instrument)")
             score += cheque_boost
+            print(f"DEBUG: +{cheque_boost} for cheque_present → score = {score}")
         
         if case_data.get('dishonour_memo'):
             dishonour_boost = 15
             trace.append(f"+{dishonour_boost} dishonour memo (bank confirmation)")
             score += dishonour_boost
+            print(f"DEBUG: +{dishonour_boost} for dishonour_memo → score = {score}")
         
         if case_data.get('notice_sent'):
             notice_boost = 10
             trace.append(f"+{notice_boost} legal notice sent")
             score += notice_boost
+            print(f"DEBUG: +{notice_boost} for notice_sent → score = {score}")
         
         if case_data.get('debt_proven'):
             debt_boost = 10
             trace.append(f"+{debt_boost} debt proven")
             score += debt_boost
+            print(f"DEBUG: +{debt_boost} for debt_proven → score = {score}")
         
         # Issues (penalties)
         if not case_data.get('cheque_present'):
             penalty = -20
             trace.append(f"{penalty} no cheque present")
             score += penalty
+            print(f"DEBUG: {penalty} for no cheque_present → score = {score}")
         
         if not case_data.get('notice_sent'):
             penalty = -15
             trace.append(f"{penalty} no legal notice sent")
             score += penalty
+            print(f"DEBUG: {penalty} for no notice_sent → score = {score}")
         
         if not case_data.get('debt_proven'):
             penalty = -10
             trace.append(f"{penalty} debt not proven")
             score += penalty
+            print(f"DEBUG: {penalty} for no debt_proven → score = {score}")
         
         # Evidence weighting impact
         if evidence_assessment:
@@ -1895,7 +1908,12 @@ class ScoringEngineV12:
             # Note: NO HARD CAP! Let the score reflect actual case strength
         
         # Final bounds
+        print(f"DEBUG: Score before clamping = {score}")
         score = max(0, min(score, 100))
+        print(f"DEBUG: Final score after clamping = {score}/100")
+        print(f"DEBUG: Fatal conditions count = {len(fatal_conditions)}")
+        print(f"{'='*80}\n")
+        
         trace.append(f"Final score bounded to: {score}/100")
         
         # Debug logging
@@ -10304,7 +10322,10 @@ def calculate_overall_risk_score(
                                             or defect_data.get('overall_risk', '').startswith('HIGH')):
         fatal_defect_override = True
         override_reason.append('Fatal procedural defect detected')
-        risk_model['final_score'] = min(risk_model['final_score'], 40)
+        # 🔥 FIX: Dynamic penalty instead of hard cap at 40
+        penalty = -25  # Apply 25-point penalty for single fatal defect
+        risk_model['final_score'] = max(15, risk_model['final_score'] + penalty)  # Floor at 15, not cap at 40
+        print(f"DEBUG: Single fatal defect penalty applied: {penalty} points")
     elif procedural_high_count >= 1:
 
         _high_reduction = round(risk_model.get('final_score', 0) * 0.20, 1)
@@ -36095,6 +36116,16 @@ def run_full_analysis_v12(case_data: Dict, case_id: str = None, fast_mode: bool 
     # Ensure case_data is a dict
     case_data = ensure_dict(case_data)
     
+    # 🔥 DEBUG: Log incoming case_data
+    print(f"\n{'='*80}")
+    print(f"🔥 INCOMING CASE DATA DEBUG:")
+    print(f"🔥 cheque_present: {case_data.get('cheque_present')}")
+    print(f"🔥 notice_sent: {case_data.get('notice_sent')}")
+    print(f"🔥 debt_proven: {case_data.get('debt_proven')}")
+    print(f"🔥 dishonour_memo: {case_data.get('dishonour_memo')}")
+    print(f"🔥 Total fields in case_data: {len(case_data)}")
+    print(f"{'='*80}\n")
+    
     # Ensure critical fields have safe defaults
     if not case_data:
         case_data = {
@@ -36443,6 +36474,15 @@ def run_full_analysis_v12(case_data: Dict, case_id: str = None, fast_mode: bool 
     logger.info(f"   Concepts Detected: {len(concepts_detected)}")
     logger.info(f"   Evidence Strength: {evidence_assessment['strength']}")
     logger.info("=" * 80)
+    
+    # 🔥 CRITICAL DEBUG: Validate score is not constant
+    final_score_value = final_report['executive_decision']['score']
+    print(f"\n{'🔥'*50}")
+    print(f"🔥 FINAL OUTPUT VALIDATION")
+    print(f"🔥 Score being returned: {final_score_value}/100")
+    print(f"🔥 Verdict: {final_report['executive_decision']['verdict']}")
+    print(f"🔥 This score should be DYNAMIC based on inputs")
+    print(f"{'🔥'*50}\n")
     
     # TASK 5: Normalize output before returning
     final_report['executive_decision'] = normalize_output(final_report.get('executive_decision', {}))
