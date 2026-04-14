@@ -38010,6 +38010,95 @@ def normalize_input(raw_data: dict) -> dict:
         )
 
         # ════════════════════════════════════════════════════════════
+        # STEP 3.45 — DEFENCE & DEFECT SIGNAL INJECTION (v16.2)
+        # ════════════════════════════════════════════════════════════
+        # ROOT CAUSE FIX: EnhancedSemanticExtractor (Step 3.5 below)
+        # reads case_description ONCE. If it's empty or contains only
+        # positive phrases, defect concepts (security_cheque, no_debt_proof
+        # etc.) never fire → penalties = 0 → score stays at 75.
+        #
+        # Fix: enrich case_description with human-readable defence signals
+        # derived from structured boolean/enum fields BEFORE the extractor
+        # runs. That way the AI sees the right vocabulary and fires correctly.
+        # ════════════════════════════════════════════════════════════
+        _pre_defence_signals = []
+
+        _defence_type_pre = _first_str(
+            raw_data.get("defenceType"),
+            raw_data.get("defence_type"),
+            default="",
+        )
+        _DEFENCE_PHRASES_PRE = {
+            "security_cheque":             "The cheque was given as security and not to discharge any legally enforceable debt or liability.",
+            "cheque_as_security":          "The cheque was given as security and not to discharge any legally enforceable debt or liability.",
+            "no_debt":                     "No legally enforceable debt or liability exists between the parties.",
+            "no_legally_enforceable_debt": "There is no legally enforceable debt underlying this cheque.",
+            "no_agreement":                "No written agreement or documentary proof of debt exists between the parties.",
+            "signature_mismatch":          "The accused disputes the signature on the cheque alleging it was forged or not genuine.",
+            "stop_payment":                "Payment was stopped by the drawer before dishonour.",
+            "time_barred":                 "The complaint may be time-barred due to expiry of the limitation period.",
+            "stolen_cheque":               "The cheque was stolen and presented without the drawer's authority.",
+            "company_director":            "The accused is a director and personal liability is disputed.",
+        }
+        if _defence_type_pre in _DEFENCE_PHRASES_PRE:
+            _pre_defence_signals.append(_DEFENCE_PHRASES_PRE[_defence_type_pre])
+        elif _defence_type_pre:
+            _pre_defence_signals.append(f"Defence raised by accused: {_defence_type_pre}.")
+
+        if (raw_data.get("securityChequeAlleged") or raw_data.get("security_cheque_alleged") or
+                raw_data.get("chequeAsSecurityAlleged") or raw_data.get("cheque_as_security")):
+            _pre_defence_signals.append(
+                "The accused alleges the cheque was given as security and not for any debt."
+            )
+
+        if (raw_data.get("noWrittenAgreement") or raw_data.get("no_written_agreement") or
+                raw_data.get("writtenAgreementExists") is False or
+                raw_data.get("written_agreement_exists") is False):
+            _pre_defence_signals.append(
+                "No written agreement or documentary evidence of the underlying debt exists."
+            )
+
+        if raw_data.get("debtDisputed") or raw_data.get("debt_disputed"):
+            _pre_defence_signals.append(
+                "The accused disputes the existence of any legally enforceable debt or liability."
+            )
+
+        if (raw_data.get("signatureMismatch") or raw_data.get("signature_mismatch") or
+                raw_data.get("signatureDisputed") or raw_data.get("signature_disputed")):
+            _pre_defence_signals.append(
+                "The accused disputes the signature on the cheque alleging it is forged."
+            )
+
+        # defendant_claims — free text from accused side
+        _dc_pre = normalized.get("defendant_claims", [])
+        if _dc_pre:
+            _dc_text = " ".join(str(x) for x in _dc_pre if x).strip()
+            if _dc_text:
+                _pre_defence_signals.append(f"Defendant claims: {_dc_text}")
+
+        # notice_sent=False — explicit gap (safe: structured flag, no phrase loop risk)
+        if not normalized.get("notice_sent", True):
+            _pre_defence_signals.append(
+                "No statutory demand notice has been sent to the accused as required under Section 138(b) NI Act."
+            )
+
+        if _pre_defence_signals:
+            _signal_text = " ".join(_pre_defence_signals)
+            _orig_desc = normalized["case_description"].strip()
+            normalized["case_description"] = (
+                f"{_orig_desc} {_signal_text}".strip() if _orig_desc else _signal_text
+            )
+            api_logger.info(
+                f"[SIGNAL INJECT v16.2] {len(_pre_defence_signals)} defence signal(s) prepended. "
+                f"Description now ({len(normalized['case_description'])} chars): "
+                f"{normalized['case_description'][:300]}"
+            )
+            print(f"SEMANTIC INPUT (enriched): {normalized['case_description'][:400]}")
+        else:
+            api_logger.info("[SIGNAL INJECT v16.2] No defence signals — description unchanged.")
+            print(f"SEMANTIC INPUT (no signals): {normalized['case_description'][:200]}")
+
+        # ════════════════════════════════════════════════════════════
         # STEP 3.5 — 🧠 ENHANCED SEMANTIC EXTRACTION v15.1
         # ════════════════════════════════════════════════════════════
         # 🔥 FIXES BOTH CRITICAL ISSUES:
@@ -38318,144 +38407,13 @@ def normalize_input(raw_data: dict) -> dict:
                 api_logger.info(f"[AUTO-EXPAND v15.2] Description enriched: {normalized['case_description'][:200]}")
 
         # ════════════════════════════════════════════════════════════
-        # STEP 3.7 — DEFENCE & DEFECT SIGNAL INJECTION (v16.2 FIX)
+        # STEP 3.7 — REMOVED (v16.2): signal injection moved to STEP
+        # 3.45 which runs BEFORE EnhancedSemanticExtractor so defect
+        # vocabulary is present when the AI reads the description.
+        # This stub is kept only as an execution-order marker.
         # ════════════════════════════════════════════════════════════
-        # ROOT CAUSE FIX: EnhancedSemanticExtractor gets 0 concepts when
-        # the case_description is empty or contains only positive phrases.
-        # Defence flags and defendant claims live in STRUCTURED fields but
-        # never reach the semantic text — so defects are invisible.
-        # Fix: always append defence signals to case_description so the
-        # extractor has the vocabulary it needs to fire defect patterns.
-        # ════════════════════════════════════════════════════════════
-        _defence_signals = []
+        _defence_signals = []  # intentionally empty — logic moved to 3.45
 
-        # 1. defence_type structured flag → human-readable phrase
-        _defence_type = _first_str(
-            raw_data.get("defenceType"),
-            raw_data.get("defence_type"),
-            default="",
-        )
-        _DEFENCE_TYPE_PHRASES = {
-            "security_cheque":           "The cheque was given as security and not for discharge of any debt or liability.",
-            "cheque_as_security":        "The cheque was given as security and not for discharge of any debt or liability.",
-            "no_debt":                   "No legally enforceable debt exists between the parties.",
-            "no_legally_enforceable_debt": "There is no legally enforceable debt or liability underlying this cheque.",
-            "no_agreement":              "No written agreement or documentary proof of debt exists.",
-            "signature_mismatch":        "The accused disputes the signature on the cheque.",
-            "stop_payment":              "Payment was stopped by the drawer before dishonour.",
-            "time_barred":               "The complaint is time-barred due to limitation period expiry.",
-            "stolen_cheque":             "The cheque was stolen and presented without authority.",
-            "company_director":          "The accused is a director and the company is the primary drawer.",
-        }
-        if _defence_type and _defence_type in _DEFENCE_TYPE_PHRASES:
-            _defence_signals.append(_DEFENCE_TYPE_PHRASES[_defence_type])
-        elif _defence_type:
-            _defence_signals.append(f"Defence raised: {_defence_type}.")
-
-        # 2. security_cheque_alleged / cheque_as_security boolean flags
-        if (
-            raw_data.get("securityChequeAlleged") or
-            raw_data.get("security_cheque_alleged") or
-            raw_data.get("chequeAsSecurityAlleged") or
-            raw_data.get("cheque_as_security")
-        ):
-            _defence_signals.append(
-                "The accused alleges the cheque was given as security and not to discharge any debt."
-            )
-
-        # 3. no_written_agreement / no_agreement flags
-        if (
-            raw_data.get("noWrittenAgreement") or
-            raw_data.get("no_written_agreement") or
-            raw_data.get("writtenAgreementExists") is False or
-            raw_data.get("written_agreement_exists") is False
-        ):
-            _defence_signals.append(
-                "No written agreement or documentary evidence of the underlying debt exists."
-            )
-
-        # 4. debt_disputed flag
-        if raw_data.get("debtDisputed") or raw_data.get("debt_disputed"):
-            _defence_signals.append(
-                "The accused disputes the existence of any legally enforceable debt or liability."
-            )
-
-        # 5. signatureMismatch / signature_disputed flag
-        if (
-            raw_data.get("signatureMismatch") or
-            raw_data.get("signature_mismatch") or
-            raw_data.get("signatureDisputed") or
-            raw_data.get("signature_disputed")
-        ):
-            _defence_signals.append(
-                "The accused disputes the signature on the cheque, alleging it was forged or not their own."
-            )
-
-        # 6. defendantClaims — free-text defence narrative from the accused
-        _defendant_claims = normalized.get("defendant_claims", [])
-        if _defendant_claims:
-            _claims_text = " ".join(str(c) for c in _defendant_claims if c)
-            if _claims_text.strip():
-                _defence_signals.append(f"Defendant claims: {_claims_text.strip()}")
-
-        # 7. noticeSent=False explicit signal (safe — structured field, not inferred phrase)
-        if normalized.get("notice_sent") is False and not normalized.get("notice_sent"):
-            _defence_signals.append(
-                "No statutory demand notice was sent to the accused as required under Section 138(b)."
-            )
-
-        # Inject into case_description if any defence signals were built
-        if _defence_signals:
-            _signal_block = " ".join(_defence_signals)
-            _existing_desc = normalized["case_description"].strip()
-            normalized["case_description"] = (
-                f"{_existing_desc} {_signal_block}".strip()
-                if _existing_desc
-                else _signal_block
-            )
-            api_logger.info(
-                f"[DEFENCE SIGNAL INJECT v16.2] Appended {len(_defence_signals)} defence signal(s). "
-                f"Description now: {normalized['case_description'][:300]}"
-            )
-            print(f"SEMANTIC INPUT (post-inject): {normalized['case_description'][:400]}")
-
-            # Re-run EnhancedSemanticExtractor on the enriched description
-            # so defect patterns fire BEFORE the hybrid-merge stage
-            try:
-                _reinject_result = EnhancedSemanticExtractor.extract_concepts(
-                    normalized["case_description"], threshold=0.5
-                )
-                _reinject_concepts = ensure_list(
-                    ensure_dict(_reinject_result).get("concepts_detected", [])
-                )
-                print(f"SEMANTIC OUTPUT (post-inject): {[c.get('concept') for c in _reinject_concepts]}")
-                api_logger.info(
-                    f"[DEFENCE SIGNAL INJECT v16.2] Re-extraction found "
-                    f"{len(_reinject_concepts)} concepts: "
-                    f"{[c.get('concept') for c in _reinject_concepts]}"
-                )
-                # Merge re-injected concepts into _hybrid_concepts so scoring engine sees them
-                _existing_hybrid = ensure_list(normalized.get("_hybrid_concepts", []))
-                _existing_hybrid_names = {
-                    ensure_dict(c).get("concept") for c in _existing_hybrid
-                }
-                for _rc in _reinject_concepts:
-                    _rc = ensure_dict(_rc)
-                    if _rc.get("concept") and _rc["concept"] not in _existing_hybrid_names:
-                        _existing_hybrid.append(_rc)
-                        _existing_hybrid_names.add(_rc["concept"])
-                normalized["_hybrid_concepts"] = _existing_hybrid
-            except Exception as _reinject_err:
-                api_logger.warning(
-                    f"[DEFENCE SIGNAL INJECT v16.2] Re-extraction failed: {_reinject_err}"
-                )
-        else:
-            api_logger.info("[DEFENCE SIGNAL INJECT v16.2] No defence signals to inject")
-            print(f"SEMANTIC INPUT (no signals): {normalized['case_description'][:200]}")
-
-        # ════════════════════════════════════════════════════════════
-        # DATE FALLBACKS
-        # Build a plausible timeline when specific dates are absent.
         # Engines need dates for timeline and limitation calculations.
         # ════════════════════════════════════════════════════════════
 
