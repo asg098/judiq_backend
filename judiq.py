@@ -1,12 +1,12 @@
 """
 ════════════════════════════════════════════════════════════════════════════════
-🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v16.1 (CALIBRATION FIX)
+🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v16.2 (SEMANTIC DEFECT SCORING FIX)
 ════════════════════════════════════════════════════════════════════════════════
 
 🚀 PRODUCTION-GRADE FASTAPI BACKEND - LAWYER-READY OUTPUT LAYER
 ════════════════════════════════════════════════════════════════════════════════
 
-STATUS: ✅ PRODUCTION v16.1 - 🔥 CALIBRATED — NO UNDER/OVER-PENALTY — LEGAL REALISM
+STATUS: ✅ PRODUCTION v16.2 - 🔥 SEMANTIC DEFECTS CONNECTED TO SCORING ENGINE
 
 🔥 NEW FIXES IN v16.1 (CALIBRATION FIX):
 ════════════════════════════════════════════════════════════════════════════════
@@ -2138,6 +2138,68 @@ class ScoringEngineV12:
         # concept → (full_penalty, legal_weight, normal_min_conf)
         # Mid-confidence band [0.60, 0.75) applies 70% of full_penalty
         # Full confidence  [0.75, 1.0]  applies 100% of full_penalty
+
+        # ════════════════════════════════════════════════════════════════════
+        # ✅ v16.2 STEP 1: DEFECT_PENALTIES — direct semantic defect mapping
+        # ════════════════════════════════════════════════════════════════════
+        # These penalties are applied DIRECTLY from semantic_analysis concepts,
+        # with confidence gating and mid-band scaling (same as catalogue).
+        DEFECT_PENALTIES = {
+            "security_cheque":    -35,
+            "cheque_misuse":      -30,
+            "no_debt_proof":      -30,
+            "signature_disputed": -30,
+            "notice_not_sent":    -25,
+        }
+
+        # ── STEP 2: Apply DEFECT_PENALTIES from semantic_analysis concepts ──
+        for concept_det in ensure_list(concepts):
+            name       = ensure_dict(concept_det).get("concept", "unknown")
+            confidence = ensure_number(ensure_dict(concept_det).get("confidence", 0))
+
+            if name not in DEFECT_PENALTIES:
+                continue
+
+            if confidence < 0.60:
+                trace.append(
+                    f"[DEFECT SKIP] {name.replace('_', ' ')} skipped "
+                    f"(confidence {confidence:.2f} < 0.60 threshold)"
+                )
+                continue
+
+            penalty = DEFECT_PENALTIES[name]
+
+            # Mid-confidence scaling: [0.60, 0.75) → 70% of full penalty
+            if confidence < 0.75:
+                penalty = int(penalty * 0.7)
+                band = "mid (×0.70)"
+            else:
+                band = "full (×1.00)"
+
+            score += penalty
+            trace.append(
+                f"{penalty} semantic defect penalty: {name.replace('_', ' ')} "
+                f"(confidence: {confidence:.2f}, band: {band})"
+            )
+            logger.info(f"[v16.2 DEFECT] {name}: {penalty} applied ({band})")
+
+        # ── STEP 3: Critical defect cap — security_cheque / cheque_misuse ───
+        _critical_defect_names = {"security_cheque", "cheque_misuse"}
+        _critical_detected = [
+            ensure_dict(c).get("concept")
+            for c in ensure_list(concepts)
+            if ensure_dict(c).get("concept") in _critical_defect_names
+            and ensure_number(ensure_dict(c).get("confidence", 0)) >= 0.60
+        ]
+        if _critical_detected:
+            if score > 50:
+                trace.append(
+                    f"[CRITICAL CAP] score capped at 50 — critical defect(s) detected: "
+                    f"{', '.join(_critical_detected)}"
+                )
+                logger.info(f"[v16.2 CRITICAL CAP] score {score} → 50 ({_critical_detected})")
+                score = min(score, 50)
+
         _PENALTY_CATALOGUE = {
             "legally_enforceable_debt": (-25, 1.5, 0.60),
             "security_cheque":          (-25, 1.4, 0.60),
@@ -6612,15 +6674,17 @@ def classify_outcome(score: float, fatal_defects: List, confidence: str) -> Dict
 
 
     if score is None:
-        logger.error("classify_outcome received score=None, defaulting to 0")
-        score = 0
-
+        logger.error("classify_outcome received score=None, defaulting to 10")
+        score = 10  # ✅ v16.2 FIX: Real courts rarely give absolute zero
 
     try:
         score = ensure_number(score)
     except (TypeError, ValueError):
-        logger.error(f"classify_outcome received invalid score type: {type(score)}, defaulting to 0")
-        score = 0
+        logger.error(f"classify_outcome received invalid score type: {type(score)}, defaulting to 10")
+        score = 10  # ✅ v16.2 FIX: Real courts rarely give absolute zero
+
+    # ✅ v16.2 STEP 5: ZERO SCORE FIX — Real courts rarely give absolute zero
+    score = max(score, 10)
 
     if fatal_defects and len(fatal_defects) > 0:
         return {
@@ -42392,7 +42456,7 @@ async def startup_event():
     api_logger.info("   ✅ PDF GENERATION: Full report with all sections")
     api_logger.info("   ✅ DEBUG LOGGING: Complete trace at all stages")
     api_logger.info("=" * 100)
-    api_logger.info("✅ SYSTEM READY - Production v15.9 🔥 SEMANTIC SCORING CONNECTED")
+    api_logger.info("✅ SYSTEM READY - Production v16.2 🔥 SEMANTIC DEFECTS CONNECTED TO SCORING ENGINE")
     api_logger.info("=" * 100)
 
 # ════════════════════════════════════════════════════════════════════════════
