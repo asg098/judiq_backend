@@ -1,66 +1,62 @@
 """
 ════════════════════════════════════════════════════════════════════════════════
-🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v18.0 (SANKATMOCHAN v4 - FINAL POLISH)
+🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v19.0 (SANKATMOCHAN v5 - SINGLE PIPELINE)
 ════════════════════════════════════════════════════════════════════════════════
 
 🚀 PRODUCTION-GRADE FASTAPI BACKEND - LAWYER-READY OUTPUT LAYER
 ════════════════════════════════════════════════════════════════════════════════
 
-STATUS: ✅ PRODUCTION v18.0 - 🔥 DETERMINISTIC SCORING + LINKED SEMANTIC ENGINE
+STATUS: ✅ PRODUCTION v19.0 - 🔥 SINGLE PIPELINE · DETERMINISTIC · UNIFIED ENGINE
 
-🔥 SANKATMOCHAN v4 FIXES IN v18.0 (FINAL POLISH):
+🔥 SANKATMOCHAN v5 FIXES IN v19.0 (PRODUCTION STABLE):
 ════════════════════════════════════════════════════════════════════════════════
-✅ FIX #1 v18.0: REMOVED DOUBLE LOGIC COMPLETELY
-   Deleted: v16.2 DEFECT_PENALTIES block (was double-penalizing same concepts
-            that already existed in the _PENALTY_CATALOGUE)
-   Deleted: v16.2 hard score cap at 50 (non-deterministic, overrides stacking)
-   Deleted: All v16.0/v16.1 band-scaling logic (replaced by unified formula)
-   Single source: _UNIFIED_CATALOGUE handles all concept penalties
+✅ FIX #1 v19.0: DELETED FALLBACK SCORER COMPLETELY
+   Old: If engine returned 0, v15.7 deterministic fallback scored independently
+   New: Engine returns 0 → response score = 0, NO alternate logic runs
+   Reason: Two scoring paths = inconsistent output = zero lawyer trust
+   Fix:  Engine returns 0 only on genuinely empty input (correct behavior)
 
-✅ FIX #2 v18.0: SEMANTIC → SCORING FULLY LINKED
-   Formula: penalty = int(confidence × legal_weight × base_penalty)
-   Old: confidence determined band (0.60–0.75 = 70% penalty, >0.75 = 100%)
-   New: confidence directly multiplies into penalty — continuous, not stepped
-   Impact: Semantic confidence + legal weight are now both first-class inputs
+✅ FIX #2 v19.0: DELETED _SANKAT_DEFECT_PENALTIES THIRD SCORING PATH
+   Old: build_final_response ran its own penalty engine AFTER engine score
+        (v16.2 _SANKAT_DEFECT_PENALTIES with 0.60 threshold + hard caps)
+   New: Output layer is read-only — it never modifies the score
+   Pipeline is now:  Input → SemanticEngineV12 → ScoringEngineV12 → Output
+   Score flows through untouched
 
-✅ FIX #3 v18.0: DETERMINISTIC CORE SCORE (random removed)
-   Old: random(-5, 0) applied when score > 85
-   New: Core score is 100% deterministic — same input → same score always
-   Reason: Lawyers will NOT trust a system that gives different scores per run
-   Note: Display layer may add cosmetic variation if desired — scoring does not
+✅ FIX #3 v19.0: UNIFIED SEMANTIC ENGINE (ONE ENGINE, NOT TWO)
+   Old: EnhancedSemanticExtractor + SemanticEngineV12 ran independently
+        → different concepts, different confidence, conflicting intelligence
+   New: EnhancedSemanticExtractor is a thin alias that delegates to SemanticEngineV12
+   Single engine → single concept set → consistent scoring every time
 
-✅ FIX #4 v18.0: SCORE EXPLANATION LAYER ADDED
-   New field: "score_breakdown" in scoring result
-   Example: ["Security cheque reduces legal enforceability (-32)",
-             "Disputed signature weakens instrument validity (-28)"]
-   Impact: No more black-box — lawyers see exactly why score changed
+✅ FIX #4 v19.0: SINGLE SCORING PIPELINE (ENFORCED)
+   Path: normalize_input → run_full_analysis_v12 → ScoringEngineV12._UNIFIED_CATALOGUE
+         → CentralCaseStateV12 → build_final_response (read-only)
+   All OLD paths eliminated: no secondary scorers, no output-layer penalties,
+   no hard caps after scoring, no band-scaling workarounds
 
-✅ FIX #5 v18.0: DEFENCE ENGINE FULLY DYNAMIC
-   Old: Static templates, fixed probabilities (int(70 * confidence))
-   New: Every field computed from concept + confidence + legal_weight:
-        - success_probability = confidence × legal_weight × 100 × strength_factor
-        - strength label = "HIGH" / "MEDIUM" / "LOW" derived from probability
-        - trigger_reason includes confidence + legal_weight values
-        - De-duplicated by concept (no repeat defences)
-   Impact: Defence output reflects actual case intelligence, not templates
+✅ FIX #5 v19.0: CONSISTENCY LOCK
+   score_breakdown propagated end-to-end: engine → CentralCaseState → API response
+   Same input always produces same: concepts, score, defence, score_breakdown
 
-🔥 PRESERVED v17.0 FEATURES (SANKATMOCHAN v3):
+🔥 PRESERVED v18.0 FEATURES (SANKATMOCHAN v4):
 ════════════════════════════════════════════════════════════════════════════════
-✅ No hard floor (additive soft boost only)
+✅ Unified penalty formula: penalty = confidence × legal_weight × base_penalty
+✅ Deterministic core score (no random)
+✅ score_breakdown explanation field in API response
+✅ Dynamic defence engine (concept + confidence + legal_weight)
 ✅ All detected penalties applied (no top-2 cap)
-✅ Confidence threshold 0.25 for standard defects
-✅ Force threshold 0.20 for critical binary defects
-✅ Draft engine field filling (chequeNumber, amount, noticeDate, dishonourDate)
+✅ Confidence gate 0.20 for critical defects, 0.25 standard
 
-🔥 EXPECTED SCORE RANGES (v18.0 - DETERMINISTIC):
+🔥 EXPECTED SCORE RANGES (v19.0):
 ════════════════════════════════════════════════════════════════════════════════
-   Perfect (all pillars + strong evidence)  → 85–90 (stable, reproducible)
-   Signature dispute (conf 0.80)            → 40–55 (−28 penalty)
-   Security cheque (conf 0.75)              → 30–50 (−28 penalty)
-   Weak documentation                       → 50–65 (evidence penalty)
-   Multiple defects (3+)                    → 20–40 (stacked penalties)
-   No notice sent (conf 0.85)              → 10–30 (−32 penalty)
-   Limitation expired (conf 0.80)           → 10–25 (−29 penalty)
+   Perfect (all 4 pillars + strong evidence)  → 85–90 (stable)
+   Signature dispute (conf 0.80)              → 40–55
+   Security cheque (conf 0.75)                → 30–50
+   Weak documentation                         → 50–65
+   Multiple defects (3+)                      → 20–40
+   No notice sent (conf 0.85)                 → 10–30
+   Limitation expired (conf 0.80)             → 10–25
 """
 
 🔥 PRESERVED v16.1 FEATURES (CALIBRATION FIX):
@@ -1108,116 +1104,43 @@ ENHANCED_SEMANTIC_PATTERNS = {
 
 class EnhancedSemanticExtractor:
     """
-    🧠 ENHANCED SEMANTIC EXTRACTION ENGINE
+    ✅ v19.0: UNIFIED — This class is now an alias for SemanticEngineV12.
     
-    Fixes both identified issues:
-    1. REGEX ≠ SEMANTIC AI → Now uses synonym expansion + fuzzy matching
-    2. OVER-CONFIDENCE → Probabilistic scoring with explicit thresholds
+    Previously a separate extractor (v15.1), now delegates entirely to the
+    canonical SemanticEngineV12 to ensure ONE semantic engine across the system.
+    
+    Any code calling EnhancedSemanticExtractor.extract_concepts() will receive
+    SemanticEngineV12 output — same concepts, same confidence, same format.
     """
-    
+
     @staticmethod
-    def calculate_confidence(text: str, pattern: SemanticPattern) -> Tuple[float, List[str]]:
-        """
-        Calculate confidence score for pattern match
-        
-        Returns:
-            (confidence_score, evidence_list)
-            confidence_score: 0.0 to 1.0
-            evidence_list: matched phrases for transparency
-        """
-        text_lower = text.lower()
-        score = 0.0
-        evidence = []
-        
-        # 1. Exact phrase matching (highest confidence: +0.4)
-        for phrase in pattern.exact_phrases:
-            if phrase in text_lower:
-                score += 0.4
-                evidence.append(f"exact: '{phrase}'")
-                break  # Only count once
-        
-        # 2. Synonym matching (high confidence: +0.3)
-        synonym_matches = 0
-        for synonym in pattern.synonyms:
-            if synonym in text_lower:
-                synonym_matches += 1
-                evidence.append(f"synonym: '{synonym}'")
-                if synonym_matches >= 2:
-                    break
-        
-        if synonym_matches > 0:
-            score += min(0.3, synonym_matches * 0.2)
-        
-        # 3. Negation phrase detection (strong indicator: +0.3)
-        for neg_phrase in pattern.negation_phrases:
-            if neg_phrase in text_lower:
-                score += 0.3
-                evidence.append(f"negation: '{neg_phrase}'")
-                break
-        
-        # 4. Related terms (weak confidence: +0.1 per term, max 0.2)
-        related_count = 0
-        for term in pattern.related_terms:
-            if term in text_lower:
-                related_count += 1
-                if related_count <= 2:
-                    evidence.append(f"related: '{term}'")
-        
-        if related_count > 0:
-            score += min(0.2, related_count * 0.05)
-        
-        # Cap at 1.0
-        final_score = min(1.0, score)
-        
-        return final_score, evidence[:5]  # Return top 5 evidence items
-    
-    @staticmethod
-    def extract_concepts(text: str, threshold: float = 0.5) -> Dict[str, Any]:
-        """
-        Extract legal concepts from text with confidence scoring
-        
-        Args:
-            text: Input text to analyze
-            threshold: Minimum confidence to report a match
-            
-        Returns:
-            Dictionary with detected concepts and their confidence scores
-        """
-        if not text or len(text.strip()) < 5:
+    def extract_concepts(text: str, threshold: float = 0.25) -> Dict[str, Any]:
+        """Delegates to SemanticEngineV12.analyze_text (unified engine)."""
+        # SemanticEngineV12 is defined below — forward reference safe at runtime
+        try:
+            result = SemanticEngineV12.analyze_text(text)
+            concepts = ensure_list(result.get("concepts_detected", []))
+            # Apply threshold filter consistent with caller expectations
+            filtered = [c for c in concepts if ensure_number(c.get("confidence", 0)) >= threshold]
             return {
-                "concepts_detected": [],
-                "total_confidence": 0.0,
-                "method": "enhanced_semantic_extraction_v15.1"
+                "concepts_detected": filtered,
+                "total_confidence": (
+                    sum(ensure_number(c.get("confidence", 0)) for c in filtered) / len(filtered)
+                    if filtered else 0.0
+                ),
+                "count": len(filtered),
+                "method": "SemanticEngineV12_unified_v19.0",
+                "text_analyzed": text[:200] + "..." if len(text) > 200 else text,
             }
-        
-        detected = []
-        
-        for concept_name, pattern in ENHANCED_SEMANTIC_PATTERNS.items():
-            confidence, evidence = EnhancedSemanticExtractor.calculate_confidence(text, pattern)
-            
-            # Only report if above threshold
-            if confidence >= pattern.confidence_threshold:
-                detected.append({
-                    "concept": concept_name,
-                    "confidence": round(confidence, 3),
-                    "threshold": pattern.confidence_threshold,
-                    "legal_weight": pattern.legal_weight,
-                    "evidence": evidence,
-                    "severity": "HIGH" if confidence > 0.75 else "MEDIUM" if confidence > 0.6 else "LOW"
-                })
-        
-        # Sort by confidence * legal_weight
-        detected.sort(key=lambda x: x["confidence"] * x["legal_weight"], reverse=True)
-        
-        total_confidence = sum(d["confidence"] for d in detected) / len(detected) if detected else 0.0
-        
-        return {
-            "concepts_detected": detected,
-            "total_confidence": round(total_confidence, 3),
-            "count": len(detected),
-            "method": "enhanced_semantic_extraction_v15.1",
-            "text_analyzed": text[:200] + "..." if len(text) > 200 else text
-        }
+        except Exception as e:
+            logger.warning(f"[EnhancedSemanticExtractor] delegate error: {e}")
+            return {"concepts_detected": [], "total_confidence": 0.0, "count": 0,
+                    "method": "error_fallback", "text_analyzed": ""}
+
+    @staticmethod
+    def calculate_confidence(text: str, pattern) -> Tuple[float, List[str]]:
+        """Legacy compatibility shim — not used in v19 pipeline."""
+        return 0.0, []
 
 # ════════════════════════════════════════════════════════════════════════════════
 
@@ -1263,9 +1186,9 @@ TORCH_AVAILABLE = False
 logger = logging.getLogger(__name__)
 PHI2_AVAILABLE = False
 
-ENGINE_VERSION = "v15.3.0-ENGINE-INTELLIGENCE-FIX"
-ARCHITECTURE_VERSION = "Modular-Production-Grade-9-Layers-Semantic-Extraction"
-SCORING_MODEL_VERSION = "15.0-SEMANTIC-AWARE-EVIDENCE-WEIGHTED"
+ENGINE_VERSION = "v19.0.0-SANKATMOCHAN-v5-SINGLE-PIPELINE"
+ARCHITECTURE_VERSION = "Single-Pipeline-Deterministic-SemanticEngineV12-Unified"
+SCORING_MODEL_VERSION = "19.0-UNIFIED-CATALOGUE-DETERMINISTIC"
 TIMELINE_MATH_VERSION = "CALENDAR_MONTHS"
 
 # ============================================================================
@@ -41176,160 +41099,21 @@ def build_final_response(output, central_state):
         }
 
     # ════════════════════════════════════════════════════════════════════
+    # ✅ v19.0 — SINGLE SCORING PIPELINE (SANKATMOCHAN v5)
     # ════════════════════════════════════════════════════════════════════
-    # v15.7 FIX — STEP 3: DETERMINISTIC SCORE RECOMPUTE
-    # If engine returned 0 or no score, build a clean dynamic score from
-    # legal factors so we NEVER return a meaningless 0 or constant value.
-    # If engine returned a real score (>0), trust it — don't overwrite it.
+    # REMOVED: v15.7 deterministic fallback scorer (separate scoring path)
+    # REMOVED: v16.2 _SANKAT_DEFECT_PENALTIES block (third scoring path)
+    # REMOVED: Hard caps (score = min(score, 50)) — non-deterministic
+    #
+    # There is now ONE scoring path:
+    #   Input → SemanticEngineV12 → ScoringEngineV12._UNIFIED_CATALOGUE → Score
+    #
+    # If engine returns 0 on real input, that is an ENGINE BUG to fix,
+    # not a reason to silently swap in alternate logic.
+    # The output layer trusts the engine score — it does NOT rescore.
     # ════════════════════════════════════════════════════════════════════
-    print(f"DEBUG SCORING: score before recompute check = {score}")
-    if score == 0:
-        _fallback_scorer_used = True   # v15.7: flag — penalties already baked in
-        print("DEBUG SCORING: engine score=0 — running deterministic fallback scorer")
-        _ds = 10                                  # v15.7: small base so cheque-only cases score > 0
-        _ds_trace = ["Base: +10"]
-
-        # ── Calibrated positive factors ───────────────────────────
-        # Weights chosen so 4-factor strong case → ~85, moderate → ~55,
-        # weak (cheque+memo only) → ~25, very weak → < 15
-        if cheque_present:
-            _ds += 25
-            _ds_trace.append("+25 cheque present (core NI Act element)")
-        if notice_sent:
-            _ds += 20
-            _ds_trace.append("+20 legal notice sent (Section 138(b) satisfied)")
-        if debt_proven:
-            _ds += 15
-            _ds_trace.append("+15 legally enforceable debt established")
-        if dishonour_memo:
-            _ds += 10
-            _ds_trace.append("+10 bank dishonour memo obtained")
-
-        # ── Calibrated negative factors ───────────────────────────
-        if not notice_sent:
-            _ds -= 15
-            _ds_trace.append("-15 legal notice not sent (mandatory Section 138(b) gap)")
-        if not debt_proven:
-            _ds -= 8
-            _ds_trace.append("-8 debt not proven (Section 139 presumption at risk)")
-        if sig_disputed:
-            _ds -= 12
-            _ds_trace.append("-12 signature disputed (evidentiary challenge)")
-        if not limitation_ok:
-            _ds -= 20
-            _ds_trace.append("-20 limitation period likely breached (jurisdictional bar)")
-
-        # ── Evidence quality ──────────────────────────────────────
-        if evidence_list and len(evidence_list) >= 3:
-            _ds += 8
-            _ds_trace.append(f"+8 strong evidence corpus ({len(evidence_list)} items)")
-        elif evidence_list and len(evidence_list) >= 1:
-            _ds += 4
-            _ds_trace.append(f"+4 evidence available ({len(evidence_list)} item(s))")
-        else:
-            _ds -= 4
-            _ds_trace.append("-4 no documented evidence available")
-
-        # ── Clamp 0–100 and assign ────────────────────────────────
-        score = max(0, min(100, _ds))
-        print(f"DEBUG SCORING: deterministic score computed = {score}")
-        print(f"DEBUG SCORING: deterministic trace = {_ds_trace}")
-    else:
-        _fallback_scorer_used = False  # v15.7: engine score — output-layer penalties apply
-        # ✅ BUG REMOVED: "engine score accepted — no recompute needed" guard eliminated.
-        # Semantic defect penalties ALWAYS apply on top of the engine base score.
-        print(f"DEBUG SCORING: engine score={score} — applying semantic defect penalties on top")
-
-    # ════════════════════════════════════════════════════════════════════
-    # v16.2 SANKATMOCHAN FIX — SEMANTIC DEFECT PENALTY ENGINE
-    # Runs AFTER engine/fallback score regardless of which path was taken.
-    # ════════════════════════════════════════════════════════════════════
-
-    # STEP 1: Collect _hybrid_concepts (structured field triggers)
-    _hybrid_concepts = ensure_list(
-        output.get("_hybrid_concepts") or
-        cs.get("_hybrid_concepts") or
-        ensure_dict(output.get("semantic_analysis", {})).get("concepts_detected") or
-        []
-    )
-
-    # STEP 2: Run EnhancedSemanticExtractor on case description for raw defect concepts
-    _case_desc = ensure_string(
-        _get("case_description") or _get("case_facts") or _get("description") or "", ""
-    )
-    _semantic_raw_concepts = []
-    if _case_desc and len(_case_desc) > 10:
-        try:
-            _sem_result = EnhancedSemanticExtractor.extract_concepts(_case_desc, threshold=0.5)
-            _semantic_raw_concepts = ensure_list(
-                ensure_dict(_sem_result).get("concepts_detected", [])
-            )
-            print(f"DEBUG SCORING: EnhancedSemanticExtractor found {len(_semantic_raw_concepts)} concepts")
-        except Exception as _sem_err:
-            print(f"DEBUG SCORING: EnhancedSemanticExtractor error — {_sem_err}")
-
-    # STEP 2 cont: Merge both streams, deduplicate by concept name (hybrid takes priority)
-    _all_concepts = []
-    _seen_concepts = set()
-    for _c in ensure_list(_hybrid_concepts):
-        _c = ensure_dict(_c)
-        _cname = _c.get("concept", "")
-        if _cname and _cname not in _seen_concepts:
-            _all_concepts.append(_c)
-            _seen_concepts.add(_cname)
-    for _c in _semantic_raw_concepts:
-        _c = ensure_dict(_c)
-        _cname = _c.get("concept", "")
-        if _cname and _cname not in _seen_concepts:
-            _all_concepts.append(_c)
-            _seen_concepts.add(_cname)
-    print(f"DEBUG SCORING: merged concept stream — {len(_all_concepts)} total concepts")
-
-    # STEP 3 & 4: Defect filter + penalty application
-    _SANKAT_DEFECT_PENALTIES = {
-        "security_cheque":    -35,
-        "cheque_misuse":      -30,
-        "no_agreement":       -25,
-        "no_debt_proof":      -30,
-        "signature_disputed": -25,
-        "notice_not_sent":    -30,
-    }
-    _critical_detected_sankat = []
-    for _c in _all_concepts:
-        _cname = _c.get("concept", "unknown")
-        if _cname not in _SANKAT_DEFECT_PENALTIES:
-            continue
-        _conf = ensure_number(_c.get("confidence", 0))
-        if _conf < 0.60:
-            print(f"DEBUG SCORING: [{_cname}] skipped — confidence {_conf:.2f} < 0.60")
-            continue
-        _penalty = _SANKAT_DEFECT_PENALTIES[_cname]
-        if _conf < 0.75:
-            _penalty = int(_penalty * 0.7)   # mid-confidence: 70% scaling
-            _band = "mid(×0.70)"
-        else:
-            _band = "full(×1.00)"
-        score += _penalty
-        if _cname in ("security_cheque", "cheque_misuse"):
-            _critical_detected_sankat.append(_cname)
-        print(
-            f"DEBUG SCORING: SANKAT PENALTY [{_cname}] {_penalty} applied "
-            f"(conf={_conf:.2f}, band={_band}) → score now {score}"
-        )
-
-    # STEP 5: Critical defect hard caps
-    if "security_cheque" in _critical_detected_sankat and score > 50:
-        print(f"DEBUG SCORING: CRITICAL CAP — security_cheque → score {score} → 50")
-        score = min(score, 50)
-    elif "cheque_misuse" in _critical_detected_sankat and score > 45:
-        print(f"DEBUG SCORING: CRITICAL CAP — cheque_misuse → score {score} → 45")
-        score = min(score, 45)
-
-    # Re-clamp after all penalties
-    score = max(10, min(score, 100))   # floor 10: courts rarely give absolute zero
-    print(f"DEBUG SCORING: post-SANKAT score (clamped) = {score}")
-
-    print(f"DEBUG SCORING: base score after engine/fallback = {score}")
+    print(f"DEBUG SCORING: engine score accepted = {score} (single pipeline, no fallback)")
+    score = max(0, min(score, 100))  # simple bounds only — no logic
 
     # 3. REASONING TRACE — always non-empty
     # ════════════════════════════════════════════════════════════════════
@@ -41524,18 +41308,10 @@ def build_final_response(output, central_state):
         ))
         # STEP 2: Score reduction for missing notice
         # v15.7 FIX #1: Proportional penalty replaces hard cap.
-        # OLD (BUG): score = min(score, 40)  → constant 40 for ALL cases missing notice
-        # NEW (FIX): deduct fixed penalty so score stays dynamic and explainable
-        # v15.7 FIX #1b: Only apply output-layer penalty when engine score was used.
-        # Fallback scorer already bakes in its own -20 for missing notice — don't double-penalise.
-        if not _fallback_scorer_used:
-            _notice_penalty = 20
-            score = max(0, score - _notice_penalty)
-            print(f'DEBUG SCORING: notice_sent=False (engine path) → '
-                  f'-{_notice_penalty} output-layer penalty → score={score}')
-        else:
-            print(f'DEBUG SCORING: notice_sent=False (fallback path) → '
-                  f'penalty already applied in fallback scorer — skipping output-layer deduction')
+        # ✅ v19.0: Output layer does NOT apply additional scoring penalties.
+        # All penalties were already applied in ScoringEngineV12._UNIFIED_CATALOGUE.
+        # This block is intentionally left as a no-op — score is read-only here.
+        print(f'DEBUG SCORING: notice_sent=False — penalty already in engine score={score}')
 
     if not debt_proven:
         _ni_rules.append((
@@ -41986,7 +41762,7 @@ def build_final_response(output, central_state):
     print(f"[v15.7 FIX #1] notice_sent={notice_sent} — penalty applied, NOT hard cap")
     print(f"[v15.7 FIX #2] limitation_ok={limitation_ok} — hard cap only for confirmed breach")
     print(f"[v15.7 FIX #3] score read from engine — output={output.get('score')}, cs={cs.get('score')}")
-    print(f"[v15.7 FIX #4] deterministic fallback scorer available if engine returns 0")
+    print(f"[v19.0] Single scoring pipeline active — no fallback scorer")
     print(f"[v15.6 FIX #5] missing_data_notes: {len(final_response['missing_data_notes'])} warnings")
     print(f"[v15.6 FIX #8] disclaimer: {'PRESENT' if final_response['disclaimer'] else 'MISSING'}")
     print("=" * 100 + "\n")
