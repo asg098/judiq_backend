@@ -1,75 +1,63 @@
 """
 ════════════════════════════════════════════════════════════════════════════════
-🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v16.0 (OVER-PENALIZATION FIX)
+🎯 JUDIQ LEGAL ANALYSIS ENGINE - PRODUCTION v16.1 (CALIBRATION FIX)
 ════════════════════════════════════════════════════════════════════════════════
 
 🚀 PRODUCTION-GRADE FASTAPI BACKEND - LAWYER-READY OUTPUT LAYER
 ════════════════════════════════════════════════════════════════════════════════
 
-STATUS: ✅ PRODUCTION v16.0 - 🔥 OVER-PENALIZATION FIXED — SCORE COLLAPSE PREVENTED
+STATUS: ✅ PRODUCTION v16.1 - 🔥 CALIBRATED — NO UNDER/OVER-PENALTY — LEGAL REALISM
 
-🔥 NEW FIXES IN v16.0 (OVER-PENALIZATION FIX):
+🔥 NEW FIXES IN v16.1 (CALIBRATION FIX):
 ════════════════════════════════════════════════════════════════════════════════
-✅ FIX #1 v16.0: CONFIDENCE THRESHOLD GATE
-   Penalties are applied ONLY when concept confidence >= 0.70
-   Below 0.70 → penalty silently skipped with trace note
-   Impact: Low-confidence detections no longer drag scores to 0–10
+✅ FIX #1 v16.1: LOWERED CONFIDENCE THRESHOLD TO 0.60
+   Old: penalties applied only when confidence >= 0.70
+   New: penalties applied when confidence >= 0.60
+   Reason: Real detections observed in 0.55–0.68 range; 0.70 was silently skipping them
+   Impact: Penalties now fire for typical semantic outputs
 
-✅ FIX #2 v16.0: CONTRADICTION GUARD (AVOID DOUBLE-PENALIZATION)
-   If debt_proven == True → legally_enforceable_debt penalty is suppressed
-   Prevents contradictory signal from penalizing an already-proven strength
-   Impact: Strong cases with proven debt no longer receive phantom debt penalty
+✅ FIX #2 v16.1: MID-CONFIDENCE PENALTY SCALING
+   Band [0.60, 0.75): penalty = base_penalty × 0.70 (partial — uncertain detection)
+   Band [0.75, 1.00]: penalty = base_penalty × 1.00 (full — high-confidence detection)
+   Impact: Low/medium confidence gives proportional, not maximum, penalty
 
-✅ FIX #3 v16.0: SCALED-DOWN PENALTY VALUES
-   legally_enforceable_debt → -25  (was -50)
-   security_cheque          → -25  (was -40)
-   cheque_misuse            → -25  (was -40)
-   signature_disputed       → -20  (was -25/-30)
-   Knowledge base score_impact values updated to match
-   Impact: Penalties are proportional, not case-killers by themselves
+✅ FIX #3 v16.1: FORCE-APPLY CRITICAL PROCEDURAL PENALTIES AT >= 0.55
+   Concepts: notice_not_sent, notice_defect, limitation_issue, signature_disputed
+   These are binary legal requirements — even moderate detection must score
+   Force threshold: 0.55 (lower than standard 0.60)
+   Same mid/full scaling applied for fairness
+   Impact: S.138 notice failures and time-bar issues always penalise
 
-✅ FIX #4 v16.0: TOP-2 PENALTY LIMIT (SORT BY confidence × legal_weight)
-   Candidate penalties ranked by: confidence × legal_weight
-   ONLY the top 2 highest-ranked penalties are applied
-   Impact: Stacking of 3–4 simultaneous penalties no longer possible
+✅ FIX #4 v16.1: SMART SAFETY FLOOR (replaces hard floor of 70)
+   Old: chequePresent+noticeSent+debtProven → floor 70 (flattened all strong cases to 70)
+   New Tier-1: all 4 pillars (+ dishonourMemo) → floor 75
+   New Tier-2: 3 core pillars only            → floor 65
+   Impact: Strong cases score 75–90; solid cases score 65–74; no artificial flattening
 
-✅ FIX #5 v16.0: DEFENCE PENALTY CONTROL
-   Threshold raised: confidence >= 0.75 (was 0.65)
-   Penalty reduced:  -15 (was -25)
-   Applied ONLY when strong defence concept detected at high confidence
-   Impact: Marginal detections no longer trigger defence pile-on
+✅ FIX #5 v16.1: WEAK-EVIDENCE ADDITIVE PENALTY
+   if evidence_strength in (WEAK, VERY_WEAK, NONE): score -= 10
+   Applied after concept and fatal penalties so it stacks correctly
+   Impact: Partial-doc / oral-only cases drop into 50–65 range
 
-✅ FIX #6 v16.0: FINAL SAFETY FLOOR
-   If chequePresent AND noticeSent AND debtProven → score must be >= 70
-   Floor boost applied with full trace entry
-   Impact: Strong cases always score 70+ regardless of minor semantic flags
-
-🔥 SCORING RANGES (GUARANTEED):
+🔥 EXPECTED SCORE RANGES (v16.1):
 ════════════════════════════════════════════════════════════════════════════════
-   Strong case   → 75–90  (all pillars, no critical defects)
-   Moderate      → 50–70  (mixed factors, some weaknesses)
-   Weak          → 20–50  (significant defects, strong defences)
-   Very weak     → <20    (multiple critical defects, case-killers)
+   Perfect (all pillars + strong evidence)  → 80–90
+   Solid (3 pillars, no defects)            → 65–79
+   Partial docs                             → 50–65
+   Security cheque / misuse alleged         → 30–50
+   No notice sent                           → 10–25
+   Limitation expired                       → 10–30
+
+🔥 PRESERVED v16.0 FEATURES (OVER-PENALIZATION FIX):
+════════════════════════════════════════════════════════════════════════════════
+✅ Contradiction guard: legally_enforceable_debt suppressed when debt_proven=True
+✅ Top-2 penalty cap: only 2 highest-ranked penalties applied (confidence × weight)
+✅ Reduced base penalty values: -25/-20 (not -40/-50)
+✅ Defence penalty controlled: threshold 0.75, cap -15
+✅ Dynamic fatal conditions (no hard score cap)
 
 🔥 PRESERVED v15.9 FEATURES (SEMANTIC SCORING CONNECTION):
 ════════════════════════════════════════════════════════════════════════════════
-✅ FIX #1 v15.9: ADDED MISSING SEMANTIC PATTERNS
-   Added: "security_cheque" - Detects security/collateral cheque claims
-   Added: "cheque_misuse" - Detects wrongful/unauthorized use
-   Added: "legally_enforceable_debt" - Detects debt enforceability issues
-   Impact: System now detects all critical legal concepts from text
-
-✅ FIX #2 v15.9: CONNECTED SEMANTIC CONCEPTS TO KNOWLEDGE BASE
-   security_cheque: score_impact = -25 (updated v16.0)
-   cheque_misuse: score_impact = -25 (updated v16.0)
-   legally_enforceable_debt: score_impact = -25 (updated v16.0)
-   Impact: All semantic detections now have defined penalties
-
-✅ FIX #3 v15.9: DIRECT PENALTY APPLICATION IN SCORING ENGINE
-   Before: Concepts detected but not reducing score
-   After: Specific penalty logic for each critical concept
-   Updated in v16.0: confidence threshold, contradiction guard, top-2 limit
-   Impact: Semantic detections now directly reduce scores (controlled)
 
 🔥 PRESERVED v15.8 FEATURES (SCORING IMBALANCE FIX):
 ════════════════════════════════════════════════════════════════════════════════
@@ -2135,83 +2123,149 @@ class ScoringEngineV12:
                 })
                 logger.info(f"[FATAL DEBUG] Marked HIGH as fatal: {concept} (confidence={confidence:.2f})")
         
-        # ✅ v16.0 STEP 2: CONTROLLED PENALTY LOGIC FOR CRITICAL SEMANTIC CONCEPTS
-        # 🔥 FIX #1: Apply penalties ONLY when confidence >= 0.70 (confidence threshold)
-        # 🔥 FIX #2: Skip legally_enforceable_debt penalty if debt_proven == True (avoid contradiction)
-        # 🔥 FIX #3: Reduced penalty values to prevent score collapse
-        # 🔥 FIX #4: Collect all candidate penalties, sort by (confidence * legal_weight), apply only TOP 2
+        # ════════════════════════════════════════════════════════════════════
+        # ✅ v16.1 STEP 2: CALIBRATED PENALTY ENGINE
+        # ════════════════════════════════════════════════════════════════════
+        # FIX #1: Threshold lowered to 0.60 (real detections: 0.55–0.68 range)
+        # FIX #2: Mid-confidence scaling — partial penalty for 0.60–0.74 range
+        # FIX #3: Force-apply penalties for critical procedural defects at >= 0.55
+        # FIX #4: Top-2 cap preserved; ranked by confidence × legal_weight
+        # (Contradiction guard from v16.0 retained)
 
         debt_proven = bool(case_data.get('debt_proven') or case_data.get('debtProven'))
 
-        # Penalty catalogue: concept → (penalty_value, legal_weight, min_confidence)
+        # ── Penalty catalogue ────────────────────────────────────────────────
+        # concept → (full_penalty, legal_weight, normal_min_conf)
+        # Mid-confidence band [0.60, 0.75) applies 70% of full_penalty
+        # Full confidence  [0.75, 1.0]  applies 100% of full_penalty
         _PENALTY_CATALOGUE = {
-            "legally_enforceable_debt": (-25, 1.5, 0.70),   # was -40/-50; skip if debtProven
-            "security_cheque":          (-25, 1.4, 0.70),   # was -40
-            "cheque_misuse":            (-25, 1.3, 0.70),   # was -40
-            "signature_disputed":       (-20, 1.2, 0.70),   # was -25
+            "legally_enforceable_debt": (-25, 1.5, 0.60),
+            "security_cheque":          (-25, 1.4, 0.60),
+            "cheque_misuse":            (-25, 1.3, 0.60),
+            "signature_disputed":       (-20, 1.2, 0.60),
         }
 
-        candidate_penalties = []
+        # ── FIX #3: Critical procedural defects — forced at >= 0.55 ─────────
+        # These are objective, binary legal requirements. Even moderate
+        # confidence in their detection must produce a penalty.
+        _FORCE_PENALTY_CATALOGUE = {
+            # concept: (full_penalty, legal_weight, force_min_conf)
+            "notice_not_sent":   (-30, 1.6, 0.55),   # S.138 mandatory requirement
+            "notice_defect":     (-20, 1.4, 0.55),   # Defective notice = near-miss
+            "limitation_issue":  (-25, 1.5, 0.55),   # Jurisdictional bar if expired
+        }
+        # signature_disputed at high confidence also force-applied
+        _FORCE_HIGH_CONF_CONCEPTS = {
+            "signature_disputed": (-20, 1.2, 0.55),  # Force when confidence >= 0.55
+        }
 
+        candidate_penalties = []   # (rank_score, scaled_penalty, concept, confidence, band)
+
+        # ── Process standard catalogue ────────────────────────────────────────
         for concept_det in ensure_list(concepts):
-            concept   = ensure_dict(concept_det).get("concept", "unknown")
+            concept    = ensure_dict(concept_det).get("concept", "unknown")
             confidence = ensure_number(ensure_dict(concept_det).get("confidence", 0))
 
             if concept not in _PENALTY_CATALOGUE:
                 continue
 
-            penalty_val, legal_weight, min_conf = _PENALTY_CATALOGUE[concept]
+            full_penalty, legal_weight, min_conf = _PENALTY_CATALOGUE[concept]
 
-            # 🔥 FIX #1: Confidence threshold gate
+            # Contradiction guard (retained from v16.0)
+            if concept == "legally_enforceable_debt" and debt_proven:
+                trace.append(
+                    f"[SKIP] legally enforceable debt penalty suppressed "
+                    f"(debt_proven=True contradicts this penalty)"
+                )
+                logger.info("[v16.1] legally_enforceable_debt suppressed — debtProven=True")
+                continue
+
+            # FIX #1: Gate at 0.60 (was 0.70)
             if confidence < min_conf:
                 trace.append(
                     f"[SKIP] {concept.replace('_', ' ')} penalty skipped "
-                    f"(confidence {confidence:.2f} < threshold {min_conf})"
+                    f"(confidence {confidence:.2f} < {min_conf} threshold)"
                 )
-                logger.info(f"[SEMANTIC PENALTY SKIPPED] {concept}: confidence {confidence:.2f} below threshold {min_conf}")
+                logger.info(f"[v16.1 SKIP] {concept}: confidence {confidence:.2f} < {min_conf}")
                 continue
 
-            # 🔥 FIX #2: Contradiction guard — do NOT penalise debt when it is proven
-            if concept == "legally_enforceable_debt" and debt_proven:
-                trace.append(
-                    f"[SKIP] legally_enforceable_debt penalty suppressed "
-                    f"(debt_proven=True contradicts this penalty)"
-                )
-                logger.info("[SEMANTIC PENALTY SKIPPED] legally_enforceable_debt suppressed — debtProven=True")
-                continue
+            # FIX #2: Mid-confidence scaling
+            if confidence < 0.75:
+                scaled_penalty = int(full_penalty * 0.7)
+                band = "mid (×0.70)"
+            else:
+                scaled_penalty = full_penalty
+                band = "full (×1.00)"
 
-            # Rank by confidence × legal_weight (higher = more impactful)
             rank_score = confidence * legal_weight
-            candidate_penalties.append((rank_score, penalty_val, concept, confidence))
-            logger.info(f"[SEMANTIC PENALTY CANDIDATE] {concept}: penalty={penalty_val}, rank={rank_score:.3f}")
+            candidate_penalties.append((rank_score, scaled_penalty, concept, confidence, band))
+            logger.info(
+                f"[v16.1 CANDIDATE] {concept}: full={full_penalty}, scaled={scaled_penalty}, "
+                f"band={band}, rank={rank_score:.3f}"
+            )
 
-        # 🔥 FIX #4: Sort descending by rank and apply ONLY TOP 2 penalties
+        # ── Process force-penalty catalogue (FIX #3) ─────────────────────────
+        for concept_det in ensure_list(concepts):
+            concept    = ensure_dict(concept_det).get("concept", "unknown")
+            confidence = ensure_number(ensure_dict(concept_det).get("confidence", 0))
+
+            # Merge both force catalogues
+            if concept in _FORCE_PENALTY_CATALOGUE:
+                full_penalty, legal_weight, force_min = _FORCE_PENALTY_CATALOGUE[concept]
+            elif concept in _FORCE_HIGH_CONF_CONCEPTS:
+                full_penalty, legal_weight, force_min = _FORCE_HIGH_CONF_CONCEPTS[concept]
+            else:
+                continue
+
+            if confidence < force_min:
+                trace.append(
+                    f"[SKIP] {concept.replace('_', ' ')} force-penalty skipped "
+                    f"(confidence {confidence:.2f} < force threshold {force_min})"
+                )
+                logger.info(f"[v16.1 FORCE SKIP] {concept}: {confidence:.2f} < {force_min}")
+                continue
+
+            # Force penalties also get mid/full scaling for fairness
+            if confidence < 0.75:
+                scaled_penalty = int(full_penalty * 0.7)
+                band = "force-mid (×0.70)"
+            else:
+                scaled_penalty = full_penalty
+                band = "force-full (×1.00)"
+
+            rank_score = confidence * legal_weight
+            candidate_penalties.append((rank_score, scaled_penalty, concept, confidence, band))
+            logger.info(
+                f"[v16.1 FORCE CANDIDATE] {concept}: full={full_penalty}, scaled={scaled_penalty}, "
+                f"band={band}, rank={rank_score:.3f}"
+            )
+
+        # ── FIX #4: Sort by rank; apply TOP 2 only ────────────────────────────
         candidate_penalties.sort(key=lambda x: x[0], reverse=True)
         top_penalties = candidate_penalties[:2]
 
-        for rank_score, penalty_val, concept, confidence in top_penalties:
-            score += penalty_val
+        for rank_score, scaled_penalty, concept, confidence, band in top_penalties:
+            score += scaled_penalty
             trace.append(
-                f"{penalty_val} {concept.replace('_', ' ')} penalty applied "
-                f"(confidence: {confidence:.2f}, rank: {rank_score:.3f})"
+                f"{scaled_penalty} {concept.replace('_', ' ')} penalty applied "
+                f"(confidence: {confidence:.2f}, band: {band}, rank: {rank_score:.3f})"
             )
-            logger.info(f"[SEMANTIC PENALTY APPLIED] {concept}: {penalty_val} (top-2 selection)")
-        
-        # Contradiction penalties
+            logger.info(f"[v16.1 APPLIED] {concept}: {scaled_penalty} ({band})")
+
+        # ── Contradiction penalties (unchanged) ───────────────────────────────
         if contradictions:
             for contra in ensure_list(contradictions):
                 severity = contra.get('severity', 'MEDIUM')
-                penalty = contra.get('score_penalty', -15)
-                
-                score += penalty
+                penalty  = contra.get('score_penalty', -15)
+                score   += penalty
                 trace.append(
                     f"{penalty} contradiction detected "
                     f"(severity: {severity}, type: {contra.get('type', 'unknown')})"
                 )
-        
-        # ✅ v16.0 STEP 3: CONTROLLED DEFENCE PENALTY
-        # 🔥 FIX #5: Apply defence penalty ONLY when strong defence AND confidence >= 0.75
-        #            Penalty reduced to -15 (was -25) to avoid over-penalization
+
+        # ════════════════════════════════════════════════════════════════════
+        # ✅ v16.1 STEP 3: CONTROLLED DEFENCE PENALTY (threshold 0.75, cap -15)
+        # ════════════════════════════════════════════════════════════════════
         strong_defence_concepts = [
             "cheque_as_security",
             "security_cheque",
@@ -2227,95 +2281,96 @@ class ScoringEngineV12:
             concept    = ensure_dict(concept_det).get("concept", "unknown")
             confidence = ensure_number(ensure_dict(concept_det).get("confidence", 0))
 
-            # 🔥 FIX #5: Raised threshold to 0.75 (was 0.65)
             if concept in strong_defence_concepts and confidence >= 0.75:
-                detected_strong_defences.append({
-                    "concept": concept,
-                    "confidence": confidence
-                })
+                detected_strong_defences.append({"concept": concept, "confidence": confidence})
 
         if detected_strong_defences:
-            defence_penalty = -15  # 🔥 FIX #5: Reduced from -25 to -15
+            defence_penalty = -15
             score += defence_penalty
             defence_list = ", ".join([d["concept"].replace("_", " ") for d in detected_strong_defences])
             trace.append(
                 f"{defence_penalty} strong defence likely "
                 f"(concepts: {defence_list}, threshold: confidence>=0.75)"
             )
-            logger.info(f"[DEFENCE DEBUG] Strong defence applied: {len(detected_strong_defences)} concept(s), penalty={defence_penalty}")
-        
-        
-        # Fatal condition handling - FIXED: Dynamic penalties instead of hard cap
-        # 🔥 OLD BROKEN LOGIC: if fatal_conditions: score = min(score, 40)  # ❌ KILLS ALL SCORES
-        # 🔥 NEW FIXED LOGIC: Apply penalties based on severity and count, not hard cap
+            logger.info(f"[v16.1 DEFENCE] Applied {defence_penalty} for: {defence_list}")
+
+        # ── Fatal condition handling (dynamic penalties, no hard cap) ─────────
         if fatal_conditions:
             original_score = score
-            
-            # Count fatal conditions by severity
             critical_count = sum(1 for f in fatal_conditions if ensure_dict(f).get('severity') == 'CRITICAL')
-            high_count = sum(1 for f in fatal_conditions if ensure_dict(f).get('severity') == 'HIGH')
-            
-            logger.info(f"[FATAL DEBUG] Found {len(fatal_conditions)} fatal conditions: {critical_count} CRITICAL, {high_count} HIGH")
-            
-            # Apply dynamic penalties instead of hard cap
-            # Multiple critical issues → severe penalty
+            high_count     = sum(1 for f in fatal_conditions if ensure_dict(f).get('severity') == 'HIGH')
+            logger.info(f"[FATAL DEBUG] {len(fatal_conditions)} conditions: {critical_count} CRITICAL, {high_count} HIGH")
+
             if critical_count >= 2:
                 penalty = -40
-                score += penalty
+                score  += penalty
                 trace.append(f"{penalty} multiple CRITICAL issues detected ({critical_count} issues)")
-                logger.info(f"[FATAL DEBUG] Applied {penalty} for {critical_count} CRITICAL issues")
             elif critical_count == 1:
-                # Single critical issue → moderate penalty, not death sentence
                 penalty = -20
-                score += penalty
-                critical_concept = next((ensure_dict(f).get('concept', 'unknown') for f in fatal_conditions if ensure_dict(f).get('severity') == 'CRITICAL'), 'unknown')
-                trace.append(f"{penalty} CRITICAL issue: {critical_concept.replace('_', ' ')}")
-                logger.info(f"[FATAL DEBUG] Applied {penalty} for single CRITICAL issue: {critical_concept}")
+                score  += penalty
+                cc = next((ensure_dict(f).get('concept', 'unknown') for f in fatal_conditions
+                           if ensure_dict(f).get('severity') == 'CRITICAL'), 'unknown')
+                trace.append(f"{penalty} CRITICAL issue: {cc.replace('_', ' ')}")
             elif high_count >= 2:
-                # Multiple high-risk issues
                 penalty = -25
-                score += penalty
-                trace.append(f"{penalty} multiple HIGH risk issues detected ({high_count} issues)")
-                logger.info(f"[FATAL DEBUG] Applied {penalty} for {high_count} HIGH issues")
+                score  += penalty
+                trace.append(f"{penalty} multiple HIGH risk issues ({high_count} issues)")
             elif high_count == 1:
-                # Single high-risk issue already penalized in concept scoring
-                trace.append(f"HIGH risk issue noted (already penalized in concept scoring)")
-                logger.info(f"[FATAL DEBUG] Single HIGH issue - already penalized in concept scoring")
-            
-            logger.info(f"[FATAL DEBUG] Score before fatal penalties: {original_score} → after: {score}")
-            
-            # Note: NO HARD CAP! Let the score reflect actual case strength
-        
-        # Final bounds
+                trace.append("HIGH risk issue noted (already penalized in concept scoring)")
+
+            logger.info(f"[FATAL DEBUG] Score: {original_score} → {score}")
+
+        # ════════════════════════════════════════════════════════════════════
+        # ✅ v16.1 STEP 5: WEAK-EVIDENCE ADDITIVE PENALTY
+        # ════════════════════════════════════════════════════════════════════
+        # Applied AFTER all concept and fatal penalties so it stacks cleanly.
+        if evidence_assessment:
+            ev_strength = evidence_assessment.get('strength', 'UNKNOWN')
+            if ev_strength in ('WEAK', 'VERY_WEAK', 'NONE'):
+                ev_penalty = -10
+                score     += ev_penalty
+                trace.append(
+                    f"{ev_penalty} weak documentary evidence penalty "
+                    f"(evidence strength: {ev_strength})"
+                )
+                logger.info(f"[v16.1 EVIDENCE PENALTY] {ev_penalty} applied for strength={ev_strength}")
+
+        # ── Final bounds ──────────────────────────────────────────────────────
         score = max(0, min(score, 100))
 
-        # 🔥 FIX #6: FINAL SAFETY FLOOR — Strong case must not collapse
-        # If all three core pillars are satisfied, guarantee a minimum score of 70
-        cheque_present = bool(
-            case_data.get('cheque_present') or case_data.get('chequePresent')
-        )
-        notice_sent = bool(
-            case_data.get('notice_sent') or case_data.get('noticeSent')
-        )
-        debt_proven_final = bool(
-            case_data.get('debt_proven') or case_data.get('debtProven')
-        )
+        # ════════════════════════════════════════════════════════════════════
+        # ✅ v16.1 STEP 4: SMART SAFETY FLOOR (replaces hard floor of 70)
+        # ════════════════════════════════════════════════════════════════════
+        # Old: chequePresent+noticeSent+debtProven → floor 70 (flattened all strong cases)
+        # New: genuine strong case → floor 75 (preserves score differentiation above 75)
+        cheque_present    = bool(case_data.get('cheque_present') or case_data.get('chequePresent'))
+        notice_sent_final = bool(case_data.get('notice_sent')    or case_data.get('noticeSent'))
+        debt_proven_final = bool(case_data.get('debt_proven')    or case_data.get('debtProven'))
+        dishonour_memo    = bool(case_data.get('dishonour_memo') or case_data.get('dishonourMemo'))
 
-        if cheque_present and notice_sent and debt_proven_final:
-            if score < 70:
-                floor_boost = 70 - score
-                score = 70
+        # Tier-1 strong: all three pillars + dishonour memo → floor 75
+        if cheque_present and notice_sent_final and debt_proven_final and dishonour_memo:
+            if score < 75:
+                floor_boost = 75 - score
+                score       = 75
                 trace.append(
-                    f"+{floor_boost} safety floor applied "
-                    f"(chequePresent+noticeSent+debtProven → score must be >= 70)"
+                    f"+{floor_boost} smart floor applied "
+                    f"(all 4 pillars present → score >= 75)"
                 )
-                logger.info(
-                    f"[SAFETY FLOOR] All 3 pillars present — score raised from {score - floor_boost} to 70"
+                logger.info(f"[v16.1 SMART FLOOR] 4-pillar case floored to 75 (was {score - floor_boost})")
+
+        # Tier-2: three core pillars present but no dishonour memo → floor 65
+        elif cheque_present and notice_sent_final and debt_proven_final:
+            if score < 65:
+                floor_boost = 65 - score
+                score       = 65
+                trace.append(
+                    f"+{floor_boost} smart floor applied "
+                    f"(3 core pillars present → score >= 65)"
                 )
+                logger.info(f"[v16.1 SMART FLOOR] 3-pillar case floored to 65 (was {score - floor_boost})")
 
         trace.append(f"Final score bounded to: {score}/100")
-
-        # Debug logging
         logger.info(f"🎯 FINAL SCORE: {score}/100 (base: {base_score}, fatal: {len(fatal_conditions)})")
         
         return {
