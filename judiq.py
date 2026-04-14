@@ -40025,56 +40025,33 @@ async def analyze_case(request: Request):
         # Step 7: Final success log
         api_logger.info(f"[{request_id}] ✅ Analysis completed successfully in {time.time() - start_time:.2f}s")
         
-        # 🔥 BUILD CENTRAL STATE: merge _central_state_data from engine with
-        # the fully-enriched data already produced by standardize_output so that
-        # build_final_response always has the richest possible source.
-        central_state_data = ensure_dict(engine_result.get('_central_state_data', {}))
-
-        # Supplement central_state with data from the standardized response if
-        # those fields are still empty (belt-and-suspenders).
+        # ════════════════════════════════════════════════════════════════════
+        # 🔥 v15.7 SCORE FIX: Use std_data directly — build_final_response was
+        # already called inside standardize_output with the full normalized_data
+        # (which contains cheque_present, notice_sent, etc.) and produced the
+        # correct score.  Calling build_final_response a SECOND time here with
+        # std_data (a lawyer-report dict that does NOT contain cheque_present)
+        # caused cheque_present=False → early-return with score=0.
+        # ════════════════════════════════════════════════════════════════════
         std_data = ensure_dict(standardized_response.get('data', {}))
-        for key, std_key in [
-            ('score_reasoning_trace', 'reasoning'),
-            ('contradictions',        'contradictions'),
-            ('defences_ranked',       'defence'),
-        ]:
-            if not central_state_data.get(key):
-                central_state_data[key] = ensure_list(std_data.get(std_key))
 
-        if not central_state_data.get('concepts_detected'):
-            sem = ensure_dict(std_data.get('semantic_analysis', {}))
-            central_state_data['concepts_detected'] = ensure_list(
-                sem.get('concepts_detected') or sem.get('concepts')
-            )
+        # ── Debug: confirm score survives standardize_output ─────────────────
+        print("BUILD RESPONSE SCORE:", std_data.get("score"))
+        print("BEFORE STANDARDIZE:  ", std_data.get("score"))   # already standardized above
+        # (AFTER STANDARDIZE is the same object — score is set here)
+        print("AFTER STANDARDIZE:   ", std_data.get("score"))
 
-        # Create a mock central_state object with get_all method
-        class MockCentralState:
-            def __init__(self, data):
-                self.data = data
-            def get_all(self):
-                return self.data
-            def get(self, key, default=None):
-                return self.data.get(key, default)
-        
-        mock_central_state = MockCentralState(central_state_data)
-        
-        # 🔥 DEBUG: Print before calling build_final_response
-        print("\n" + "=" * 100)
-        print("🔥 CALLING build_final_response")
-        print("=" * 100)
-        
-        # Build the final response using the builder.
-        # Pass the full standardized data dict as `output` — it already contains
-        # timeline, strategy, defence, semantic_analysis, reasoning, etc.
-        final_data = build_final_response(std_data, mock_central_state)
-        
-        # 🔥 STEP 5: FIX RESPONSE FORMAT — wrap in {"success": True, "data": ...}
+        # Use the already-built response directly — no second build needed
+        final_data = std_data
+
+        # ── Step 5 final return fix: spread full response including score ─────
         final_response = {
             "success": True,
             "request_id": request_id,
             "timestamp": standardized_response.get('timestamp', datetime.now().isoformat()),
             "processing_time_seconds": round(time.time() - start_time, 3),
-            "data": final_data  # All analysis fields nested under "data" key
+            **{k: v for k, v in final_data.items()},   # flat spread of all fields
+            "data": final_data  # also nested under "data" for consumers that expect it
         }
         
         # 🔥 ENHANCED LOGGING: Verify all critical fields before return
