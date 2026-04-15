@@ -36,6 +36,7 @@ async def analyze(request: Request):
             "verdict": result.get("verdict"),
             "risk_level": result.get("risk_level"),
             "analysis_confidence": result.get("analysis_confidence"),
+            "decision": result.get("decision", {}),
             "strengths": result.get("strengths", []),
             "weaknesses": result.get("weaknesses", []),
             "semantic_analysis": result.get("semantic_analysis", {}),
