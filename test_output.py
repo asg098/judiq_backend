@@ -5,36 +5,36 @@ def get_cases():
     return [
         {
             "case_id": "CASE_ALMOST_PERFECT",
-            "description": "Bounced cheque of 10L. Written agreement exists. Notice sent via AD card.",
-            "cheque_present": True,
+            "caseDescription": "Bounced cheque of 10L. Written agreement exists. Notice sent via AD card.",
+            "chequePresent": True,
             "cheque_proof_type": "original",
-            "dishonour_memo": True,
+            "dishonourMemo": True,
             "memo_type": "original",
-            "notice_sent": True,
+            "noticeSent": True,
             "notice_served_proof": True,
-            "debt_proven": True,
+            "debtProven": True,
             "debt_proof_type": "loan_agreement",
             "amount": 1000000
         },
         {
             "case_id": "CASE_VERBAL_DEBT",
-            "description": "Bounced cheque of 50k. No written agreement, only verbal promise.",
-            "cheque_present": True,
-            "dishonour_memo": True,
-            "notice_sent": True,
-            "debt_proven": True,
+            "caseDescription": "Bounced cheque of 50k. No written agreement, only verbal promise.",
+            "chequePresent": True,
+            "dishonourMemo": True,
+            "noticeSent": True,
+            "debtProven": True,
             "debt_proof_type": "verbal",
             "amount": 50000
         },
         {
             "case_id": "CASE_XEROX_NOTICE_ISSUE",
-            "description": "Bounced cheque. Notice sent but proof of service missing. Cheque is a photocopy.",
-            "cheque_present": True,
+            "caseDescription": "Bounced cheque. Notice sent but proof of service missing. Cheque is a photocopy.",
+            "chequePresent": True,
             "cheque_proof_type": "xerox",
-            "dishonour_memo": True,
-            "notice_sent": True,
+            "dishonourMemo": True,
+            "noticeSent": True,
             "notice_served_proof": False,
-            "debt_proven": True,
+            "debtProven": True,
             "debt_proof_type": "invoice"
         }
     ]
@@ -46,9 +46,9 @@ def generate_multi_json():
         res = JudiQEngine.analyze_case(c)
         results.append({
             "case_id": c["case_id"],
-            "score": res["score"],
-            "verdict": res["verdict"],
-            "top_trace": res["legal_analysis"]["reasoning"][:3]
+            "score": res.get("score"),
+            "verdict": res.get("verdict"),
+            "concepts": len(res.get("legal_analysis", {}).get("issues", []))
         })
     print(json.dumps(results, indent=2))
 

@@ -11,8 +11,16 @@ logger = logging.getLogger(__name__)
 class JudiQEngine:
     @classmethod
     def analyze_case(cls, case_data: dict):
-        description = case_data.get("description", "")
-        semantic_result = SemanticEngineV12.analyze_text(description)
+        text = case_data.get("description", "").strip()
+        if not text:
+            parts = []
+            if case_data.get("cheque_present"): parts.append("cheque issued")
+            if case_data.get("dishonour_memo"): parts.append("cheque dishonoured")
+            if case_data.get("notice_sent"): parts.append("legal notice sent")
+            if case_data.get("debt_proven"): parts.append("legally enforceable debt exists")
+            text = ". ".join(parts)
+        
+        semantic_result = SemanticEngineV12.analyze_text(text)
         concepts = semantic_result.get("concepts_detected", [])
         timeline = TimelineEngine.generate_timeline(case_data)
         limitation = TimelineEngine.check_limitation(case_data)
