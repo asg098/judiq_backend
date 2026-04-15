@@ -381,6 +381,8 @@ def generate_legal_opinion(score: int, concepts: List[Dict], case_data: Dict) ->
     if case_data.get("debt_proven"): checklist.append("   [✓] Debt/liability established")
     else: checklist.append("   [✗] Underlying debt proof MISSING")
 
+    checklist_text = "\n".join(checklist)
+
     return f"""{_header("LEGAL OPINION — SECTION 138 NI ACT CASE ANALYSIS")}
 
 Date: {today}
@@ -394,7 +396,7 @@ RISK FACTORS IDENTIFIED:
 {risk_text}
 
 DOCUMENT CHECKLIST:
-{"chr(10).join(checklist)}
+{checklist_text}
 
 RECOMMENDATION:
 {recommendation}
