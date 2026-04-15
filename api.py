@@ -12,6 +12,16 @@ logger = logging.getLogger("JudiQ-API")
 
 app = FastAPI(title="JudiQ Legal AI API v6", version="6.0.0")
 
+def normalize_input(data):
+    return {
+        "case_id": data.get("case_id", data.get("caseId", "API_CASE")),
+        "cheque_present": data.get("cheque_present", data.get("chequePresent", False)),
+        "dishonour_memo": data.get("dishonour_memo", data.get("dishonourMemo", False)),
+        "notice_sent": data.get("notice_sent", data.get("noticeSent", False)),
+        "debt_proven": data.get("debt_proven", data.get("debtProven", False)),
+        "description": data.get("description", data.get("caseDescription", ""))
+    }
+
 @app.on_event("startup")
 async def startup():
     DatabaseManager.init_db()
@@ -24,11 +34,30 @@ async def health():
 @app.post("/analyze")
 async def analyze(request: Request):
     try:
-        data = await request.json()
-        result = JudiQEngine.analyze_case(data)
-        if data.get("user_id") and data.get("case_id"):
-            DatabaseManager.save_case(data["user_id"], data["case_id"], data, result)
-        return {"success": True, "data": result}
+        raw_data = await request.json()
+        logger.info(f"INPUT RECEIVED: {raw_data}")
+        
+        normalized = normalize_input(raw_data)
+        logger.info(f"NORMALIZED: {normalized}")
+        
+        result = JudiQEngine.analyze_case(normalized)
+        logger.info(f"OUTPUT: {result}")
+        
+        if normalized.get("user_id") and normalized.get("case_id"):
+            DatabaseManager.save_case(normalized["user_id"], normalized["case_id"], normalized, result)
+            
+        return {
+            "success": True, 
+            "score": result.get("score"),
+            "verdict": result.get("verdict"),
+            "risk_level": result.get("risk_level"),
+            "executive_summary": result.get("executive_summary"),
+            "legal_analysis": result.get("legal_analysis"),
+            "predicted_defences": result.get("defence_strategy"),
+            "draft": result.get("draft"),
+            "timeline": result.get("timeline"),
+            "data": result
+        }
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
@@ -49,7 +78,7 @@ async def explain_score():
 async def generate_pdf(request: Request):
     data = await request.json()
     if "score" not in data:
-        data = JudiQEngine.analyze_case(data)
+        data = JudiQEngine.analyze_case(normalize_input(data))
     pdf_bytes = PDFGenerator.generate_report(data)
     return Response(
         content=pdf_bytes,

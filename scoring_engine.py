@@ -88,12 +88,24 @@ class ScoringEngineV12:
             trace.append(f"+5 strong case synergy bonus")
         catalogue = kb_manager.get_scoring_catalogue()
         score_breakdown = []
+        positive_concepts = [
+            "legally_enforceable_debt",
+            "legal_notice_compliance",
+            "strong_documentary_evidence",
+            "cheque_bounce"
+        ]
         for concept_det in concepts:
             concept = concept_det.get("concept", "unknown")
             confidence = ensure_number(concept_det.get("confidence", 0))
             if confidence < 0.2:
                 continue
-            elif confidence < 0.5:
+            if concept in positive_concepts:
+                boost = int((confidence ** 2) * 10)
+                score += boost
+                trace.append(f"+{boost} {concept} strength boost")
+                score_breakdown.append(f"{concept} (+{boost})")
+                continue
+            if confidence < 0.5:
                 penalty_multiplier = 0.4
             else:
                 penalty_multiplier = 1.0
@@ -102,7 +114,7 @@ class ScoringEngineV12:
             impact_factor = (confidence ** 2)
             scaled_penalty = int(impact_factor * legal_weight * base_penalty * 0.6 * penalty_multiplier)
             score += scaled_penalty
-            trace.append(f"{scaled_penalty:+d} {concept} (conf: {confidence:.2f}, impact: {impact_factor:.2f})")
+            trace.append(f"{scaled_penalty:+d} {concept} (conf: {confidence:.2f})")
             score_breakdown.append(f"{concept} ({scaled_penalty})")
             risk = kb_manager.get_risk_level(concept)
             if risk == "CRITICAL" and confidence >= 0.75:
