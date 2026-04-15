@@ -37,7 +37,7 @@ async def analyze(request: Request):
             "risk_level": result.get("risk_level"),
             "executive_summary": result.get("executive_summary"),
             "legal_analysis": result.get("legal_analysis"),
-            "predicted_defences": result.get("defence_strategy"),
+            "predicted_defences": result.get("defence_strategy", result.get("defences", [])),
             "draft": result.get("draft"),
             "timeline": result.get("timeline"),
             "data": result
