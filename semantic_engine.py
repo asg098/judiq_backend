@@ -10,14 +10,24 @@ def ensure_list(x):
     if isinstance(x, list): return x
     return [x]
 
-def ensure_dict(x):
-    if x is None: return {}
-    if isinstance(x, dict): return x
-    return {}
-
 def ensure_number(x, default=0):
     try: return float(x)
     except: return default
+
+NEGATION_WINDOW = 6
+
+def _is_negated(text_tokens: List[str], match_start_idx: int) -> bool:
+    negators = {"no", "not", "without", "never", "cannot", "didn't", "did not", "wasn't", "hasn't", "lack", "lacking", "absent", "missing"}
+    window_start = max(0, match_start_idx - NEGATION_WINDOW)
+    window = text_tokens[window_start:match_start_idx]
+    return any(tok in negators for tok in window)
+
+NEGATION_SENSITIVE_CONCEPTS = {
+    "payment_already_made",
+    "legally_enforceable_debt",
+    "legal_notice_compliance",
+    "strong_documentary_evidence",
+}
 
 class SemanticEngineV12:
     @classmethod
@@ -39,34 +49,45 @@ class SemanticEngineV12:
         if not text:
             return []
         text_lower = text.lower()
+        tokens = re.findall(r'\w+', text_lower)
         detected = []
         concepts_config = kb_manager.get_legal_concepts()
+
         for concept, config in concepts_config.items():
             matched_phrases = []
             match_count = 0
+            negated_count = 0
             patterns = config.get('patterns', [])
+
             for pattern in patterns:
-                matches = re.findall(pattern, text_lower, re.IGNORECASE)
-                if matches:
-                    match_count += 1
-                    for match in ensure_list(matches):
-                        if isinstance(match, tuple):
-                            matched_phrases.append(match[0] if match[0] else str(match))
-                        else:
-                            matched_phrases.append(match)
+                for m in re.finditer(pattern, text_lower, re.IGNORECASE):
+                    match_start = len(re.findall(r'\w+', text_lower[:m.start()]))
+                    negated = _is_negated(tokens, match_start) if concept in NEGATION_SENSITIVE_CONCEPTS else False
+                    if negated:
+                        negated_count += 1
+                    else:
+                        match_count += 1
+                        matched_text = m.group(0)
+                        matched_phrases.append(matched_text)
+
             if match_count > 0:
                 base_confidence = min(match_count / len(patterns), 1.0) if patterns else 0.5
                 weight_adjusted = base_confidence * config.get('weight', 1.0)
                 phrase_boost = min(len(set(matched_phrases)) * 0.1, 0.2)
-                final_confidence = min(weight_adjusted + phrase_boost, 1.0)
-                detected.append({
-                    "concept": concept,
-                    "confidence": round(final_confidence, 2),
-                    "matched_phrases": list(set(matched_phrases))[:5],
-                    "legal_impact": config.get('legal_impact', "N/A")
-                })
+                negation_penalty = min(negated_count * 0.15, 0.4)
+                final_confidence = min(max(weight_adjusted + phrase_boost - negation_penalty, 0.0), 1.0)
+
+                if final_confidence > 0.0:
+                    detected.append({
+                        "concept": concept,
+                        "confidence": round(final_confidence, 2),
+                        "matched_phrases": list(set(matched_phrases))[:5],
+                        "legal_impact": config.get('legal_impact', "N/A")
+                    })
+
         detected.sort(key=lambda x: x.get('confidence', 0), reverse=True)
         return detected
+
 
 class EnhancedSemanticExtractor:
     @staticmethod

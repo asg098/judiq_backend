@@ -10,10 +10,19 @@ def ensure_list(x):
     if isinstance(x, list): return x
     return [x]
 
-def ensure_dict(x):
-    if x is None: return {}
-    if isinstance(x, dict): return x
-    return {}
+NEGATIVE_CONCEPTS = {
+    "signature_dispute", "notice_defect", "no_debt_proof", "security_cheque",
+    "cheque_misuse", "limitation_issue", "payment_already_made", "dishonour_disputed",
+    "cheque_validity_issue", "no_agreement"
+}
+
+POSITIVE_CONCEPTS = {
+    "cheque_bounce", "legal_notice_compliance", "legally_enforceable_debt",
+    "strong_documentary_evidence"
+}
+
+WEAKNESS_THRESHOLD = 0.22
+STRENGTH_THRESHOLD = 0.45
 
 def _convert_to_lawyer_language(raw_trace: list) -> list:
     _PHRASE_MAP = [
@@ -22,23 +31,29 @@ def _convert_to_lawyer_language(raw_trace: list) -> list:
         (r"-\d+\s+instrument\s+missing", "Absence of the foundational instrument required for a Section 138 proceeding."),
         (r"\+\d+\s+memo\s+available", "An official bank dishonour memo provides documentary confirmation of the return."),
         (r"\+\d+\s+notice\s+compliance", "Service of the statutory demand notice satisfies Section 138(b) compliance."),
-        (r"-\d+\s+notice\s+defect", "The mandatory statutory demand notice has not been served (procedural bar)."),
+        (r"-\d+\s+notice\s+defect", "The mandatory statutory demand notice has not been served — a procedural bar."),
         (r"\+\d+\s+debt\s+provenance", "Legally enforceable debt or liability is documented via independent evidence."),
-        (r"-\d+\s+debt\s+not\s+established", "Absence of proof of underlying debt weakens the presumption under S.139."),
-        (r"\+\d+\s+strong\s+case\s+synergy", "All four legal pillars are satisfied — instrument, dishonour, notice, and debt.")
+        (r"-\d+\s+debt\s+not\s+established", "Absence of proof of underlying debt weakens the evidentiary presumption under S.139."),
+        (r"\+\d+\s+strong\s+case\s+synergy", "All four legal pillars are satisfied: instrument, dishonour, notice, and debt."),
+        (r"-\d+\s+notice\s+defect\s+\(fatal\)", "Failure to serve statutory demand notice within 30 days is a fatal procedural defect."),
+        (r"-\d+\s+debt\s+not\s+established", "No legally enforceable debt proven — S.139 presumption significantly weakened."),
     ]
     clean_trace = []
+    seen = set()
     for item in raw_trace:
         matched = False
         for pattern, substitution in _PHRASE_MAP:
             if re.search(pattern, str(item), re.IGNORECASE):
-                clean_trace.append(substitution)
+                if substitution not in seen:
+                    clean_trace.append(substitution)
+                    seen.add(substitution)
                 matched = True
                 break
         if not matched:
             cleaned = re.sub(r"^[+-]\d+\s+", "", str(item)).strip()
-            if cleaned and not cleaned.startswith("Base score") and not cleaned.startswith("Final score") and not cleaned.startswith("Applied"):
+            if cleaned and not cleaned.startswith("Base score") and not cleaned.startswith("Final score") and not cleaned.startswith("Applied") and cleaned not in seen:
                 clean_trace.append(cleaned)
+                seen.add(cleaned)
     return clean_trace
 
 
@@ -58,28 +73,25 @@ class ResponseBuilder:
         if score < 50: risk_level = "CRITICAL"
         elif score < 75: risk_level = "MEDIUM"
 
-        negative_concepts = {"signature_dispute", "notice_defect", "no_debt_proof", "security_cheque",
-                             "cheque_misuse", "limitation_issue", "payment_already_made", "dishonour_disputed",
-                             "cheque_validity_issue", "no_agreement"}
-        positive_concepts = {"cheque_bounce", "legal_notice_compliance", "legally_enforceable_debt",
-                              "strong_documentary_evidence"}
-
         strengths = []
         weaknesses = []
 
-        if case_data.get("cheque_present"): strengths.append("Instrument (cheque) in possession")
-        if case_data.get("dishonour_memo"): strengths.append("Bank return / dishonour memo available")
-        if case_data.get("notice_sent"): strengths.append("Statutory notice compliance (S.138b)")
-        if case_data.get("debt_proven"): strengths.append("Legally enforceable debt established")
+        if case_data.get("cheque_present"):   strengths.append("Negotiable instrument (cheque) secured")
+        if case_data.get("dishonour_memo"):   strengths.append("Bank dishonour memo / return slip available")
+        if case_data.get("notice_sent"):      strengths.append("Statutory demand notice served (S.138b)")
+        if case_data.get("debt_proven"):      strengths.append("Legally enforceable debt established")
 
         for c in concepts:
             concept_name = c.get("concept", "")
             conf = c.get("confidence", 0)
-            label = f"{concept_name.replace('_', ' ').title()} (conf: {conf:.2f})"
-            if concept_name in negative_concepts and conf >= 0.35:
-                weaknesses.append(label)
-            elif concept_name in positive_concepts and conf >= 0.5:
-                strengths.append(label)
+            label = concept_name.replace('_', ' ').title()
+
+            if concept_name in NEGATIVE_CONCEPTS and conf >= WEAKNESS_THRESHOLD:
+                severity = "CRITICAL" if conf >= 0.65 else ("HIGH" if conf >= 0.45 else "MEDIUM")
+                weaknesses.append(f"{label} [{severity} — conf: {conf:.0%}]")
+
+            elif concept_name in POSITIVE_CONCEPTS and conf >= STRENGTH_THRESHOLD:
+                strengths.append(f"{label} detected (conf: {conf:.0%})")
 
         confidence_score = round(sum(c.get("confidence", 0) for c in concepts) / len(concepts), 2) if concepts else None
         lawyer_reasoning = _convert_to_lawyer_language(trace)
@@ -122,5 +134,5 @@ class ResponseBuilder:
             "draft": engine_result.get("draft", ""),
             "timeline": engine_result.get("timeline", []),
             "timestamp": datetime.now().isoformat(),
-            "engine_version": "v19.0-SANKATMOCHAN-v6.4"
+            "engine_version": "v19.0-SANKATMOCHAN-v6.5"
         }

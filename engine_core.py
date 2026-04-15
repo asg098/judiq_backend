@@ -9,6 +9,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+SYNTHETIC_TEXT_MAP = {
+    "cheque_present":   "cheque dishonoured and bounced by bank",
+    "dishonour_memo":   "bank issued dishonour memo and return slip",
+    "notice_sent":      "legal notice served on accused",
+    "debt_proven":      "loan agreement executed and legally enforceable debt established",
+}
+
 class JudiQEngine:
     @classmethod
     def analyze_case(cls, raw_data: dict):
@@ -16,11 +23,7 @@ class JudiQEngine:
 
         text = case_data.get("description", "").strip()
         if not text:
-            parts = []
-            if case_data.get("cheque_present"): parts.append("cheque bounced and dishonoured by bank")
-            if case_data.get("dishonour_memo"): parts.append("bank return memo issued for cheque")
-            if case_data.get("notice_sent"): parts.append("legal notice sent to accused")
-            if case_data.get("debt_proven"): parts.append("loan agreement and legally enforceable debt exists")
+            parts = [phrase for key, phrase in SYNTHETIC_TEXT_MAP.items() if case_data.get(key)]
             text = ". ".join(parts)
 
         print(f"DEBUG TEXT: {text}")
@@ -29,12 +32,16 @@ class JudiQEngine:
         concepts = semantic_result.get("concepts_detected", [])
 
         if not concepts:
+            detected_names = set()
             if case_data.get("cheque_present"):
-                concepts.append({"concept": "cheque_bounce", "confidence": 0.8, "matched_phrases": ["cheque bounced"], "legal_impact": "establishes core Section 138 NI Act offence"})
+                concepts.append({"concept": "cheque_bounce", "confidence": 0.80, "matched_phrases": ["cheque bounced"], "legal_impact": "establishes core Section 138 NI Act offence"})
+                detected_names.add("cheque_bounce")
             if case_data.get("notice_sent"):
-                concepts.append({"concept": "legal_notice_compliance", "confidence": 0.7, "matched_phrases": ["legal notice sent"], "legal_impact": "satisfies mandatory notice requirement under S.138(b)"})
+                concepts.append({"concept": "legal_notice_compliance", "confidence": 0.72, "matched_phrases": ["legal notice served"], "legal_impact": "satisfies mandatory notice requirement under S.138(b)"})
+                detected_names.add("legal_notice_compliance")
             if case_data.get("debt_proven"):
                 concepts.append({"concept": "legally_enforceable_debt", "confidence": 0.75, "matched_phrases": ["loan agreement"], "legal_impact": "establishes legally enforceable liability under S.139"})
+                detected_names.add("legally_enforceable_debt")
 
         print(f"DEBUG CONCEPTS: {[c['concept'] for c in concepts]}")
 
@@ -56,9 +63,12 @@ class JudiQEngine:
 
         final_score = scoring_result["final_score"]
         verdict = "STRONG" if final_score > 70 else ("MODERATE" if final_score > 40 else "WEAK")
+
         draft = DraftEngine.generate_opinion({
             "score": final_score,
-            "verdict": verdict
+            "verdict": verdict,
+            "concepts": concepts,
+            "case_data": case_data
         })
 
         engine_output = {
