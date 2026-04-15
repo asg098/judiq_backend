@@ -105,13 +105,23 @@ class ScoringEngineV12:
                 trace.append(f"+{boost} {concept} strength boost")
                 score_breakdown.append(f"{concept} (+{boost})")
                 continue
+            
+            lookup_concept = concept
+            if lookup_concept not in catalogue:
+                alias = "signature_dispute" if concept == "signature_disputed" else ("signature_disputed" if concept == "signature_dispute" else None)
+                if alias and alias in catalogue:
+                    lookup_concept = alias
+                else:
+                    continue
+            base_penalty, legal_weight, _ = catalogue[lookup_concept]
+            
             if confidence < 0.5:
-                penalty_multiplier = 0.4
+                penalty_multiplier = 0.5
+                impact_factor = confidence
             else:
                 penalty_multiplier = 1.0
-            if concept not in catalogue: continue
-            base_penalty, legal_weight, _ = catalogue[concept]
-            impact_factor = (confidence ** 2)
+                impact_factor = confidence ** 2
+            
             scaled_penalty = int(impact_factor * legal_weight * base_penalty * 0.6 * penalty_multiplier)
             score += scaled_penalty
             trace.append(f"{scaled_penalty:+d} {concept} (conf: {confidence:.2f})")

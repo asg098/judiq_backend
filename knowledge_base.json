@@ -159,11 +159,13 @@
     "signature_dispute": {
       "patterns": [
         "\\b(den(y|ies|ied)\\s+(execution|signing))",
-        "\\b(not\\s+signed|unsigned|forged\\s+signature)",
-        "\\b(signature\\s+(forged|fake|disputed))",
-        "\\b(never\\s+signed|didn't\\s+sign)",
+        "\\b(not\\s+signed|unsigned|forged\\s+signature|signature\\s+forged)",
+        "\\b(signature\\s+(forged|fake|disputed|denied))",
+        "\\b(never\\s+signed|didn't\\s+sign|did\\s+not\\s+sign)",
         "\\b(handwriting\\s+not\\s+mine)",
-        "\\b(signature\\s+mismatch)"
+        "\\b(signature\\s+mismatch)",
+        "\\b(not\\s+my\\s+signature)",
+        "\\b((fake|forged|fabricated)\\s+signature)"
       ],
       "weight": 1.0,
       "legal_impact": "challenges authenticity of negotiable instrument"
@@ -277,6 +279,41 @@
       ],
       "weight": 0.85,
       "legal_impact": "strengthens evidentiary basis of complainant's case"
+    },
+    "security_cheque": {
+      "patterns": [
+        "\\b(security\\s+(cheque|check))",
+        "\\b(cheque\\s+(as|for)\\s+security)",
+        "\\b(given\\s+as\\s+(security|collateral))",
+        "\\b(collateral\\s+(cheque|check))",
+        "\\b(guarantee\\s+(cheque|check))",
+        "\\b(only\\s+for\\s+security)"
+      ],
+      "weight": 0.95,
+      "legal_impact": "may eliminate Section 138 NI Act liability entirely if proven"
+    },
+    "no_agreement": {
+      "patterns": [
+        "\\b(no\\s+written\\s+(agreement|contract|documentation|proof))",
+        "\\b(without\\s+written\\s+(agreement|contract))",
+        "\\b(oral\\s+(agreement|promise|only))",
+        "\\b(verbal\\s+(agreement|promise|only))",
+        "\\b(no\\s+agreement\\s+exists)"
+      ],
+      "weight": 0.85,
+      "legal_impact": "weakens debt proof under Section 139 NI Act"
+    },
+    "cheque_misuse": {
+      "patterns": [
+        "\\b(cheque\\s+(misused|stolen|fraud|fraudulent))",
+        "\\b(misused\\s+cheque)",
+        "\\b(stolen\\s+(cheque|check))",
+        "\\b(wrongful(ly)?\\s+use(d)?)",
+        "\\b(without\\s+(permission|consent|authority|authorization))",
+        "\\b(no\\s+legally\\s+enforceable\\s+debt)"
+      ],
+      "weight": 0.85,
+      "legal_impact": "challenges legitimate purpose of instrument under S.138"
     }
   },
   "knowledge_base": {
@@ -439,8 +476,10 @@
     "legally_enforceable_debt": [-35, 0.95, 0.25],
     "security_cheque": [-40, 0.95, 0.20],
     "cheque_misuse": [-30, 0.85, 0.25],
+    "signature_dispute": [-35, 0.90, 0.20],
     "signature_disputed": [-35, 0.90, 0.20],
     "no_debt_proof": [-30, 0.90, 0.25],
+    "no_agreement": [-25, 0.85, 0.20],
     "notice_not_sent": [-30, 0.95, 0.20],
     "notice_defect": [-20, 0.85, 0.20],
     "limitation_issue": [-25, 0.90, 0.20]
@@ -495,12 +534,13 @@
   "defence_legal_weights": {
     "security_cheque": 0.95,
     "signature_disputed": 0.90,
+    "signature_dispute": 0.90,
     "no_debt_proof": 0.90,
+    "no_agreement": 0.85,
     "notice_not_sent": 0.95,
     "notice_defect": 0.85,
     "limitation_issue": 0.90,
     "cheque_misuse": 0.85,
-    "legally_enforceable_debt": 0.95,
-    "no_agreement": 0.80
+    "legally_enforceable_debt": 0.95
   }
 }

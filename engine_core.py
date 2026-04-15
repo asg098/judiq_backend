@@ -16,6 +16,21 @@ SYNTHETIC_TEXT_MAP = {
     "debt_proven":      "loan agreement executed and legally enforceable debt established",
 }
 
+STRUCTURAL_NEGATIVE_CONCEPTS = {
+    "debt_proven": {
+        "concept": "no_debt_proof",
+        "confidence": 0.72,
+        "matched_phrases": ["debt not proven — structured signal"],
+        "legal_impact": "challenges legal enforceability under S.139"
+    },
+    "notice_sent": {
+        "concept": "notice_defect",
+        "confidence": 0.85,
+        "matched_phrases": ["notice not sent — structural signal"],
+        "legal_impact": "mandatory statutory requirement under S.138(b)"
+    },
+}
+
 class JudiQEngine:
     @classmethod
     def analyze_case(cls, raw_data: dict):
@@ -31,17 +46,22 @@ class JudiQEngine:
         semantic_result = SemanticEngineV12.analyze_text(text)
         concepts = semantic_result.get("concepts_detected", [])
 
+        existing_concepts = {c["concept"] for c in concepts}
+
+        # Inject structural negative signals for missing pillars (always)
+        for pillar_key, signal in STRUCTURAL_NEGATIVE_CONCEPTS.items():
+            if not case_data.get(pillar_key) and signal["concept"] not in existing_concepts:
+                concepts.append(dict(signal))
+                existing_concepts.add(signal["concept"])
+
+        # Inject positive fallback only if semantic returned nothing at all
         if not concepts:
-            detected_names = set()
             if case_data.get("cheque_present"):
-                concepts.append({"concept": "cheque_bounce", "confidence": 0.80, "matched_phrases": ["cheque bounced"], "legal_impact": "establishes core Section 138 NI Act offence"})
-                detected_names.add("cheque_bounce")
+                concepts.append({"concept": "cheque_bounce", "confidence": 0.80, "matched_phrases": ["fallback: cheque present"], "legal_impact": "establishes core Section 138 NI Act offence"})
             if case_data.get("notice_sent"):
-                concepts.append({"concept": "legal_notice_compliance", "confidence": 0.72, "matched_phrases": ["legal notice served"], "legal_impact": "satisfies mandatory notice requirement under S.138(b)"})
-                detected_names.add("legal_notice_compliance")
+                concepts.append({"concept": "legal_notice_compliance", "confidence": 0.72, "matched_phrases": ["fallback: notice sent"], "legal_impact": "satisfies mandatory notice requirement under S.138(b)"})
             if case_data.get("debt_proven"):
-                concepts.append({"concept": "legally_enforceable_debt", "confidence": 0.75, "matched_phrases": ["loan agreement"], "legal_impact": "establishes legally enforceable liability under S.139"})
-                detected_names.add("legally_enforceable_debt")
+                concepts.append({"concept": "legally_enforceable_debt", "confidence": 0.75, "matched_phrases": ["fallback: debt proven"], "legal_impact": "establishes legally enforceable liability under S.139"})
 
         print(f"DEBUG CONCEPTS: {[c['concept'] for c in concepts]}")
 
