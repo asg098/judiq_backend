@@ -31,15 +31,17 @@ async def analyze(request: Request):
         if normalized.get("user_id") and normalized.get("case_id"):
             DatabaseManager.save_case(normalized["user_id"], normalized["case_id"], normalized, result)
         return {
-            "success": True, 
+            "success": True,
             "score": result.get("score"),
             "verdict": result.get("verdict"),
             "risk_level": result.get("risk_level"),
+            "confidence": result.get("confidence"),
             "executive_summary": result.get("executive_summary"),
             "legal_analysis": result.get("legal_analysis"),
-            "predicted_defences": result.get("defence_strategy", result.get("defences", [])),
-            "draft": result.get("draft"),
-            "timeline": result.get("timeline"),
+            "semantic_concepts": result.get("semantic_concepts", []),
+            "predicted_defences": result.get("defence_strategy", []),
+            "draft": result.get("draft", ""),
+            "timeline": result.get("timeline", []),
             "data": result
         }
     except Exception as e:
