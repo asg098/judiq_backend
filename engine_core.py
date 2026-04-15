@@ -4,13 +4,16 @@ from defence_engine import DefenceEngineV12
 from timeline_engine import TimelineEngine
 from draft_engine import DraftEngine
 from response_builder import ResponseBuilder
+from normalizer import normalize_input
 import logging
 
 logger = logging.getLogger(__name__)
 
 class JudiQEngine:
     @classmethod
-    def analyze_case(cls, case_data: dict):
+    def analyze_case(cls, raw_data: dict):
+        case_data = normalize_input(raw_data)
+        
         text = case_data.get("description", "").strip()
         if not text:
             parts = []
@@ -20,8 +23,13 @@ class JudiQEngine:
             if case_data.get("debt_proven"): parts.append("legally enforceable debt exists")
             text = ". ".join(parts)
         
+        print(f"DEBUG: FINAL TEXT FOR SEMANTIC: {text}")
+        
         semantic_result = SemanticEngineV12.analyze_text(text)
         concepts = semantic_result.get("concepts_detected", [])
+        
+        print(f"DEBUG: CONCEPTS DETECTED: {concepts}")
+        
         timeline = TimelineEngine.generate_timeline(case_data)
         limitation = TimelineEngine.check_limitation(case_data)
         evidence = {

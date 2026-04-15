@@ -6,21 +6,12 @@ from engine_core import JudiQEngine
 from kb_manager import kb_manager
 from pdf_generator import PDFGenerator
 from database_manager import DatabaseManager
+from normalizer import normalize_input
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("JudiQ-API")
 
 app = FastAPI(title="JudiQ Legal AI API v6", version="6.0.0")
-
-def normalize_input(data):
-    return {
-        "case_id": data.get("case_id", data.get("caseId", "API_CASE")),
-        "cheque_present": data.get("cheque_present", data.get("chequePresent", False)),
-        "dishonour_memo": data.get("dishonour_memo", data.get("dishonourMemo", False)),
-        "notice_sent": data.get("notice_sent", data.get("noticeSent", False)),
-        "debt_proven": data.get("debt_proven", data.get("debtProven", False)),
-        "description": data.get("description", data.get("caseDescription", ""))
-    }
 
 @app.on_event("startup")
 async def startup():
@@ -35,17 +26,10 @@ async def health():
 async def analyze(request: Request):
     try:
         raw_data = await request.json()
-        logger.info(f"INPUT RECEIVED: {raw_data}")
-        
+        result = JudiQEngine.analyze_case(raw_data)
         normalized = normalize_input(raw_data)
-        logger.info(f"NORMALIZED: {normalized}")
-        
-        result = JudiQEngine.analyze_case(normalized)
-        logger.info(f"OUTPUT: {result}")
-        
         if normalized.get("user_id") and normalized.get("case_id"):
             DatabaseManager.save_case(normalized["user_id"], normalized["case_id"], normalized, result)
-            
         return {
             "success": True, 
             "score": result.get("score"),
@@ -78,7 +62,7 @@ async def explain_score():
 async def generate_pdf(request: Request):
     data = await request.json()
     if "score" not in data:
-        data = JudiQEngine.analyze_case(normalize_input(data))
+        data = JudiQEngine.analyze_case(data)
     pdf_bytes = PDFGenerator.generate_report(data)
     return Response(
         content=pdf_bytes,
