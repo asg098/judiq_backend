@@ -1,0 +1,506 @@
+{
+  "semantic_patterns": {
+    "no_agreement": {
+      "concept_name": "no_agreement",
+      "exact_phrases": [
+        "no agreement", "without agreement", "no contract", "without contract",
+        "no written agreement", "no formal agreement"
+      ],
+      "synonyms": [
+        "never signed", "never executed", "no documentation", "no formal documentation",
+        "unsigned", "no paperwork", "verbal only", "oral only", "word of mouth",
+        "handshake deal", "informal arrangement", "no signed document",
+        "did not sign any", "never signed any", "without signing"
+      ],
+      "related_terms": [
+        "unwritten", "undocumented", "informal", "casual", "verbal", "oral",
+        "understanding", "arrangement", "gentleman's agreement", "no proof"
+      ],
+      "negation_phrases": [
+        "did not sign", "never signed", "refused to sign", "failed to sign",
+        "no signature", "without signing", "unsigned document"
+      ],
+      "confidence_threshold": 0.55,
+      "legal_weight": 0.95
+    },
+    "no_debt_proof": {
+      "concept_name": "no_debt_proof",
+      "exact_phrases": [
+        "no proof", "no evidence", "unproven debt", "disputed debt",
+        "no documentation", "cannot prove"
+      ],
+      "synonyms": [
+        "unable to prove", "lacks evidence", "insufficient evidence",
+        "no supporting documents", "unsubstantiated", "baseless claim",
+        "no backup", "uncorroborated", "not proven", "unproven"
+      ],
+      "related_terms": [
+        "disputed", "contested", "challenged", "questioned", "doubted", "unverified"
+      ],
+      "negation_phrases": [
+        "never borrowed", "never received", "never took", "did not borrow",
+        "no loan taken"
+      ],
+      "confidence_threshold": 0.55,
+      "legal_weight": 0.90
+    },
+    "signature_disputed": {
+      "concept_name": "signature_disputed",
+      "exact_phrases": [
+        "signature disputed", "forged signature", "fake signature", "signature denied",
+        "signature is not mine", "not my signature"
+      ],
+      "synonyms": [
+        "signature questioned", "signature challenged", "unauthorized signature",
+        "signature mismatch", "wrong signature", "different signature",
+        "signature doesn't match", "signature does not match",
+        "signature not mine", "not my signature"
+      ],
+      "related_terms": [
+        "forged", "fabricated", "falsified", "counterfeit", "unauthorized",
+        "mismatch", "different", "altered", "tampered"
+      ],
+      "negation_phrases": [
+        "not my signature", "never signed", "didn't sign", "did not sign",
+        "someone else signed"
+      ],
+      "confidence_threshold": 0.25,
+      "legal_weight": 0.85
+    },
+    "notice_not_sent": {
+      "concept_name": "notice_not_sent",
+      "exact_phrases": [
+        "notice not sent", "no notice", "without notice", "no legal notice"
+      ],
+      "synonyms": [
+        "failed to send notice", "neglected to send notice", "did not serve notice",
+        "notice missing", "no demand letter", "no intimation",
+        "never notified", "never informed", "no warning given"
+      ],
+      "related_terms": [
+        "unnotified", "uninformed", "no warning", "no communication",
+        "surprise action", "no prior notice"
+      ],
+      "negation_phrases": [
+        "never received notice", "did not receive", "no notice received",
+        "never got notice"
+      ],
+      "confidence_threshold": 0.55,
+      "legal_weight": 0.80
+    },
+    "security_cheque": {
+      "concept_name": "security_cheque",
+      "exact_phrases": [
+        "security cheque", "security check", "cheque as security", "check as security",
+        "given as security", "for security purposes", "security deposit"
+      ],
+      "synonyms": [
+        "collateral cheque", "guarantee cheque", "cheque for guarantee",
+        "safety cheque", "cheque for safekeeping", "protective cheque",
+        "cheque as collateral", "cheque for protection", "advance security"
+      ],
+      "related_terms": [
+        "security", "collateral", "guarantee", "safekeeping", "protection",
+        "deposit", "earnest money", "good faith", "assurance"
+      ],
+      "negation_phrases": [
+        "not for payment", "not to encash", "not for discharge", "not for debt",
+        "only for security", "merely security", "just security"
+      ],
+      "confidence_threshold": 0.25,
+      "legal_weight": 0.95
+    },
+    "cheque_misuse": {
+      "concept_name": "cheque_misuse",
+      "exact_phrases": [
+        "cheque misuse", "misused cheque", "wrongful use", "unauthorized use",
+        "cheque abuse", "fraudulent use"
+      ],
+      "synonyms": [
+        "cheque misappropriation", "improper use", "illegal use", "unlawful presentation",
+        "wrongly presented", "falsely presented", "dishonestly used",
+        "cheque exploitation", "cheque manipulation"
+      ],
+      "related_terms": [
+        "misuse", "abuse", "fraud", "deception", "wrongful", "improper",
+        "unauthorized", "illegal", "unlawful", "dishonest"
+      ],
+      "negation_phrases": [
+        "never authorized", "without permission", "without consent",
+        "did not permit", "no authority to present"
+      ],
+      "confidence_threshold": 0.25,
+      "legal_weight": 0.90
+    },
+    "legally_enforceable_debt": {
+      "concept_name": "legally_enforceable_debt",
+      "exact_phrases": [
+        "legally enforceable debt", "enforceable liability", "valid debt",
+        "legal obligation", "binding debt", "contractual debt"
+      ],
+      "synonyms": [
+        "provable debt", "documented debt", "established debt",
+        "confirmed liability", "admitted debt", "acknowledged debt",
+        "recognized obligation", "verifiable debt"
+      ],
+      "related_terms": [
+        "enforceable", "binding", "valid", "legal", "legitimate",
+        "documented", "proven", "established", "contractual"
+      ],
+      "negation_phrases": [
+        "no enforceable debt", "not legally enforceable", "unenforceable",
+        "no valid debt", "invalid debt", "no legal obligation"
+      ],
+      "confidence_threshold": 0.55,
+      "legal_weight": 0.95
+    }
+  },
+  "legal_concepts": {
+    "signature_dispute": {
+      "patterns": [
+        "\\b(den(y|ies|ied)\\s+(execution|signing))",
+        "\\b(not\\s+signed|unsigned|forged\\s+signature)",
+        "\\b(signature\\s+(forged|fake|disputed))",
+        "\\b(never\\s+signed|didn't\\s+sign)",
+        "\\b(handwriting\\s+not\\s+mine)",
+        "\\b(signature\\s+mismatch)"
+      ],
+      "weight": 1.0,
+      "legal_impact": "challenges authenticity of negotiable instrument"
+    },
+    "notice_defect": {
+      "patterns": [
+        "\\b(no\\s+notice|notice\\s+not\\s+(received|sent))",
+        "\\b(improper\\s+notice|defective\\s+notice)",
+        "\\b(notice\\s+(missing|absent))",
+        "\\b(failed\\s+to\\s+serve\\s+notice)",
+        "\\b(notice\\s+not\\s+as\\s+per\\s+law)"
+      ],
+      "weight": 1.0,
+      "legal_impact": "mandatory statutory requirement under S.138"
+    },
+    "limitation_issue": {
+      "patterns": [
+        "\\b(barred\\s+by\\s+limitation|time[-\\s]?barred)",
+        "\\b(limitation\\s+period\\s+expired)",
+        "\\b(filed\\s+beyond\\s+limitation)",
+        "\\b(case\\s+(stale|belated))",
+        "\\b(out\\s+of\\s+time)"
+      ],
+      "weight": 1.0,
+      "legal_impact": "jurisdictional bar to prosecution"
+    },
+    "no_debt_proof": {
+      "patterns": [
+        "\\b(no\\s+(debt|liability)\\s+(exists|proven))",
+        "\\b(debt\\s+(not\\s+established|unproven))",
+        "\\b(no\\s+(agreement|contract)\\s+shown)",
+        "\\b(underlying\\s+debt\\s+(missing|absent))",
+        "\\b(lack\\s+of\\s+consideration)"
+      ],
+      "weight": 0.9,
+      "legal_impact": "challenges legal enforceability under S.139"
+    },
+    "cheque_validity_issue": {
+      "patterns": [
+        "\\b(cheque\\s+(stale|expired|invalid))",
+        "\\b(beyond\\s+validity|validity\\s+period\\s+over)",
+        "\\b(presented\\s+beyond\\s+3\\s+months)",
+        "\\b(post[-\\s]?dated\\s+beyond\\s+validity)"
+      ],
+      "weight": 0.85,
+      "legal_impact": "impacts admissibility of cheque as evidence"
+    },
+    "payment_already_made": {
+      "patterns": [
+        "\\b(already\\s+paid|payment\\s+(made|completed))",
+        "\\b(debt\\s+(settled|discharged))",
+        "\\b(amount\\s+(returned|refunded))",
+        "\\b(no\\s+outstanding\\s+dues)"
+      ],
+      "weight": 0.8,
+      "legal_impact": "discharge of liability defense"
+    },
+    "dishonour_disputed": {
+      "patterns": [
+        "\\b(dishonour\\s+(memo|slip)\\s+(fake|forged))",
+        "\\b(bank\\s+memo\\s+disputed)",
+        "\\b(no\\s+dishonour\\s+occurred)",
+        "\\b(cheque\\s+actually\\s+cleared)"
+      ],
+      "weight": 0.85,
+      "legal_impact": "challenges foundational fact of dishonour"
+    },
+    "cheque_bounce": {
+      "patterns": [
+        "\\b(cheque\\s+(dishonoured|bounced|returned|presented))",
+        "\\b(negotiable\\s+instrument)",
+        "\\b(cheque\\s+present)",
+        "\\b(section\\s+138)",
+        "\\b(ni\\s+act)",
+        "\\b(dishonour\\s+memo)",
+        "\\b(bank\\s+(memo|slip|return\\s+memo))"
+      ],
+      "weight": 0.95,
+      "legal_impact": "establishes core Section 138 NI Act offence"
+    },
+    "legal_notice_compliance": {
+      "patterns": [
+        "\\b(legal\\s+notice\\s+sent)",
+        "\\b(demand\\s+notice\\s+(issued|served|sent))",
+        "\\b(notice\\s+(served|delivered|sent|issued))",
+        "\\b(registered\\s+post\\s+notice)",
+        "\\b(statutory\\s+notice)"
+      ],
+      "weight": 0.90,
+      "legal_impact": "satisfies mandatory notice requirement under S.138(b)"
+    },
+    "legally_enforceable_debt": {
+      "patterns": [
+        "\\b(loan\\s+(amount|given|advanced|transaction))",
+        "\\b(legally\\s+enforceable\\s+debt)",
+        "\\b(debt\\s+proven|debt\\s+established)",
+        "\\b(loan\\s+agreement|written\\s+agreement)",
+        "\\b(promissory\\s+note|acknowledgment\\s+of\\s+debt)",
+        "\\b(consideration\\s+paid)"
+      ],
+      "weight": 0.90,
+      "legal_impact": "establishes legally enforceable liability under S.139"
+    },
+    "strong_documentary_evidence": {
+      "patterns": [
+        "\\b(documentary\\s+evidence)",
+        "\\b(bank\\s+statement)",
+        "\\b(signed\\s+agreement|notarized\\s+agreement)",
+        "\\b(invoice|receipt|voucher)",
+        "\\b(written\\s+(proof|record|documentation))"
+      ],
+      "weight": 0.85,
+      "legal_impact": "strengthens evidentiary basis of complainant's case"
+    }
+  },
+  "knowledge_base": {
+    "signature_dispute": {
+      "section": "Section 138 + 139 NI Act (Presumption can be rebutted)",
+      "legal_provision": "Burden on accused to prove signature not genuine",
+      "court_view": "Mere denial insufficient; expert evidence required",
+      "risk_level": "HIGH",
+      "score_impact": -35,
+      "common_defences": [
+        "Signature not mine - handwriting expert opinion",
+        "Cheque obtained by fraud/coercion",
+        "Signature forged - police complaint filed"
+      ],
+      "rebuttal_strategy": "Cross-examine on specimen signatures, demand handwriting expert",
+      "precedent": "Modi Cements Ltd v. Kuchil Kumar Nandi (2013) - Burden on accused",
+      "success_probability_range": [40, 60]
+    },
+    "notice_defect": {
+      "section": "Section 138(b) NI Act - Mandatory requirement",
+      "legal_provision": "Notice must be sent within 30 days of dishonour",
+      "court_view": "Strict compliance required; procedural lapse fatal",
+      "risk_level": "CRITICAL",
+      "score_impact": -50,
+      "common_defences": [
+        "No legal notice received",
+        "Notice sent beyond 30 days of dishonour",
+        "Notice defective - doesn't state amount/details",
+        "Notice not sent to correct address"
+      ],
+      "rebuttal_strategy": "Produce postal receipts, acknowledgment, courier proof",
+      "precedent": "C.C. Alavi Haji v. Palapetty Muhammed (2007) - Notice mandatory",
+      "success_probability_range": [70, 90]
+    },
+    "limitation_issue": {
+      "section": "Section 142(b) NI Act - 1 month from notice expiry",
+      "legal_provision": "Complaint must be filed within 1 month after notice period",
+      "court_view": "Jurisdictional requirement; no condonation allowed",
+      "risk_level": "CRITICAL",
+      "score_impact": -60,
+      "common_defences": [
+        "Complaint filed beyond limitation period",
+        "Time-barred by law",
+        "No sufficient cause for delay"
+      ],
+      "rebuttal_strategy": "Calculate dates precisely, show sufficient cause if delayed",
+      "precedent": "Saketh India Ltd v. India Securities Ltd (1999) - Limitation mandatory",
+      "success_probability_range": [85, 95]
+    },
+    "no_debt_proof": {
+      "section": "Section 139 NI Act - Presumption of debt",
+      "legal_provision": "Legally enforceable debt or liability must exist",
+      "court_view": "Presumption can be rebutted; complainant must prove debt",
+      "risk_level": "HIGH",
+      "score_impact": -30,
+      "common_defences": [
+        "No underlying debt exists",
+        "Cheque given as security only",
+        "No agreement or contract shown",
+        "Debt not legally enforceable"
+      ],
+      "rebuttal_strategy": "Produce loan agreement, invoices, ledger entries, correspondence",
+      "precedent": "Kumar Exports v. Sharma Carpets (2009) - Debt must be proven",
+      "success_probability_range": [50, 70]
+    },
+    "cheque_validity_issue": {
+      "section": "Section 138 NI Act (3-month validity from date)",
+      "legal_provision": "Cheque must be presented within 3 months of date",
+      "court_view": "Stale cheque not valid negotiable instrument",
+      "risk_level": "MEDIUM",
+      "score_impact": -20,
+      "common_defences": [
+        "Cheque presented beyond 3 months - stale",
+        "Validity period expired"
+      ],
+      "rebuttal_strategy": "Verify presentation date vs cheque date; revalidation possible",
+      "precedent": "Guidelines by RBI on cheque validity periods",
+      "success_probability_range": [60, 75]
+    },
+    "payment_already_made": {
+      "section": "Section 139 NI Act - Discharge of liability",
+      "legal_provision": "Payment discharges debt; no liability remains",
+      "court_view": "Accused must prove payment with evidence",
+      "risk_level": "MEDIUM",
+      "score_impact": -25,
+      "common_defences": [
+        "Amount already paid/returned",
+        "Debt settled before complaint",
+        "Payment receipts available"
+      ],
+      "rebuttal_strategy": "Demand payment proof; check for receipt forgery",
+      "precedent": "Standard defense under discharge of debt",
+      "success_probability_range": [40, 60]
+    },
+    "dishonour_disputed": {
+      "section": "Section 138 NI Act - Dishonour is foundational fact",
+      "legal_provision": "Bank memo is primary evidence of dishonour",
+      "court_view": "Bank records carry high evidentiary value",
+      "risk_level": "HIGH",
+      "score_impact": -35,
+      "common_defences": [
+        "Bank memo forged/fabricated",
+        "Cheque actually cleared",
+        "No dishonour occurred"
+      ],
+      "rebuttal_strategy": "Bank certificate, call bank official as witness",
+      "precedent": "Bank documents treated as reliable evidence",
+      "success_probability_range": [30, 50]
+    },
+    "no_agreement": {
+      "section": "Section 139 NI Act - Legally enforceable debt",
+      "legal_provision": "No written agreement establishing debt",
+      "court_view": "Absence of agreement weakens debt proof significantly",
+      "risk_level": "HIGH",
+      "score_impact": -30,
+      "common_defences": [
+        "No written agreement exists",
+        "Debt not legally enforceable",
+        "Oral claim without documentary proof",
+        "Transaction nature unclear"
+      ],
+      "rebuttal_strategy": "Gather oral testimony, witness statements, indirect evidence",
+      "precedent": "Written agreement strengthens debt proof substantially",
+      "success_probability_range": [60, 75]
+    },
+    "cheque_as_security": {
+      "section": "Section 139 NI Act - Presumption of debt can be rebutted",
+      "legal_provision": "Cheque given as security, not for debt discharge",
+      "court_view": "If proven as security cheque, no Section 138 liability",
+      "risk_level": "CRITICAL",
+      "score_impact": -40,
+      "common_defences": [
+        "Cheque was security for different transaction",
+        "No underlying debt exists",
+        "Cheque given for collateral purpose",
+        "Transaction was loan against security, not debt"
+      ],
+      "rebuttal_strategy": "Prove actual debt transaction with documentary evidence",
+      "precedent": "Indus Airways v. Magnum Aviation (2014) - Security cheque defense",
+      "success_probability_range": [70, 85]
+    },
+    "security_cheque": {
+      "section": "Section 139 NI Act - Presumption of debt can be rebutted",
+      "legal_provision": "Cheque given as security/collateral, not for debt discharge",
+      "court_view": "If proven as security cheque, no Section 138 liability - case-killer",
+      "risk_level": "CRITICAL",
+      "score_impact": -25,
+      "common_defences": [
+        "Cheque was security for different transaction",
+        "Given as collateral, not for debt payment",
+        "Advance security cheque - no debt exists",
+        "Cheque for guarantee purposes only"
+      ],
+      "rebuttal_strategy": "Prove actual debt transaction with agreement showing debt discharge purpose",
+      "precedent": "Standard defense under S.139 rebuttal",
+      "success_probability_range": [70, 85]
+    }
+  },
+  "scoring_catalogue": {
+    "legally_enforceable_debt": [-35, 0.95, 0.25],
+    "security_cheque": [-40, 0.95, 0.20],
+    "cheque_misuse": [-30, 0.85, 0.25],
+    "signature_disputed": [-35, 0.90, 0.20],
+    "no_debt_proof": [-30, 0.90, 0.25],
+    "notice_not_sent": [-30, 0.95, 0.20],
+    "notice_defect": [-20, 0.85, 0.20],
+    "limitation_issue": [-25, 0.90, 0.20]
+  },
+  "defence_templates": {
+    "security_cheque": [
+      "Cheque given as security, not in discharge of legally enforceable debt",
+      "Establish nature of transaction through contemporaneous documents, loan agreements, or WhatsApp/email records",
+      "S.138 NI Act requires legally enforceable debt — security cheques fall outside its scope"
+    ],
+    "signature_disputed": [
+      "Signature on cheque is forged or denied by accused",
+      "Commission handwriting expert analysis; forensic examination of the instrument",
+      "Complainant bears burden to establish genuineness of signature (S.118 NI Act)"
+    ],
+    "no_debt_proof": [
+      "Absence of documentary proof of underlying debt undermines the presumption",
+      "Produce loan agreement, bank transfer records, or witness affidavits establishing debt",
+      "S.139 NI Act raises presumption — but rebuttable if no underlying debt shown"
+    ],
+    "notice_not_sent": [
+      "Mandatory legal notice under S.138 was not served within 30 days of dishonour",
+      "Verify postal records, courier tracking, and acknowledgment receipts",
+      "S.138(b) NI Act — notice is a mandatory condition precedent; non-compliance is fatal"
+    ],
+    "notice_defect": [
+      "Legal notice is defective — incorrect amount, address, or served out of time",
+      "Re-examine notice for compliance with S.138 requirements; consider fresh notice if within limitation",
+      "S.138(b)(c) NI Act — defective notice is equivalent to no notice"
+    ],
+    "limitation_issue": [
+      "Complaint filed beyond limitation period prescribed under S.142 NI Act",
+      "Calculate exact timeline from dishonour → notice → non-payment → complaint filing",
+      "S.142 NI Act — complaint must be filed within 1 month of cause of action arising"
+    ],
+    "cheque_misuse": [
+      "Cheque was misused — issued for a different purpose than alleged by complainant",
+      "Produce original purpose documentation; examine if cheque leaf was misappropriated",
+      "S.138 requires the cheque to be 'drawn' for the specific liability claimed"
+    ],
+    "legally_enforceable_debt": [
+      "No legally enforceable debt exists — transaction may be time-barred or void",
+      "Verify nature of underlying obligation; check if debt is time-barred under Limitation Act",
+      "S.138 requires 'legally enforceable debt or other liability' — void obligations excluded"
+    ],
+    "no_agreement": [
+      "No formal agreement exists to establish the basis or terms of the alleged debt",
+      "Seek contemporaneous documents, bank statements, or digital communications",
+      "Lack of agreement weakens the presumption under S.139 NI Act"
+    ]
+  },
+  "defence_legal_weights": {
+    "security_cheque": 0.95,
+    "signature_disputed": 0.90,
+    "no_debt_proof": 0.90,
+    "notice_not_sent": 0.95,
+    "notice_defect": 0.85,
+    "limitation_issue": 0.90,
+    "cheque_misuse": 0.85,
+    "legally_enforceable_debt": 0.95,
+    "no_agreement": 0.80
+  }
+}
