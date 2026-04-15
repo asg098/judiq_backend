@@ -37,9 +37,10 @@ def _convert_to_lawyer_language(raw_trace: list) -> list:
                 break
         if not matched:
             cleaned = re.sub(r"^[+-]\d+\s+", "", str(item)).strip()
-            if cleaned and not cleaned.startswith("Base score") and not cleaned.startswith("Final score"):
+            if cleaned and not cleaned.startswith("Base score") and not cleaned.startswith("Final score") and not cleaned.startswith("Applied"):
                 clean_trace.append(cleaned)
     return clean_trace
+
 
 class ResponseBuilder:
     @staticmethod
@@ -57,21 +58,38 @@ class ResponseBuilder:
         if score < 50: risk_level = "CRITICAL"
         elif score < 75: risk_level = "MEDIUM"
 
-        risks = [c.get("concept", "").replace('_', ' ').title() for c in concepts if c.get("confidence", 0) > 0.4][:3]
+        negative_concepts = {"signature_dispute", "notice_defect", "no_debt_proof", "security_cheque",
+                             "cheque_misuse", "limitation_issue", "payment_already_made", "dishonour_disputed",
+                             "cheque_validity_issue", "no_agreement"}
+        positive_concepts = {"cheque_bounce", "legal_notice_compliance", "legally_enforceable_debt",
+                              "strong_documentary_evidence"}
 
         strengths = []
-        if case_data.get("cheque_present"): strengths.append("Instrument Possession")
-        if case_data.get("dishonour_memo"): strengths.append("Bank Return Memo")
-        if case_data.get("notice_sent"): strengths.append("Compliance (Notice)")
-        if case_data.get("debt_proven"): strengths.append("Debt Established")
+        weaknesses = []
 
+        if case_data.get("cheque_present"): strengths.append("Instrument (cheque) in possession")
+        if case_data.get("dishonour_memo"): strengths.append("Bank return / dishonour memo available")
+        if case_data.get("notice_sent"): strengths.append("Statutory notice compliance (S.138b)")
+        if case_data.get("debt_proven"): strengths.append("Legally enforceable debt established")
+
+        for c in concepts:
+            concept_name = c.get("concept", "")
+            conf = c.get("confidence", 0)
+            label = f"{concept_name.replace('_', ' ').title()} (conf: {conf:.2f})"
+            if concept_name in negative_concepts and conf >= 0.35:
+                weaknesses.append(label)
+            elif concept_name in positive_concepts and conf >= 0.5:
+                strengths.append(label)
+
+        confidence_score = round(sum(c.get("confidence", 0) for c in concepts) / len(concepts), 2) if concepts else None
         lawyer_reasoning = _convert_to_lawyer_language(trace)
 
-        semantic_summary = [
+        concepts_for_response = [
             {
                 "concept": c.get("concept", ""),
                 "confidence": c.get("confidence", 0),
-                "legal_impact": c.get("legal_impact", "")
+                "legal_impact": c.get("legal_impact", ""),
+                "matched_phrases": c.get("matched_phrases", [])
             }
             for c in concepts
         ]
@@ -80,20 +98,26 @@ class ResponseBuilder:
             "score": score,
             "verdict": verdict,
             "risk_level": risk_level,
-            "confidence": round(sum(c.get("confidence", 0) for c in concepts) / len(concepts), 2) if concepts else None,
+            "analysis_confidence": confidence_score,
+            "strengths": strengths,
+            "weaknesses": weaknesses,
+            "semantic_analysis": {
+                "concepts_detected": concepts_for_response,
+                "total_confidence": confidence_score,
+                "count": len(concepts)
+            },
             "executive_summary": {
                 "score": score,
-                "top_risks": risks or ["None detected"],
+                "top_risks": weaknesses[:3] or ["None detected"],
                 "top_strengths": strengths[:3] or ["None"],
                 "next_action": "Proceed with filing" if score > 70 else "Address critical defects before litigation"
             },
             "legal_analysis": {
-                "issues": risks,
+                "issues": weaknesses,
                 "strengths": strengths,
                 "reasoning": lawyer_reasoning,
                 "breakdown": breakdown
             },
-            "semantic_concepts": semantic_summary,
             "defence_strategy": engine_result.get("defences", []),
             "draft": engine_result.get("draft", ""),
             "timeline": engine_result.get("timeline", []),

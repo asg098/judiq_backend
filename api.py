@@ -28,17 +28,19 @@ async def analyze(request: Request):
         raw_data = await request.json()
         result = JudiQEngine.analyze_case(raw_data)
         normalized = normalize_input(raw_data)
-        if normalized.get("user_id") and normalized.get("case_id"):
+        if normalized.get("user_id") and normalized.get("case_id") and normalized["user_id"] != "ANONYMOUS":
             DatabaseManager.save_case(normalized["user_id"], normalized["case_id"], normalized, result)
         return {
             "success": True,
             "score": result.get("score"),
             "verdict": result.get("verdict"),
             "risk_level": result.get("risk_level"),
-            "confidence": result.get("confidence"),
-            "executive_summary": result.get("executive_summary"),
-            "legal_analysis": result.get("legal_analysis"),
-            "semantic_concepts": result.get("semantic_concepts", []),
+            "analysis_confidence": result.get("analysis_confidence"),
+            "strengths": result.get("strengths", []),
+            "weaknesses": result.get("weaknesses", []),
+            "semantic_analysis": result.get("semantic_analysis", {}),
+            "executive_summary": result.get("executive_summary", {}),
+            "legal_analysis": result.get("legal_analysis", {}),
             "predicted_defences": result.get("defence_strategy", []),
             "draft": result.get("draft", ""),
             "timeline": result.get("timeline", []),
