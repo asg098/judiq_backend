@@ -84,19 +84,17 @@ class JudiQEngine:
         final_score = scoring_result["final_score"]
         verdict = "STRONG" if final_score > 70 else ("MODERATE" if final_score > 40 else "WEAK")
 
-        draft = DraftEngine.generate_opinion({
-            "score": final_score,
-            "verdict": verdict,
-            "concepts": concepts,
-            "case_data": case_data
-        })
+        from draft_engine import decide_draft_type
+        draft_type = decide_draft_type(final_score, concepts, case_data)
+        draft = DraftEngine.generate_draft(draft_type, final_score, concepts, case_data)
 
         engine_output = {
             **scoring_result,
             "concepts": concepts,
             "defences": defences,
             "timeline": timeline,
-            "draft": draft
+            "draft": draft,
+            "draft_type": draft_type
         }
 
         return ResponseBuilder.build_final_response(engine_output, case_data)

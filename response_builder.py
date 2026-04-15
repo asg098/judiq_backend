@@ -132,6 +132,7 @@ class ResponseBuilder:
             },
             "defence_strategy": engine_result.get("defences", []),
             "draft": engine_result.get("draft", ""),
+            "draft_type": engine_result.get("draft_type", "LEGAL_OPINION"),
             "timeline": engine_result.get("timeline", []),
             "timestamp": datetime.now().isoformat(),
             "engine_version": "v19.0-SANKATMOCHAN-v6.5"
