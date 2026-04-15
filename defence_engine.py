@@ -6,14 +6,20 @@ def ensure_list(x):
     if isinstance(x, list): return x
     return [x]
 
-def ensure_dict(x):
-    if x is None: return {}
-    if isinstance(x, dict): return x
-    return {}
-
 def ensure_number(x, default=0):
     try: return float(x)
     except: return default
+
+DEFENCE_ONLY_NEGATIVE_CONCEPTS = {
+    "security_cheque", "signature_dispute", "signature_disputed", "no_debt_proof",
+    "notice_not_sent", "notice_defect", "limitation_issue", "cheque_misuse",
+    "no_agreement", "cheque_validity_issue", "payment_already_made", "dishonour_disputed"
+}
+
+POSITIVE_CONCEPTS_NO_DEFENCE = {
+    "cheque_bounce", "legal_notice_compliance", "legally_enforceable_debt",
+    "strong_documentary_evidence"
+}
 
 class DefenceEngineV12:
     @classmethod
@@ -25,13 +31,23 @@ class DefenceEngineV12:
         weights = kb_manager.get_defence_legal_weights()
         templates = kb_manager.get_defence_templates()
         seen = set()
+
         for concept_det in ensure_list(concepts):
             concept = concept_det.get("concept", "unknown")
             confidence = ensure_number(concept_det.get("confidence", 0))
+
+            if concept in POSITIVE_CONCEPTS_NO_DEFENCE:
+                continue
+
+            if concept not in DEFENCE_ONLY_NEGATIVE_CONCEPTS:
+                continue
+
             if concept not in templates or concept in seen:
                 continue
+
             if confidence < 0.20:
                 continue
+
             seen.add(concept)
             legal_weight = weights.get(concept, 0.75)
             arg, reb, basis = templates[concept]
@@ -39,9 +55,11 @@ class DefenceEngineV12:
             strength_factor = max(0.5, 1.0 - (case_strength / 200))
             prob = int(base_prob * strength_factor)
             prob = max(10, min(95, prob))
+
             strength = "LOW"
             if prob >= 70: strength = "HIGH"
             elif prob >= 40: strength = "MEDIUM"
+
             defences.append({
                 "argument": arg,
                 "strength": strength,
@@ -50,5 +68,6 @@ class DefenceEngineV12:
                 "rebuttal": reb,
                 "legal_basis": basis
             })
+
         defences.sort(key=lambda x: x['success_probability'], reverse=True)
         return defences
