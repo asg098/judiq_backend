@@ -19,6 +19,17 @@ def ensure_number(x, default=0):
     try: return float(x)
     except: return default
 
+# Keys that indicate the user explicitly submitted structured form data.
+# If NONE of these are present (i.e. the raw dict had no boolean flags at all),
+# we treat the submission as "description-only" and skip structural penalties.
+STRUCTURED_KEYS = {"cheque_present", "chequePresent", "dishonour_memo", "dishonourMemo",
+                   "notice_sent", "noticeSent", "debt_proven", "debtProven"}
+
+def _is_structured_input(raw_case_data: Dict) -> bool:
+    """Return True only when at least one explicit boolean pillar flag is present."""
+    return any(k in raw_case_data for k in STRUCTURED_KEYS)
+
+
 class ScoringEngineV12:
     @classmethod
     def resolve_conflicts(cls, concepts: List[Dict]) -> List[Dict]:
@@ -43,11 +54,12 @@ class ScoringEngineV12:
         return resolved
 
     @classmethod
-    def calculate_score_with_trace(cls, 
+    def calculate_score_with_trace(cls,
                                    case_data: Dict,
                                    concepts: List[Dict],
                                    contradictions: List[Dict],
-                                   evidence_assessment: Dict) -> Dict:
+                                   evidence_assessment: Dict,
+                                   raw_input: Dict = None) -> Dict:
         concepts = cls.resolve_conflicts(ensure_list(concepts))
         trace = []
         base_score = 35
@@ -55,37 +67,54 @@ class ScoringEngineV12:
         fatal_conditions = []
         case_id = str(case_data.get("case_id", "DEFAULT_ID"))
         trace.append(f"Base score: {base_score}")
+
         cheque = bool(case_data.get('cheque_present'))
-        memo = bool(case_data.get('dishonour_memo'))
+        memo   = bool(case_data.get('dishonour_memo'))
         notice = bool(case_data.get('notice_sent'))
-        debt = bool(case_data.get('debt_proven'))
-        if cheque: 
-            score += 10
-            trace.append("+10 instrument present")
-        else: 
-            score -= 25
-            trace.append("-25 instrument missing")
-        if memo: 
-            score += 10
-            trace.append("+10 memo available")
-        if notice: 
-            score += 8
-            trace.append("+8 notice compliance")
-        else: 
-            score -= 30
-            trace.append("-30 notice defect (fatal)")
-        if debt:
-            proof_method = case_data.get("debt_proof_type", "written_agreement").lower()
-            impact = 12 if proof_method != "verbal" else 4
-            score += impact
-            trace.append(f"+{impact} debt provenance ({proof_method})")
+        debt   = bool(case_data.get('debt_proven'))
+
+        # Determine if user submitted explicit boolean flags or only a description.
+        # raw_input falls back to case_data when not separately provided.
+        source = raw_input if raw_input is not None else case_data
+        structured = _is_structured_input(source)
+
+        if structured:
+            # ── Pillar scoring: only when flags were explicitly submitted ──────
+            if cheque:
+                score += 10
+                trace.append("+10 instrument present")
+            else:
+                score -= 25
+                trace.append("-25 instrument missing")
+
+            if memo:
+                score += 10
+                trace.append("+10 memo available")
+
+            if notice:
+                score += 8
+                trace.append("+8 notice compliance")
+            else:
+                score -= 30
+                trace.append("-30 notice defect (fatal)")
+
+            if debt:
+                proof_method = case_data.get("debt_proof_type", "written_agreement").lower()
+                impact = 12 if proof_method != "verbal" else 4
+                score += impact
+                trace.append(f"+{impact} debt provenance ({proof_method})")
+            else:
+                score -= 35
+                trace.append("-35 debt not established")
+
+            if cheque and memo and notice and debt:
+                score += 5
+                trace.append("+5 strong case synergy bonus")
         else:
-            score -= 35
-            trace.append("-35 debt not established")
-        if cheque and memo and notice and debt:
-            synergy = 5
-            score += synergy
-            trace.append(f"+5 strong case synergy bonus")
+            # ── Description-only mode: neutral base, no structural penalties ──
+            trace.append("Description-only input — structural pillar scoring skipped")
+
+        # ── Concept-based scoring (applies in both modes) ─────────────────────
         catalogue = kb_manager.get_scoring_catalogue()
         score_breakdown = []
         positive_concepts = [
@@ -94,44 +123,54 @@ class ScoringEngineV12:
             "strong_documentary_evidence",
             "cheque_bounce"
         ]
+
         for concept_det in concepts:
-            concept = concept_det.get("concept", "unknown")
+            concept    = concept_det.get("concept", "unknown")
             confidence = ensure_number(concept_det.get("confidence", 0))
             if confidence < 0.2:
                 continue
+
             if concept in positive_concepts:
                 boost = int((confidence ** 2) * 10)
                 score += boost
                 trace.append(f"+{boost} {concept} strength boost")
                 score_breakdown.append(f"{concept} (+{boost})")
                 continue
-            
+
             lookup_concept = concept
             if lookup_concept not in catalogue:
-                alias = "signature_dispute" if concept == "signature_disputed" else ("signature_disputed" if concept == "signature_dispute" else None)
+                alias = (
+                    "signature_dispute" if concept == "signature_disputed"
+                    else ("signature_disputed" if concept == "signature_dispute" else None)
+                )
                 if alias and alias in catalogue:
                     lookup_concept = alias
                 else:
                     continue
+
             base_penalty, legal_weight, _ = catalogue[lookup_concept]
-            
+
             if confidence < 0.5:
                 penalty_multiplier = 0.5
                 impact_factor = confidence
             else:
                 penalty_multiplier = 1.0
                 impact_factor = confidence ** 2
-            
+
             scaled_penalty = int(impact_factor * legal_weight * base_penalty * 0.6 * penalty_multiplier)
             score += scaled_penalty
             trace.append(f"{scaled_penalty:+d} {concept} (conf: {confidence:.2f})")
             score_breakdown.append(f"{concept} ({scaled_penalty})")
+
             risk = kb_manager.get_risk_level(concept)
             if risk == "CRITICAL" and confidence >= 0.75:
                 fatal_conditions.append(concept)
+
+        # ── Small deterministic variation per case_id ─────────────────────────
         variation_hash = int(hashlib.md5(case_id.encode()).hexdigest(), 16)
         variation = variation_hash % 12
         score += variation
+
         score = max(0, min(score, 100))
         return {
             "final_score": score,
