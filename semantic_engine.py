@@ -17,7 +17,12 @@ def ensure_number(x, default=0):
 NEGATION_WINDOW = 6
 
 def _is_negated(text_tokens: List[str], match_start_idx: int) -> bool:
-    negators = {"no", "not", "without", "never", "cannot", "didn't", "did not", "wasn't", "hasn't", "lack", "lacking", "absent", "missing"}
+    """Check if a phrase is negated by looking at preceding words"""
+    negators = {
+        "no", "not", "without", "never", "cannot", "didn't", "did not", 
+        "wasn't", "hasn't", "haven't", "lack", "lacking", "absent", 
+        "missing", "none", "neither", "nor", "un", "doesn't"
+    }
     window_start = max(0, match_start_idx - NEGATION_WINDOW)
     window = text_tokens[window_start:match_start_idx]
     return any(tok in negators for tok in window)
@@ -27,11 +32,13 @@ NEGATION_SENSITIVE_CONCEPTS = {
     "legally_enforceable_debt",
     "legal_notice_compliance",
     "strong_documentary_evidence",
+    "cheque_bounce"
 }
 
 class SemanticEngineV12:
     @classmethod
     def analyze_text(cls, text: str) -> Dict[str, Any]:
+        """Analyze case description text and extract legal concepts"""
         detected = cls.detect_concepts(text)
         return {
             "concepts_detected": detected,
@@ -40,14 +47,16 @@ class SemanticEngineV12:
                 if detected else 0.0
             ),
             "count": len(detected),
-            "method": "SemanticEngineV12_unified",
+            "method": "SemanticEngineV12_enhanced",
             "text_analyzed": text[:200] + "..." if len(text) > 200 else text,
         }
 
     @classmethod
     def detect_concepts(cls, text: str) -> List[Dict]:
+        """Enhanced concept detection with better pattern matching"""
         if not text:
             return []
+        
         text_lower = text.lower()
         tokens = re.findall(r'\w+', text_lower)
         detected = []
@@ -62,22 +71,43 @@ class SemanticEngineV12:
             for pattern in patterns:
                 for m in re.finditer(pattern, text_lower, re.IGNORECASE):
                     match_start = len(re.findall(r'\w+', text_lower[:m.start()]))
-                    negated = _is_negated(tokens, match_start) if concept in NEGATION_SENSITIVE_CONCEPTS else False
-                    if negated:
+                    
+                    # Check for negation
+                    is_negated = False
+                    if concept in NEGATION_SENSITIVE_CONCEPTS:
+                        is_negated = _is_negated(tokens, match_start)
+                    
+                    if is_negated:
                         negated_count += 1
                     else:
                         match_count += 1
                         matched_text = m.group(0)
-                        matched_phrases.append(matched_text)
+                        if matched_text not in matched_phrases:
+                            matched_phrases.append(matched_text)
 
             if match_count > 0:
-                base_confidence = min(match_count / len(patterns), 1.0) if patterns else 0.5
-                weight_adjusted = base_confidence * config.get('weight', 1.0)
-                phrase_boost = min(len(set(matched_phrases)) * 0.1, 0.2)
-                negation_penalty = min(negated_count * 0.15, 0.4)
-                final_confidence = min(max(weight_adjusted + phrase_boost - negation_penalty, 0.0), 1.0)
+                # Enhanced confidence calculation
+                pattern_coverage = min(match_count / max(len(patterns), 1), 1.0)
+                base_confidence = pattern_coverage * config.get('weight', 1.0)
+                
+                # Bonus for multiple unique phrase matches
+                phrase_diversity_boost = min(len(set(matched_phrases)) * 0.08, 0.25)
+                
+                # Penalty for negations
+                negation_penalty = min(negated_count * 0.18, 0.5)
+                
+                # Special boost for exact critical phrase matches
+                critical_boost = 0.0
+                if any(phrase in text_lower for phrase in ["funds insufficient", "signature mismatch", "account closed", "payment stopped"]):
+                    if concept in ["cheque_bounce", "dishonour_disputed"]:
+                        critical_boost = 0.15
+                
+                final_confidence = min(
+                    max(base_confidence + phrase_diversity_boost + critical_boost - negation_penalty, 0.0), 
+                    1.0
+                )
 
-                if final_confidence > 0.0:
+                if final_confidence > 0.15:  # Lower threshold for detection
                     detected.append({
                         "concept": concept,
                         "confidence": round(final_confidence, 2),
@@ -91,7 +121,8 @@ class SemanticEngineV12:
 
 class EnhancedSemanticExtractor:
     @staticmethod
-    def extract_concepts(text: str, threshold: float = 0.25) -> Dict[str, Any]:
+    def extract_concepts(text: str, threshold: float = 0.20) -> Dict[str, Any]:
+        """Extract concepts with configurable threshold"""
         result = SemanticEngineV12.analyze_text(text)
         concepts = result.get("concepts_detected", [])
         filtered = [c for c in concepts if c.get("confidence", 0) >= threshold]
@@ -102,6 +133,6 @@ class EnhancedSemanticExtractor:
                 if filtered else 0.0
             ),
             "count": len(filtered),
-            "method": "SemanticEngineV12_unified_compat",
+            "method": "SemanticEngineV12_enhanced_compat",
             "text_analyzed": result.get("text_analyzed", "")
         }
