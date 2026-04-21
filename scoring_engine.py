@@ -47,7 +47,8 @@ class ScoringEngineV12:
                                    case_data: Dict,
                                    concepts: List[Dict],
                                    contradictions: List[Dict],
-                                   evidence_assessment: Dict) -> Dict:
+                                   evidence_assessment: Dict,
+                                   raw_input: Dict = None) -> Dict:  # Added for backward compatibility
         """
         REALISTIC SCORING ENGINE - Produces varied scores based on actual case strength
         
@@ -57,6 +58,8 @@ class ScoringEngineV12:
         - Concept impacts: Negatives (-5 to -45), Positives (+3 to +12)
         - Quality matters: Original docs score higher than copies
         - Strong case: 75-100, Moderate: 40-74, Weak: 0-39
+        
+        Note: raw_input parameter is deprecated but kept for backward compatibility
         """
         concepts = cls.resolve_conflicts(ensure_list(concepts))
         trace = []
