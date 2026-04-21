@@ -574,4 +574,458 @@ After deployment:
 
 **🎯 Ready to Deploy!**
 
-All 20 files included, tested, and documented. Follow the Quick Start guide above and you'll be live in 5 minutes!
+All 20 files included, tested, and documented. Follow the Quick Start guide above and you'll be live in 5 minutes
+
+# COMPLETE FRONTEND-BACKEND INTEGRATION TESTING GUIDE
+## All 3 User Types (Citizen, Lawyer, Student) - Full Functionality Verification
+
+---
+
+## 🎯 OVERVIEW
+
+This guide ensures EVERY feature works correctly for all 3 user types with the backend.
+
+### Files Updated:
+✅ **Backend** (7 files):
+- scoring_engine.py
+- semantic_engine.py  
+- normalizer.py
+- timeline_engine.py
+- defence_engine.py
+- response_builder.py
+- engine_core.py
+
+✅ **Frontend** (2 files):
+- script.js
+- styles.css
+
+---
+
+## 🔧 DEPLOYMENT CHECKLIST
+
+### Backend Deployment:
+```bash
+# 1. Upload all 7 Python files to your backend
+# 2. Restart the backend
+pkill -f "uvicorn"
+uvicorn api:app --host 0.0.0.0 --port 10000
+
+# 3. Verify backend is running
+curl https://your-backend-url.com/
+# Should return: {"status":"operational","version":"6.0.0"}
+```
+
+### Frontend Deployment:
+```bash
+# 1. Replace script.js and styles.css in your frontend folder
+# 2. Clear browser cache (Ctrl+Shift+R or Cmd+Shift+R)
+# 3. Reload the page
+```
+
+---
+
+## 📋 WHAT'S FIXED
+
+### Backend Fixes:
+1. ✅ **Realistic Scoring** - Scores now range 0-100 based on actual case quality
+2. ✅ **Backward Compatibility** - Fixed `raw_input` parameter error
+3. ✅ **All Fields Populated** - issues, recommended_actions, weaknesses, strengths
+4. ✅ **Timeline Calculations** - Real limitation period tracking
+5. ✅ **Defence Probabilities** - Inversely correlated with case strength
+6. ✅ **30+ Fields Extracted** - Complete case context from normalizer
+
+### Frontend Fixes:
+1. ✅ **Decision Panel** - Now displays recommended action + next steps beautifully
+2. ✅ **Defence Strategy** - Properly reads `defence_strategy` field from backend
+3. ✅ **Risk Display** - Top 3 risks shown with severity levels
+4. ✅ **Next Steps** - Numbered list of actions
+5. ✅ **Responsive Styling** - Works on mobile and desktop
+
+---
+
+## 🧪 TESTING PROTOCOL
+
+### Test Each Feature for EACH User Type:
+
+## 1️⃣ **CITIZEN USER** Testing
+
+### Features to Test:
+- ✅ Case analysis with score
+- ✅ Strengths list
+- ✅ Weaknesses list  
+- ✅ Recommended actions panel
+- ✅ Report generation
+- ✅ Dashboard with recent cases
+
+### Test Case 1: Strong Case
+```json
+{
+  "case_id": "CITIZEN_STRONG_001",
+  "cheque_present": true,
+  "cheque_proof_type": "original",
+  "dishonour_memo": true,
+  "memo_type": "original",
+  "notice_sent": true,
+  "notice_served_proof": true,
+  "within_30_days": "Yes",
+  "debt_proven": true,
+  "debt_proof_type": "loan_agreement",
+  "description": "Cheque of Rs. 5 lakhs bounced. Bank memo shows insufficient funds. Legal notice sent via registered post. Loan agreement executed.",
+  "amount": 500000,
+  "complainant_name": "Rajesh Kumar",
+  "accused_name": "Amit Shah",
+  "cheque_date": "2024-01-15",
+  "dishonour_date": "2024-01-20",
+  "notice_date": "2024-02-05"
+}
+```
+
+**Expected Results for Citizen**:
+- Score: 85-95
+- Verdict: "STRONG CASE"
+- Strengths: 4-5 items visible
+- Weaknesses: 0-2 items
+- Decision Panel Shows: "File Criminal Complaint"
+- Next Steps: 3 actionable items
+- Timeline: Shows all dates with ✓ marks
+- No defences expected (strong case)
+
+### Test Case 2: Moderate Case
+```json
+{
+  "case_id": "CITIZEN_MODERATE_001",
+  "cheque_present": true,
+  "cheque_proof_type": "copy",
+  "dishonour_memo": true,
+  "notice_sent": true,
+  "notice_served_proof": false,
+  "debt_proven": true,
+  "debt_proof_type": "invoice",
+  "description": "Cheque dishonoured. Notice sent but acknowledgment not received. Invoice available.",
+  "amount": 200000
+}
+```
+
+**Expected Results**:
+- Score: 50-65
+- Verdict: "MODERATE CASE"
+- Decision Panel: "Address Defects Before Filing"
+- Weaknesses: 2-3 items visible
+- Strengths: 2-3 items
+- Next Steps: Address specific defects
+
+### Test Case 3: Weak Case
+```json
+{
+  "case_id": "CITIZEN_WEAK_001",
+  "cheque_present": true,
+  "dishonour_memo": false,
+  "notice_sent": false,
+  "debt_proven": false,
+  "description": "Cheque bounced but no other documents available."
+}
+```
+
+**Expected Results**:
+- Score: 15-30
+- Verdict: "WEAK CASE"
+- Decision Panel: "Send Legal Notice First" or "High Risk"
+- Weaknesses: 3-5 items clearly visible
+- Strengths: 1-2 items max
+- Strong warning message
+
+---
+
+## 2️⃣ **LAWYER USER** Testing
+
+### Additional Features for Lawyers:
+- ✅ Draft generation (all 12 types)
+- ✅ Defence simulation
+- ✅ Detailed legal analysis
+- ✅ Semantic concepts
+- ✅ Reasoning trace
+- ✅ PDF export
+
+### Test Case 1: Draft Generation - Legal Notice
+```json
+{
+  "case_id": "LAWYER_DRAFT_001",
+  "cheque_present": true,
+  "dishonour_memo": true,
+  "notice_sent": false,
+  "debt_proven": true,
+  "description": "Need to send legal notice for dishonoured cheque",
+  "amount": 300000,
+  "complainant_name": "ABC Pvt Ltd",
+  "accused_name": "XYZ Traders",
+  "accused_address": "123 Market Street, Mumbai",
+  "cheque_number": "123456",
+  "cheque_date": "2024-03-15",
+  "bank_name": "HDFC Bank",
+  "dishonour_date": "2024-03-20"
+}
+```
+
+**Expected for Lawyer**:
+- Draft Type: "LEGAL_NOTICE"
+- Draft Content: Full legal notice with all details filled
+- Copy/Download buttons work
+- Draft auto-populates with case data
+
+### Test Case 2: Defence Simulation
+```json
+{
+  "case_id": "LAWYER_DEFENCE_001",
+  "cheque_present": true,
+  "dishonour_memo": true,
+  "notice_sent": true,
+  "debt_proven": false,
+  "description": "Cheque was given as security only. No legally enforceable debt exists. Signature appears forged.",
+  "amount": 100000
+}
+```
+
+**Expected**:
+- Defences Detected: 2-3 defences
+- Each defence shows:
+  - Argument
+  - Success Probability (should be HIGH since case is weak)
+  - Strength (HIGH/MEDIUM/LOW)
+  - Trigger reason
+  - Rebuttal strategy
+- Defences sorted by probability
+
+### Test Case 3: Complete Legal Analysis
+```json
+{
+  "case_id": "LAWYER_COMPLETE_001",
+  "cheque_present": true,
+  "cheque_proof_type": "original",
+  "dishonour_memo": true,
+  "memo_type": "original",
+  "notice_sent": true,
+  "within_30_days": "Yes",
+  "notice_served_proof": true,
+  "debt_proven": true,
+  "debt_proof_type": "loan_agreement",
+  "description": "Complete case with all documentation. Cheque bounced due to insufficient funds. Loan agreement for Rs 10 lakhs dated 2024-01-01. Legal notice sent on 2024-02-15.",
+  "amount": 1000000,
+  "complainant_name": "Suresh Patel",
+  "accused_name": "Ramesh Verma",
+  "cheque_date": "2024-01-15",
+  "presentation_date": "2024-01-20",
+  "dishonour_date": "2024-01-20",
+  "notice_date": "2024-02-15",
+  "transaction_date": "2024-01-01"
+}
+```
+
+**Expected**:
+- Score: 90-100
+- All sections fully populated:
+  - ✅ Score with explanation
+  - ✅ Strengths (5-6 items)
+  - ✅ Weaknesses (0-1 items)
+  - ✅ Timeline with all dates
+  - ✅ Semantic analysis (3-5 concepts)
+  - ✅ Reasoning trace (10+ steps)
+  - ✅ Decision: File Complaint
+  - ✅ Next Steps: 3 clear actions
+  - ✅ Draft: COMPLAINT or LEGAL_OPINION
+  - ✅ Defence simulation (LOW probabilities)
+
+---
+
+## 3️⃣ **STUDENT USER** Testing
+
+### Focus for Students:
+- ✅ Educational explanations
+- ✅ Detailed reasoning
+- ✅ Concept explanations
+- ✅ Learning from analysis
+
+### Test Case: Learning Scenario
+```json
+{
+  "case_id": "STUDENT_LEARN_001",
+  "cheque_present": true,
+  "cheque_proof_type": "copy",
+  "dishonour_memo": true,
+  "notice_sent": false,
+  "debt_proven": true,
+  "debt_proof_type": "verbal",
+  "description": "Student wants to understand why this case is weak. Cheque bounced, memo available, but notice not sent and only verbal agreement for debt.",
+  "amount": 50000
+}
+```
+
+**Expected for Student**:
+- Score: 30-45
+- Verdict: MODERATE/WEAK
+- Clear explanations in:
+  - ✅ Score explanation panel
+  - ✅ Weakness descriptions with severity
+  - ✅ Improvement suggestions
+  - ✅ Reasoning trace showing logic
+  - ✅ Semantic concepts with matched phrases
+- Decision panel explains WHY this score
+- Next steps educational and actionable
+
+---
+
+## 🎨 UI/UX VERIFICATION
+
+### Decision Panel Display:
+```
+┌─────────────────────────────────────────────┐
+│ 🟢  FILE CRIMINAL COMPLAINT                │
+│                                              │
+│ Strong case (92/100). All legal            │
+│ prerequisites satisfied...                  │
+│                                              │
+│ ⚠️  Top Identified Risks:                   │
+│ • None detected                             │
+│                                              │
+│ 📋 Next Steps:                              │
+│ 1. Verify all original documents...        │
+│ 2. File complaint within limitation...     │
+│ 3. Engage an advocate...                   │
+└─────────────────────────────────────────────┘
+```
+
+### Verification Points:
+- ✅ Decision panel has colored left border
+- ✅ Icon matches action type
+- ✅ Background has subtle gradient
+- ✅ Risks show with severity colors
+- ✅ Next steps numbered and clear
+- ✅ Responsive on mobile
+
+---
+
+## 🔍 DEBUGGING CHECKLIST
+
+### If scores are still similar:
+```javascript
+// Check in browser console:
+console.log(window.caseData);
+
+// Verify these fields:
+- score: Should vary 0-100
+- strengths: Should be array with items
+- weaknesses: Should be array with items
+- recommended_actions: Should be array
+- issues: Should be array
+- decision: Should be object with next_steps
+- defence_strategy: Should be array
+- timeline: Should have date strings with ✓/⚠️
+```
+
+### If fields are empty:
+1. Check Network tab → /analyze response
+2. Verify response has:
+   - `issues` (array)
+   - `recommended_actions` (array)
+   - `decision.next_steps` (array)
+   - `defence_strategy` (array)
+3. Check console for JavaScript errors
+4. Verify renderFullReport() is called
+
+### If decision panel doesn't show:
+1. Check if `data.decision` exists in response
+2. Verify renderDecisionPanel() is called
+3. Check #actionsList element exists in HTML
+4. Check CSS is loaded (decision-panel styles)
+
+---
+
+## ✅ ACCEPTANCE CRITERIA
+
+### For ALL User Types:
+
+#### Backend Integration:
+- [ ] No 500 errors
+- [ ] Response time < 3 seconds
+- [ ] All fields populated in response
+- [ ] Scores vary realistically (0-100)
+
+#### Frontend Display:
+- [ ] Score displays correctly
+- [ ] Verdict matches score range
+- [ ] Strengths list shows items
+- [ ] Weaknesses list shows items
+- [ ] Decision panel renders
+- [ ] Next steps numbered list visible
+- [ ] Timeline shows dates
+- [ ] Draft content populates
+
+#### User-Specific:
+**Citizen:**
+- [ ] Simple, clear language
+- [ ] Actionable next steps
+- [ ] Easy to understand verdict
+
+**Lawyer:**
+- [ ] Draft generation works
+- [ ] Defence simulation accurate
+- [ ] Detailed legal analysis
+- [ ] PDF export functional
+- [ ] All 12 draft types accessible
+
+**Student:**
+- [ ] Educational explanations
+- [ ] Reasoning trace visible
+- [ ] Concept details clear
+- [ ] Learning-friendly format
+
+---
+
+## 📞 SUPPORT & TROUBLESHOOTING
+
+### Common Issues:
+
+**Issue**: "500 Internal Server Error"
+**Fix**: Ensure all 7 backend files deployed, restart server
+
+**Issue**: "Same scores for different cases"
+**Fix**: Verify scoring_engine.py updated, check pillar values (cheque_present, etc.)
+
+**Issue**: "Empty weaknesses/strengths"
+**Fix**: Check response_builder.py deployed, verify API response structure
+
+**Issue**: "Decision panel not showing"
+**Fix**: Verify script.js updated, clear browser cache, check CSS loaded
+
+**Issue**: "Draft field empty"
+**Fix**: Ensure draft_engine.py exists, check draft field in API response
+
+---
+
+## 🚀 FINAL VERIFICATION
+
+Run this comprehensive test:
+
+```bash
+# Test all 3 user types with 3 different cases each
+# Total: 9 test scenarios
+
+# Backend health
+curl https://your-url.com/
+
+# Test strong case
+curl -X POST https://your-url.com/analyze -H "Content-Type: application/json" -d @strong_case.json
+
+# Test moderate case  
+curl -X POST https://your-url.com/analyze -H "Content-Type: application/json" -d @moderate_case.json
+
+# Test weak case
+curl -X POST https://your-url.com/analyze -H "Content-Type: application/json" -d @weak_case.json
+```
+
+Expected: All return 200 OK with fully populated JSON
+
+---
+
+**Version**: v20.2 - Complete Frontend-Backend Integration
+**Date**: April 21, 2026
+**Status**: ✅ PRODUCTION READY - ALL USER TYPES
