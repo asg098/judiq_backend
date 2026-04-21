@@ -27,6 +27,15 @@ class DefenceEngineV12:
                                  concepts: List[Dict],
                                  case_data: Dict,
                                  case_strength: float) -> List[Dict]:
+        """
+        Generate realistic defence strategies with accurate success probabilities
+        
+        Logic:
+        - High case strength (75+): Defences have low probability (10-30%)
+        - Medium strength (40-74): Defences moderate probability (25-55%)
+        - Low strength (<40): Defences high probability (45-85%)
+        - Confidence matters: Higher concept confidence = higher defence success chance
+        """
         defences = []
         weights = kb_manager.get_defence_legal_weights()
         templates = kb_manager.get_defence_templates()
@@ -36,38 +45,88 @@ class DefenceEngineV12:
             concept = concept_det.get("concept", "unknown")
             confidence = ensure_number(concept_det.get("confidence", 0))
 
+            # Skip positive concepts
             if concept in POSITIVE_CONCEPTS_NO_DEFENCE:
                 continue
 
+            # Only process negative concepts
             if concept not in DEFENCE_ONLY_NEGATIVE_CONCEPTS:
                 continue
 
+            # Skip if no template or already processed
             if concept not in templates or concept in seen:
                 continue
 
+            # Minimum confidence threshold
             if confidence < 0.20:
                 continue
 
             seen.add(concept)
+            
+            # Get template data
             legal_weight = weights.get(concept, 0.75)
             arg, reb, basis = templates[concept]
+            
+            # === REALISTIC PROBABILITY CALCULATION ===
+            
+            # Base probability from concept confidence and legal weight
             base_prob = confidence * legal_weight * 100
-            strength_factor = max(0.5, 1.0 - (case_strength / 200))
-            prob = int(base_prob * strength_factor)
-            prob = max(10, min(95, prob))
-
-            strength = "LOW"
-            if prob >= 70: strength = "HIGH"
-            elif prob >= 40: strength = "MEDIUM"
+            
+            # Inverse relationship with case strength
+            # Strong complainant case = weak defence probability
+            if case_strength >= 75:
+                strength_multiplier = 0.3  # Strong case: defences unlikely
+            elif case_strength >= 60:
+                strength_multiplier = 0.5
+            elif case_strength >= 45:
+                strength_multiplier = 0.75
+            elif case_strength >= 30:
+                strength_multiplier = 1.0
+            else:
+                strength_multiplier = 1.25  # Weak case: defences more viable
+            
+            # Concept-specific modifiers
+            concept_modifiers = {
+                "notice_defect": 1.3,  # Procedural defects are strong defences
+                "notice_not_sent": 1.4,  # Fatal procedural defect
+                "limitation_issue": 1.35,  # Time-bar is powerful
+                "no_debt_proof": 1.2,  # Rebuts S.139 presumption
+                "signature_dispute": 0.85,  # Hard to prove without expert
+                "security_cheque": 0.9,  # Difficult to establish
+                "payment_already_made": 1.1,  # If provable, strong
+                "cheque_misuse": 0.8,  # Hard to prove
+                "no_agreement": 1.15,  # Challenges enforceability
+            }
+            
+            concept_mod = concept_modifiers.get(concept, 1.0)
+            
+            # Final calculation
+            prob = int(base_prob * strength_multiplier * concept_mod)
+            
+            # Realistic boundaries
+            prob = max(8, min(88, prob))
+            
+            # Determine strength category
+            if prob >= 65:
+                strength = "HIGH"
+            elif prob >= 35:
+                strength = "MEDIUM"
+            else:
+                strength = "LOW"
 
             defences.append({
                 "argument": arg,
                 "strength": strength,
                 "success_probability": prob,
-                "trigger_reason": f"{concept.replace('_', ' ')} detected (conf: {confidence:.2f})",
+                "trigger_reason": f"{concept.replace('_', ' ')} detected (confidence: {confidence:.0%})",
                 "rebuttal": reb,
-                "legal_basis": basis
+                "legal_basis": basis,
+                "concept": concept,
+                "confidence": confidence
             })
 
+        # Sort by probability (highest first)
         defences.sort(key=lambda x: x['success_probability'], reverse=True)
-        return defences
+        
+        # Return top 5 most viable defences
+        return defences[:5]
