@@ -189,6 +189,12 @@ class ResponseBuilder:
             "draft_type_generated": engine_result.get("draft_type", "LEGAL_OPINION")
         }
 
+        # Build issues list from ranked weaknesses
+        issues_list = [f"{r['risk']} [{r['severity']}]" for r in ranked_weaknesses]
+        
+        # Ensure weaknesses list is properly formatted
+        weaknesses_list = [f"{r['risk']} [{r['severity']} — conf: {r['confidence']:.0%}]" for r in ranked_weaknesses]
+        
         return {
             "score": score,
             "verdict": verdict,
@@ -196,7 +202,9 @@ class ResponseBuilder:
             "analysis_confidence": confidence_score,
             "decision": decision,
             "strengths": strengths,
-            "weaknesses": [f"{r['risk']} [{r['severity']} — conf: {r['confidence']:.0%}]" for r in ranked_weaknesses],
+            "weaknesses": weaknesses_list,
+            "issues": issues_list,  # Add issues as top-level field for frontend
+            "recommended_actions": next_steps,  # Add recommended_actions as top-level field
             "semantic_analysis": {
                 "concepts_detected": concepts_for_response,
                 "total_confidence": confidence_score,
@@ -211,7 +219,7 @@ class ResponseBuilder:
                 "next_steps": next_steps
             },
             "legal_analysis": {
-                "issues": [f"{r['risk']} [{r['severity']}]" for r in ranked_weaknesses],
+                "issues": issues_list,
                 "strengths": strengths,
                 "reasoning": lawyer_reasoning,
                 "breakdown": breakdown
