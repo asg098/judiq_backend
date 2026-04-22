@@ -1,7 +1,7 @@
 import logging
+from datetime import datetime
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
-from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from engine_core import JudiQEngine
 from kb_manager import kb_manager
@@ -13,18 +13,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("JudiQ-API")
 
 app = FastAPI(title="JudiQ Legal AI API v6", version="6.0.0")
-
-# ── CORS ────────────────────────────────────────────────────────────────────
-# Allow all origins so browser preflight (OPTIONS) requests are handled.
-# Restrict `allow_origins` to your frontend domain(s) in production.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],          # e.g. ["https://your-frontend.com"]
-    allow_credentials=True,
-    allow_methods=["*"],          # includes OPTIONS
-    allow_headers=["*"],
-)
-# ────────────────────────────────────────────────────────────────────────────
 
 @app.on_event("startup")
 async def startup():
@@ -79,15 +67,51 @@ async def explain_score():
 
 @app.post("/generate-pdf")
 async def generate_pdf(request: Request):
-    data = await request.json()
-    if "score" not in data:
-        data = JudiQEngine.analyze_case(data)
-    pdf_bytes = PDFGenerator.generate_report(data)
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=JudiQ_Report.pdf"}
-    )
+    """Generate PDF report with proper headers for download"""
+    try:
+        data = await request.json()
+        
+        # If no score in data, analyze the case first
+        if "score" not in data:
+            logger.info("Analyzing case before PDF generation")
+            data = JudiQEngine.analyze_case(data)
+        
+        # Generate PDF
+        pdf_bytes = PDFGenerator.generate_report(data)
+        
+        if not pdf_bytes or len(pdf_bytes) < 100:
+            logger.error("PDF generation returned empty or invalid data")
+            return JSONResponse(
+                status_code=500,
+                content={"success": False, "error": "Failed to generate PDF"}
+            )
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"JUDIQ_Report_{timestamp}.pdf"
+        
+        logger.info(f"PDF generated successfully: {len(pdf_bytes)} bytes, filename: {filename}")
+        
+        # Return with proper PDF headers
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Type": "application/pdf",
+                "Content-Length": str(len(pdf_bytes)),
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    except Exception as e:
+        logger.error(f"PDF generation endpoint error: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
