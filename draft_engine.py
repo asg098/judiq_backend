@@ -54,15 +54,38 @@ def _num_to_words(n: int) -> str:
 
 
 def generate_legal_notice(case_data: Dict) -> str:
+    """Generate legal notice with ALL fields auto-filled from case data"""
     today, amount_str = _case_meta(case_data)
-    complainant = case_data.get("complainant_name", "[COMPLAINANT NAME]")
-    accused = case_data.get("accused_name", "[ACCUSED NAME]")
-    accused_addr = case_data.get("accused_address", "[ACCUSED ADDRESS]")
-    cheque_no = case_data.get("cheque_number", "[CHEQUE NUMBER]")
-    cheque_date = case_data.get("cheque_date", "[CHEQUE DATE]")
-    bank = case_data.get("bank_name", "[BANK NAME]")
-    dishonour_date = case_data.get("dishonour_date", "[DISHONOUR DATE]")
-
+    
+    # Extract all fields with proper fallbacks
+    complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[YOUR NAME]"
+    accused = case_data.get("accused_name") or case_data.get("accusedName") or "[ACCUSED NAME]"
+    accused_addr = case_data.get("accused_address") or case_data.get("accusedAddress") or "[ACCUSED ADDRESS]"
+    
+    cheque_no = case_data.get("cheque_number") or case_data.get("chequeNumber") or "______"
+    cheque_date = case_data.get("cheque_date") or case_data.get("chequeDate") or "[DATE]"
+    bank = case_data.get("bank_name") or case_data.get("bankName") or "[BANK NAME]"
+    branch = case_data.get("branch_name") or case_data.get("branchName") or ""
+    bank_full = f"{bank}, {branch}" if branch else bank
+    
+    dishonour_date = case_data.get("dishonour_date") or case_data.get("dishonourDate") or "[DATE]"
+    dishonour_reason = case_data.get("dishonour_reason") or case_data.get("dishonourReason") or "Funds Insufficient"
+    
+    # Extract transaction nature from description or field
+    description = case_data.get("description", "")
+    purpose = case_data.get("purpose", "")
+    
+    # Determine nature of transaction
+    transaction_nature = "a legally enforceable debt/liability"
+    if "loan" in description.lower() or "loan" in purpose.lower():
+        transaction_nature = "a loan advanced"
+    elif "goods" in description.lower() or "supply" in purpose.lower():
+        transaction_nature = "goods supplied"
+    elif "service" in description.lower():
+        transaction_nature = "services rendered"
+    elif purpose:
+        transaction_nature = purpose[:100]  # Use first 100 chars of purpose
+    
     return f"""{_header("LEGAL NOTICE UNDER SECTION 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881")}
 
 Date: {today}
@@ -80,13 +103,13 @@ Sir/Madam,
 Under instructions from and on behalf of my client {complainant}, I hereby serve upon you the following legal notice:
 
 1. BACKGROUND OF TRANSACTION:
-   My client states that you are indebted to my client for a sum of {amount_str} in respect of a legally enforceable debt/liability arising out of [NATURE OF TRANSACTION — e.g., loan advanced / goods supplied / services rendered] made between you and my client.
+   My client states that you are indebted to my client for a sum of {amount_str} in respect of {transaction_nature} made between you and my client.
 
 2. THE CHEQUE:
-   In discharge of the aforesaid legally enforceable liability, you issued a cheque bearing No. {cheque_no}, dated {cheque_date}, drawn on {bank}, in favour of my client for {amount_str}.
+   In discharge of the aforesaid legally enforceable liability, you issued a cheque bearing No. {cheque_no}, dated {cheque_date}, drawn on {bank_full}, in favour of my client for {amount_str}.
 
 3. DISHONOUR OF CHEQUE:
-   When my client presented the said cheque for encashment through banking channels, the same was returned/dishonoured on {dishonour_date} with the bank memo citing the reason "[REASON AS PER MEMO — e.g., Funds Insufficient / Account Closed / Stop Payment]".
+   When my client presented the said cheque for encashment through banking channels, the same was returned/dishonoured on {dishonour_date} with the bank memo citing the reason "{dishonour_reason}".
 
 4. DEMAND FOR PAYMENT:
    By this notice, my client hereby demands that you pay the said sum of {amount_str} together with interest thereon within FIFTEEN (15) DAYS from the date of receipt of this notice.
@@ -106,28 +129,60 @@ On behalf of: {complainant}
 
 
 def generate_complaint(case_data: Dict, concepts: List[Dict]) -> str:
+    """Generate criminal complaint with ALL fields auto-filled"""
     today, amount_str = _case_meta(case_data)
-    complainant = case_data.get("complainant_name", "[COMPLAINANT NAME]")
-    accused = case_data.get("accused_name", "[ACCUSED NAME]")
-    accused_addr = case_data.get("accused_address", "[ACCUSED ADDRESS]")
-    cheque_no = case_data.get("cheque_number", "[CHEQUE NUMBER]")
-    cheque_date = case_data.get("cheque_date", "[CHEQUE DATE]")
-    bank = case_data.get("bank_name", "[BANK NAME]")
-    dishonour_date = case_data.get("dishonour_date", "[DISHONOUR DATE]")
-    notice_date = case_data.get("notice_date", "[NOTICE DATE]")
+    
+    # Extract all fields with proper fallbacks
+    complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[COMPLAINANT NAME]"
+    complainant_addr = case_data.get("complainant_address") or case_data.get("complainantAddress") or "[COMPLAINANT ADDRESS]"
+    complainant_phone = case_data.get("complainant_phone") or case_data.get("complainantPhone") or "[CONTACT]"
+    
+    accused = case_data.get("accused_name") or case_data.get("accusedName") or "[ACCUSED NAME]"
+    accused_addr = case_data.get("accused_address") or case_data.get("accusedAddress") or "[ACCUSED ADDRESS]"
+    
+    cheque_no = case_data.get("cheque_number") or case_data.get("chequeNumber") or "______"
+    cheque_date = case_data.get("cheque_date") or case_data.get("chequeDate") or "[DATE]"
+    bank = case_data.get("bank_name") or case_data.get("bankName") or "[BANK NAME]"
+    branch = case_data.get("branch_name") or case_data.get("branchName") or ""
+    bank_full = f"{bank}, {branch}" if branch else bank
+    
+    dishonour_date = case_data.get("dishonour_date") or case_data.get("dishonourDate") or "[DATE]"
+    dishonour_reason = case_data.get("dishonour_reason") or case_data.get("dishonourReason") or "Insufficient Funds"
+    notice_date = case_data.get("notice_date") or case_data.get("noticeDate") or "[NOTICE DATE]"
+    
+    court_name = case_data.get("court_name") or case_data.get("courtName") or "District Court"
+    
+    # Determine nature of transaction
+    description = case_data.get("description", "")
+    purpose = case_data.get("purpose", "")
+    
+    transaction_nature = "a legally enforceable debt"
+    occupation = "business/profession"
+    
+    if "loan" in description.lower() or "loan" in purpose.lower():
+        transaction_nature = "a loan transaction"
+        occupation = "lending/financing business"
+    elif "goods" in description.lower() or "supply" in purpose.lower():
+        transaction_nature = "supply of goods"
+        occupation = "trade and commerce"
+    elif "service" in description.lower():
+        transaction_nature = "provision of services"
+        occupation = "service provider"
+    elif purpose:
+        transaction_nature = purpose[:100]
 
     return f"""{_header("CRIMINAL COMPLAINT UNDER SECTION 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881")}
 
 IN THE COURT OF THE LEARNED JUDICIAL MAGISTRATE FIRST CLASS / METROPOLITAN MAGISTRATE
-AT [COURT LOCATION]
+AT {court_name}
 
 COMPLAINT NO.: _____ / {datetime.now().year}
 
 IN THE MATTER OF:
 
 COMPLAINANT:    {complainant}
-                [ADDRESS]
-                [CONTACT]
+                {complainant_addr}
+                {complainant_phone}
 
 VERSUS
 
@@ -139,22 +194,63 @@ COMPLAINT U/S 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881
 RESPECTFULLY SHOWETH:
 
 1. THE COMPLAINANT:
-   The Complainant, {complainant}, is a law-abiding citizen/entity carrying on [DESCRIBE BUSINESS/OCCUPATION] and is competent to file this complaint.
+   The Complainant, {complainant}, is a law-abiding citizen/entity carrying on {occupation} and is competent to file this complaint.
 
 2. THE ACCUSED:
-   The Accused, {accused}, residing at {accused_addr}, is known to the Complainant and has been engaged in various transactions with the Complainant.
+   The Accused, {accused}, residing at {accused_addr}, is known to the Complainant and has been engaged in transactions with the Complainant.
 
 3. THE LEGALLY ENFORCEABLE DEBT:
-   The Complainant states that the Accused is indebted to the Complainant for a sum of {amount_str} arising from [NATURE OF TRANSACTION]. The said debt is legally enforceable and constitutes a valid liability under law.
+   The Complainant states that the Accused is indebted to the Complainant for a sum of {amount_str} arising from {transaction_nature}. The said debt is legally enforceable and constitutes a valid liability under law.
 
 4. ISSUANCE OF CHEQUE:
-   In discharge of the aforesaid legal liability, the Accused issued a cheque bearing No. {cheque_no}, dated {cheque_date}, drawn on {bank}, for an amount of {amount_str} in favour of the Complainant.
+   In discharge of the aforesaid legal liability, the Accused issued a cheque bearing No. {cheque_no}, dated {cheque_date}, drawn on {bank_full}, for an amount of {amount_str} in favour of the Complainant.
 
 5. PRESENTATION AND DISHONOUR:
-   The Complainant duly presented the said cheque for encashment. However, the said cheque was returned/dishonoured on {dishonour_date} with the bank memo citing "[REASON]", thereby constituting an offence under Section 138 of the NI Act, 1881.
+   The Complainant duly presented the said cheque for encashment. However, the said cheque was returned/dishonoured on {dishonour_date} with the bank memo citing "{dishonour_reason}", thereby constituting an offence under Section 138 of the NI Act, 1881.
 
 6. STATUTORY DEMAND NOTICE:
    As mandated under Section 138(b) of the NI Act, the Complainant caused a legal notice to be served upon the Accused on {notice_date} through Registered Post (AD), demanding payment of {amount_str} within 15 days of receipt of the notice.
+
+7. FAILURE TO PAY:
+   Despite receipt of the aforesaid notice, the Accused has wilfully and deliberately failed, neglected, and refused to make payment of the said amount, thereby committing an offence punishable under Section 138 of the Negotiable Instruments Act, 1881.
+
+8. CAUSE OF ACTION:
+   The cause of action for this Complaint arose on the date of dishonour ({dishonour_date}) and further on expiry of the 15-day notice period. This Complaint is being filed within the limitation period prescribed under Section 142 of the NI Act, 1881.
+
+9. JURISDICTION:
+   This Hon'ble Court has jurisdiction to try this Complaint as the cheque was drawn/presented/dishonoured and/or the notice was dispatched from within the territorial jurisdiction of this Court.
+
+10. PRAYER:
+    It is, therefore, most respectfully prayed that this Hon'ble Court may be pleased to:
+    
+    a) Take cognizance of the offence under Section 138 of the Negotiable Instruments Act, 1881 committed by the Accused;
+    
+    b) Summon the Accused to face trial;
+    
+    c) After due trial, convict and sentence the Accused as per law;
+    
+    d) Direct the Accused to pay compensation of {amount_str} to the Complainant under Section 357 Cr.P.C. read with Section 138 of the NI Act;
+    
+    e) Pass such other and further orders as this Hon'ble Court may deem fit and proper in the interest of justice.
+
+Date: {today}
+Place: {court_name}
+
+                                                    {complainant}
+                                                    (Complainant)
+
+VERIFICATION:
+I, {complainant}, the Complainant above-named, do hereby verify that the contents of paras 1 to 10 of the above complaint are true and correct to my knowledge and belief, and nothing material has been concealed therefrom.
+
+Verified at {court_name} on this day {today}.
+
+                                                    {complainant}
+                                                    (Complainant)
+
+ADVOCATE ON RECORD:
+[ADVOCATE NAME]
+[BAR REGISTRATION NUMBER]
+"""
 
 7. FAILURE TO PAY:
    Despite receipt of the aforesaid notice, the Accused has wilfully and deliberately failed, neglected, and refused to make payment of the said amount, thereby committing an offence punishable under Section 138 of the Negotiable Instruments Act, 1881.
