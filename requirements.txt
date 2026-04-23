@@ -10,4 +10,9 @@ flask>=3.0.0
 flask-cors>=4.0.0
 gunicorn>=22.0.0
 python-dateutil>=2.9.0
+
+
+
+
+
 a2wsgi>=1.10.0
