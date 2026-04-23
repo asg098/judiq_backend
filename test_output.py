@@ -1,6 +1,5 @@
 import json
 from engine_core import JudiQEngine
-
 def get_cases():
     return [
         {
