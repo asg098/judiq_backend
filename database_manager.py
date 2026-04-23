@@ -2,10 +2,8 @@ import sqlite3
 import json
 import logging
 from datetime import datetime
-
 logger = logging.getLogger(__name__)
 DB_PATH = "analytics.db"
-
 class DatabaseManager:
     @staticmethod
     def init_db():
