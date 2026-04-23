@@ -1,7 +1,5 @@
 import logging
-
 logger = logging.getLogger(__name__)
-
 def normalize_input(data):
     """
     Enhanced normalizer - extracts ALL possible fields from various input formats
