@@ -6,16 +6,13 @@ from draft_engine import DraftEngine
 from response_builder import ResponseBuilder
 from normalizer import normalize_input
 import logging
-
 logger = logging.getLogger(__name__)
-
 SYNTHETIC_TEXT_MAP = {
     "cheque_present":   "cheque dishonoured and bounced by bank",
     "dishonour_memo":   "bank issued dishonour memo and return slip",
     "notice_sent":      "legal notice served on accused",
     "debt_proven":      "loan agreement executed and legally enforceable debt established",
 }
-
 STRUCTURAL_NEGATIVE_CONCEPTS = {
     "debt_proven": {
         "concept": "no_debt_proof",
