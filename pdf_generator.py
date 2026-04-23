@@ -3,9 +3,7 @@ import logging
 from datetime import datetime
 from io import BytesIO
 from typing import Dict, Any
-
 logger = logging.getLogger(__name__)
-
 class PDFGenerator:
     @staticmethod
     def generate_report(analysis_result: Dict[str, Any]) -> bytes:
