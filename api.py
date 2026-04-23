@@ -8,21 +8,16 @@ from kb_manager import kb_manager
 from pdf_generator import PDFGenerator
 from database_manager import DatabaseManager
 from normalizer import normalize_input
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("JudiQ-API")
-
 app = FastAPI(title="JudiQ Legal AI API v6", version="6.0.0")
-
 @app.on_event("startup")
 async def startup():
     DatabaseManager.init_db()
     logger.info("JudiQ Backend Started | Database Initialized")
-
 @app.get("/")
 async def health():
     return {"status": "operational", "version": "6.0.0"}
-
 @app.post("/analyze")
 async def analyze(request: Request):
     try:
