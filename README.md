@@ -1,10 +1,6 @@
 RAG +RULE BASED + MACHINE LEARNING BASED CHEQUE BOUNCE ANALYSIS ENGINE
-
-
-
 # 🎯 JUDIQ AI - COMPLETE DEPLOYMENT PACKAGE
 ## Production-Ready Legal Intelligence System
-
 ---
 
 ## 📦 **PACKAGE CONTENTS** (20 Files Total)
