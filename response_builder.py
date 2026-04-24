@@ -163,12 +163,19 @@ class ResponseBuilder:
             ]
         elif score >= 40 and (has_fatal or has_high_risk):
             recommended_action = "CONSIDER_SETTLEMENT"
-            decision_label = "Consider Settlement / Compounding"
-            decision_detail = f"Borderline case ({score}/100) with significant defects. Litigation risk is high. A negotiated settlement under Section 147 NI Act may be the optimal resolution."
+            decision_label = "Consider Strategic Settlement (Section 147)"
+            top_risk = top_3_risks[0]['risk'] if top_3_risks else 'identified legal defects'
+            decision_detail = (
+                f"Moderate case ({score}/100) with significant vulnerability: {top_risk}. "
+                "Criminal prosecution involves a high burden of proof (beyond reasonable doubt). "
+                "A 'Without Prejudice' settlement under Section 147 NI Act allows for immediate recovery and "
+                "avoids the risk of acquittal due to procedural defects. Highly recommended for commercial resolution."
+            )
             next_steps = [
-                "Issue without-prejudice settlement proposal to accused",
-                "Evaluate commercial settlement vs litigation risk",
-                "If settlement fails, address all defects before proceeding to court"
+                "Draft and issue a formal Settlement Proposal with a default clause",
+                "Evaluate the 'Time-Value of Money' (Immediate settlement vs. 3-year litigation)",
+                "Negotiate interest rates (capped at 12%) to ensure enforceability",
+                "If settlement fails, address all identified defects before proceeding to court"
             ]
         else:
             recommended_action = "HIGH_RISK_DEFEND"
