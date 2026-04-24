@@ -249,7 +249,6 @@ ADVOCATE ON RECORD:
 [ADVOCATE NAME]
 [BAR REGISTRATION NUMBER]
 """
-
 7. FAILURE TO PAY:
    Despite receipt of the aforesaid notice, the Accused has wilfully and deliberately failed, neglected, and refused to make payment of the said amount, thereby committing an offence punishable under Section 138 of the Negotiable Instruments Act, 1881.
 
