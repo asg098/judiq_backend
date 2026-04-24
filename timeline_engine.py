@@ -19,21 +19,6 @@ def parse_date(date_str):
 
 def days_between(date1_str, date2_str):
     """Calculate days between two dates (date2 - date1)"""
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
     d1 = parse_date(date1_str)
     d2 = parse_date(date2_str)
     if d1 and d2:
@@ -189,8 +174,3 @@ class TimelineEngine:
             "status": "ASSUMED_VALID",
             "message": "Assumed within limitation (verify dates)"
         }
-
-
-
-
-
