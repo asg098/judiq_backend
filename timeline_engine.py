@@ -1,11 +1,14 @@
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
+
 logger = logging.getLogger(__name__)
+
 def parse_date(date_str):
     """Parse date string in various formats"""
     if not date_str:
         return None
+    
     formats = ["%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d", "%d %B %Y", "%B %d, %Y"]
     for fmt in formats:
         try:
