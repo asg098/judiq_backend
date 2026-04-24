@@ -1,14 +1,18 @@
 import logging
 from typing import List, Dict, Any
 from kb_manager import kb_manager
+
 logger = logging.getLogger(__name__)
+
 def ensure_list(x):
     if x is None: return []
     if isinstance(x, list): return x
     return [x]
+
 def ensure_number(x, default=0):
     try: return float(x)
     except: return default
+
 class ScoringEngineV12:
     @classmethod
     def resolve_conflicts(cls, concepts: List[Dict]) -> List[Dict]:
