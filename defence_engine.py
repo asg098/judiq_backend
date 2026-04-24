@@ -1,21 +1,26 @@
 from typing import List, Dict
 from kb_manager import kb_manager
+
 def ensure_list(x):
     if x is None: return []
     if isinstance(x, list): return x
     return [x]
+
 def ensure_number(x, default=0):
     try: return float(x)
     except: return default
+
 DEFENCE_ONLY_NEGATIVE_CONCEPTS = {
     "security_cheque", "signature_dispute", "signature_disputed", "no_debt_proof",
     "notice_not_sent", "notice_defect", "limitation_issue", "cheque_misuse",
     "no_agreement", "cheque_validity_issue", "payment_already_made", "dishonour_disputed"
 }
+
 POSITIVE_CONCEPTS_NO_DEFENCE = {
     "cheque_bounce", "legal_notice_compliance", "legally_enforceable_debt",
     "strong_documentary_evidence"
 }
+
 class DefenceEngineV12:
     @classmethod
     def generate_ranked_defences(cls,
@@ -43,12 +48,15 @@ class DefenceEngineV12:
             # Skip positive concepts
             if concept in POSITIVE_CONCEPTS_NO_DEFENCE:
                 continue
+
             # Only process negative concepts
             if concept not in DEFENCE_ONLY_NEGATIVE_CONCEPTS:
                 continue
+
             # Skip if no template or already processed
             if concept not in templates or concept in seen:
                 continue
+
             # Minimum confidence threshold
             if confidence < 0.20:
                 continue
