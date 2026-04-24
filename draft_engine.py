@@ -131,9 +131,11 @@ def generate_complaint(case_data: Dict, concepts: List[Dict]) -> str:
     complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[COMPLAINANT NAME]"
     complainant_addr = case_data.get("complainant_address") or case_data.get("complainantAddress") or "[COMPLAINANT ADDRESS]"
     complainant_phone = case_data.get("complainant_phone") or case_data.get("complainantPhone") or "[CONTACT]"
+    complainant_type = case_data.get("complainant_type", "Individual")
 
     accused = case_data.get("accused_name") or case_data.get("accusedName") or "[ACCUSED NAME]"
     accused_addr = case_data.get("accused_address") or case_data.get("accusedAddress") or "[ACCUSED ADDRESS]"
+    accused_type = case_data.get("accused_type", "Individual")
 
     cheque_no = case_data.get("cheque_number") or case_data.get("chequeNumber") or "______"
     cheque_date = case_data.get("cheque_date") or case_data.get("chequeDate") or "[DATE]"
@@ -165,6 +167,24 @@ def generate_complaint(case_data: Dict, concepts: List[Dict]) -> str:
     elif purpose:
         transaction_nature = purpose[:100]
 
+    # Authorization Clause Logic
+    auth_clause = ""
+    if complainant_type != "Individual":
+        is_auth = case_data.get("is_authorized", False)
+        if is_auth:
+            auth_clause = f"The Complainant is a {complainant_type} and is represented by its Authorized Signatory, who is duly empowered by way of a Board Resolution/Letter of Authority dated _________, produced herewith as ANNEXURE-A."
+        else:
+            auth_clause = f"The Complainant is a {complainant_type} filing through its representative. [WARNING: Authorization documents not yet verified]"
+
+    # Vicarious Liability Clause (Sec 141)
+    liability_clause = ""
+    if accused_type != "Individual":
+        has_directors = case_data.get("directors_named", False)
+        if has_directors:
+            liability_clause = f"3. That the Accused No. 1 is a {accused_type} and Accused Nos. 2 onwards are its Directors/Officers who were, at the time the offence was committed, in charge of and responsible for the conduct of the business of the company as per Section 141 of the NI Act."
+        else:
+            liability_clause = f"3. That the Accused is a {accused_type}. [WARNING: Individual Directors must be named for Section 141 liability]"
+
     return f"""{_header("CRIMINAL COMPLAINT UNDER SECTION 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881")}
 
 IN THE COURT OF THE LEARNED JUDICIAL MAGISTRATE FIRST CLASS / METROPOLITAN MAGISTRATE
@@ -177,62 +197,65 @@ IN THE MATTER OF:
 COMPLAINANT:    {complainant}
                 {complainant_addr}
                 {complainant_phone}
-
+                                                        ... COMPLAINANT
 VERSUS
 
 ACCUSED:        {accused}
                 {accused_addr}
+                                                        ... ACCUSED
 
 COMPLAINT U/S 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881
 
 RESPECTFULLY SHOWETH:
 
 1. THE COMPLAINANT:
-   The Complainant, {complainant}, is a law-abiding citizen/entity carrying on {occupation} and is competent to file this complaint.
+   The Complainant, {complainant}, is a law-abiding citizen/entity carrying on {occupation}. {auth_clause}
 
 2. THE ACCUSED:
    The Accused, {accused}, residing at {accused_addr}, is known to the Complainant and has been engaged in transactions with the Complainant.
 
-3. THE LEGALLY ENFORCEABLE DEBT:
+{liability_clause}
+
+4. THE LEGALLY ENFORCEABLE DEBT:
    The Complainant states that the Accused is indebted to the Complainant for a sum of {amount_str} arising from {transaction_nature}. The said debt is legally enforceable and constitutes a valid liability under law.
 
-4. ISSUANCE OF CHEQUE:
+5. ISSUANCE OF CHEQUE:
    In discharge of the aforesaid legal liability, the Accused issued a cheque bearing No. {cheque_no}, dated {cheque_date}, drawn on {bank_full}, for an amount of {amount_str} in favour of the Complainant.
 
-5. PRESENTATION AND DISHONOUR:
-   The Complainant duly presented the said cheque for encashment. However, the said cheque was returned/dishonoured on {dishonour_date} with the bank memo citing "{dishonour_reason}", thereby constituting an offence under Section 138 of the NI Act, 1881.
+6. PRESENTATION AND DISHONOUR:
+   The Complainant duly presented the said cheque for encashment through its banker. However, the said cheque was returned/dishonoured on {dishonour_date} with the bank memo citing "{dishonour_reason}", thereby constituting an offence under Section 138 of the NI Act, 1881.
 
-6. STATUTORY DEMAND NOTICE:
-   As mandated under Section 138(b) of the NI Act, the Complainant caused a legal notice to be served upon the Accused on {notice_date} through Registered Post (AD), demanding payment of {amount_str} within 15 days of receipt of the notice.
+7. STATUTORY DEMAND NOTICE:
+   As mandated under Section 138(b) of the NI Act, the Complainant caused a legal demand notice to be served upon the Accused on {notice_date} through Registered Post (AD)/Speed Post, demanding payment of {amount_str} within 15 days of receipt of the notice.
 
-7. FAILURE TO PAY:
-   Despite receipt of the aforesaid notice, the Accused has wilfully and deliberately failed, neglected, and refused to make payment of the said amount, thereby committing an offence punishable under Section 138 of the Negotiable Instruments Act, 1881.
-
-8. CAUSE OF ACTION:
-   The cause of action for this Complaint arose on the date of dishonour ({dishonour_date}) and further on expiry of the 15-day notice period. This Complaint is being filed within the limitation period prescribed under Section 142 of the NI Act, 1881.
+8. FAILURE TO PAY:
+   Despite receipt of the aforesaid notice, the Accused has wilfully and deliberately failed, neglected, and refused to make payment of the said amount within the statutory period, thereby committing an offence punishable under Section 138 of the Negotiable Instruments Act, 1881.
 
 9. JURISDICTION:
-   This Hon'ble Court has jurisdiction to try this Complaint as the cheque was drawn/presented/dishonoured and/or the notice was dispatched from within the territorial jurisdiction of this Court.
+   This Hon'ble Court has territorial jurisdiction to entertain and try this Complaint as the cheque in question was presented for encashment at {bank_full}, which is situated within the territorial limits of this Court, as per the law laid down by the Hon'ble Supreme Court in Dashrath Rupsingh Rathod vs. State of Maharashtra.
 
 10. PRAYER:
     It is, therefore, most respectfully prayed that this Hon'ble Court may be pleased to:
     (a) Take cognizance of the offence committed by the Accused under Section 138 of the NI Act, 1881;
-    (b) Issue summons to the Accused and try the Accused for the said offence;
-    (c) On conviction, sentence the Accused to imprisonment as prescribed under Section 138 of the NI Act, 1881, and/or impose a fine of twice the cheque amount; and
-    (d) Pass such other order(s) as this Hon'ble Court may deem fit and proper in the interest of justice.
+    (b) Issue summons/process to the Accused;
+    (c) Direct the Accused to pay INTERIM COMPENSATION under Section 143A of the NI Act (20% of cheque amount);
+    (d) On conviction, sentence the Accused to imprisonment and/or impose a fine of twice the cheque amount; and
+    (e) Pass such other order(s) as this Hon'ble Court may deem fit in the interest of justice.
+
+LIST OF ANNEXURES:
+ANNEXURE-A: Original Board Resolution / Letter of Authority (If applicable)
+ANNEXURE-B: Original Dishonoured Cheque No. {cheque_no}
+ANNEXURE-C: Original Bank Dishonour Memo dated {dishonour_date}
+ANNEXURE-D: Office Copy of Legal Demand Notice dated {notice_date}
+ANNEXURE-E: Original Postal Receipt and A.D. Card / Tracking Report
 
 VERIFICATION:
-I, {complainant}, do hereby solemnly verify that the contents of the above Complaint are true and correct to the best of my knowledge, information, and belief. Nothing material has been concealed.
+I, {complainant}, do hereby solemnly verify that the contents of the above Complaint are true and correct to the best of my knowledge, information, and belief. Nothing material has been concealed therefrom, and all supporting documents are annexed herewith.
 
 Place: [PLACE]
 Date: {today}
-
                                                         {complainant}
                                                         (Complainant)
-
-Drafted and filed by:
-[ADVOCATE NAME]
-[BAR REGISTRATION NUMBER]
 """
 
 
