@@ -1,13 +1,17 @@
 import logging
-from datetime import datetime
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, Response
+import os
+import shutil
 import uvicorn
+from datetime import datetime
+from fastapi import FastAPI, Request, Response, UploadFile, File
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from engine_core import JudiQEngine
 from kb_manager import kb_manager
 from pdf_generator import PDFGenerator
 from database_manager import DatabaseManager
 from normalizer import normalize_input
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("JudiQ-API")
 from fastapi.middleware.cors import CORSMiddleware
@@ -145,3 +149,42 @@ async def generate_pdf(request: Request):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.post("/upload-doc")
+async def upload_document(file: UploadFile = File(...)):
+    """Handle document ingestion (PDF, TXT, WhatsApp)"""
+    try:
+        filename = file.filename
+        temp_dir = "temp_uploads"
+        os.makedirs(temp_dir, exist_ok=True)
+        file_path = os.path.join(temp_dir, filename)
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        extracted_text = ""
+        
+        if filename.lower().endswith(".pdf"):
+            try:
+                import pdfplumber
+                with pdfplumber.open(file_path) as pdf:
+                    extracted_text = "\n".join([page.extract_text() or "" for page in pdf.pages])
+            except ImportError:
+                extracted_text = "ERROR: pdfplumber not installed."
+        elif filename.lower().endswith(".txt"):
+            try:
+                content = await file.read()
+                extracted_text = content.decode("utf-8")
+            except:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    extracted_text = f.read()
+        
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            
+        return {
+            "filename": filename,
+            "text": extracted_text,
+            "status": "success"
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
