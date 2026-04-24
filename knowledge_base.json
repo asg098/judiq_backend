@@ -321,7 +321,34 @@
       "legal_impact": "challenges legitimate purpose of instrument under S.138"
     }
   },
+    "vicarious_liability_issue": {
+      "patterns": [
+        "\\b(company\\s+accused|director\\s+not\\s+named)",
+        "\\b(vicarious\\s+liability|section\\s+141)",
+        "\\b(authorized\\s+signatory\\s+missing)",
+        "\\b(not\\s+in\\s+charge\\s+of\\s+business)"
+      ],
+      "weight": 1.0,
+      "legal_impact": "Mandatory requirement under Section 141 for corporate liability"
+    }
+  },
   "knowledge_base": {
+    "vicarious_liability_issue": {
+      "section": "Section 141 NI Act - Offences by Companies",
+      "legal_provision": "Directors/Officers in charge of business must be named",
+      "court_view": "Vicarious liability cannot be imputed without specific averments",
+      "risk_level": "CRITICAL",
+      "score_impact": -45,
+      "common_defences": [
+        "Directors not named in the complaint",
+        "Accused director not in charge of day-to-day affairs",
+        "Resigned before cheque issuance",
+        "Independent/Non-executive director only"
+      ],
+      "rebuttal_strategy": "Produce MCA records (Form DIR-12), check bank account opening forms",
+      "precedent": "SMS Pharmaceuticals Ltd v. Neeta Bhalla (2005) - Specific averments required",
+      "success_probability_range": [80, 95]
+    },
     "signature_dispute": {
       "section": "Section 138 + 139 NI Act (Presumption can be rebutted)",
       "legal_provision": "Burden on accused to prove signature not genuine",
