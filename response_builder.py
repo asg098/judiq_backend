@@ -210,7 +210,8 @@ class ResponseBuilder:
                 "top_strengths": strengths[:3] or ["None"],
                 "next_steps": next_steps
             },
-            "legal_analysis": {
+            "legal_analysis": "\n".join(lawyer_reasoning) if lawyer_reasoning else "Standard legal analysis applied based on provided case pillars.",
+            "analysis_details": {
                 "issues": [f"{r['risk']} [{r['severity']}]" for r in ranked_weaknesses],
                 "strengths": strengths,
                 "reasoning": lawyer_reasoning,
