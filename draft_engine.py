@@ -312,6 +312,9 @@ def generate_settlement_draft(case_data: Dict, score: int) -> str:
     today, amount_str = _case_meta(case_data)
     complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[COMPLAINANT NAME]"
     accused = case_data.get("accused_name") or case_data.get("accusedName") or "[ACCUSED NAME]"
+    
+    # Calculate realistic settlement interest (capped at 12%)
+    interest_rate = 12 
 
     return f"""{_header("SETTLEMENT / COMPOUNDING PROPOSAL — SECTION 138 NI ACT")}
 
@@ -329,17 +332,20 @@ Dear Sir/Madam,
 
 We write on behalf of our client {complainant} in the matter of the dishonoured cheque for {amount_str}.
 
-Pursuant to Section 147 of the Negotiable Instruments Act, 1881, the offence under Section 138 is compoundable. Our client, whilst maintaining that the complaint is fully justified and legally tenable, is open to exploring an amicable resolution to avoid protracted litigation.
+Pursuant to Section 147 of the Negotiable Instruments Act, 1881, the offence under Section 138 is compoundable. Our client, whilst maintaining that the complaint is fully justified and legally tenable, is open to exploring an amicable resolution to avoid protracted litigation and ensure speedy recovery.
 
 TERMS PROPOSED FOR SETTLEMENT:
 
-1. PRINCIPAL AMOUNT: Full payment of cheque amount {amount_str}.
-2. INTEREST: Interest @ 18% per annum from the date of dishonour to date of settlement.
-3. LEGAL COSTS: Contribution towards legal costs incurred (to be agreed).
-4. TIMELINE: Full payment within ___ days of signing of settlement agreement.
-5. WITHDRAWAL: Upon receipt of agreed settlement amount, the Complainant agrees to file a joint application for compounding before the Hon'ble Court under Section 147 NI Act.
+1. PRINCIPAL AMOUNT: Full payment of the cheque amount {amount_str}.
+2. INTEREST: Interest @ {interest_rate}% per annum from the date of dishonour until the date of actual payment.
+3. LEGAL COSTS: Nominal contribution of Rs. 5,000/- towards legal and incidental costs incurred.
+4. TIMELINE: Total settlement amount to be paid within FIFTEEN (15) DAYS of the acceptance of this proposal.
+5. MODE OF PAYMENT: Payment to be made via Demand Draft (DD) or Bank Transfer (NEFT/RTGS) in favour of "{complainant}".
+6. PHASED PAYMENT (OPTIONAL): In the event of genuine hardship, the Complainant is open to considering a maximum of two equal monthly installments, provided the first installment is paid immediately.
+7. DEFAULT CLAUSE: In the event of failure to adhere to the payment timeline or default in any installment, this settlement shall stand cancelled, and the Complainant shall be at liberty to resume/continue criminal prosecution under Section 138 NI Act to the fullest extent of law.
+8. WITHDRAWAL: Upon receipt of the full and final settlement amount, the Complainant shall file a joint application for compounding before the Hon'ble Court and withdraw the complaint.
 
-This proposal is made without prejudice to the legal rights of our client and shall not be construed as an admission of any weakness in the case.
+This proposal is made "Without Prejudice" and shall not be produced in court except to prove the factum of settlement efforts.
 
 Kindly revert with your response within 7 working days.
 
@@ -348,7 +354,8 @@ Yours faithfully,
 [ADVOCATE NAME]
 For and on behalf of {complainant}
 
-Note: Case Strength Score {score}/100 — Moderate case; early settlement is strategically recommended.
+Note: Case Strength Score {score}/100 — Strategic Settlement Recommended. 
+Basis: Amicable resolution preferred over protracted litigation for moderate strength cases.
 """
 
 
