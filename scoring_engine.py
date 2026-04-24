@@ -193,7 +193,9 @@ class ScoringEngineV12:
             if lookup_concept not in catalogue:
                 alias_map = {
                     "signature_disputed": "signature_dispute",
-                    "notice_not_sent": "notice_defect"
+                    "notice_not_sent": "notice_defect",
+                    "no_debt_proof": "no_debt_proof",
+                    "cheque_misuse": "cheque_misuse"
                 }
                 lookup_concept = alias_map.get(concept, concept)
                 if lookup_concept not in catalogue:
@@ -201,16 +203,24 @@ class ScoringEngineV12:
             
             base_penalty, legal_weight, _ = catalogue[lookup_concept]
             
-            # Confidence-based scaling
+            # 🔥 CRITICAL FIX: Massive penalty for high-confidence negative signals
+            # If we are >70% sure of a "case-killer" like forged signature, tank the score.
             if confidence >= 0.7:
-                penalty_factor = 1.2  # High confidence = bigger impact
+                penalty_factor = 2.5  # Doubled impact
             elif confidence >= 0.4:
-                penalty_factor = 1.0
+                penalty_factor = 1.5
             else:
-                penalty_factor = 0.6  # Low confidence = reduced impact
+                penalty_factor = 0.8
             
             scaled_penalty = int(confidence * legal_weight * base_penalty * penalty_factor)
-            score += scaled_penalty  # Already negative from catalogue
+            
+            # Extra penalty for specific fatal flaws
+            fatal_flaws = ["signature_dispute", "signature_disputed", "cheque_misuse", "notice_defect", "no_debt_proof"]
+            if lookup_concept in fatal_flaws and confidence > 0.6:
+                scaled_penalty -= 25 # Explicit flat penalty for fatal flaws
+                trace.append(f"⚠️ FATAL LEGAL DEFECT: {concept.replace('_', ' ')}")
+
+            score += scaled_penalty
             trace.append(f"{scaled_penalty:+d} {concept.replace('_', ' ')} risk (conf: {confidence:.0%})")
             score_breakdown.append(f"{concept} ({scaled_penalty})")
         
