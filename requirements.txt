@@ -12,3 +12,5 @@ gunicorn>=22.0.0
 python-dateutil>=2.9.0
 a2wsgi>=1.10.0
 reportlab>=4.0.0
+pdfplumber>=0.10.0
+python-multipart>=0.0.6
