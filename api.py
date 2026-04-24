@@ -72,6 +72,7 @@ async def analyze(request: Request):
             "decision": result.get("decision", {}),
             "strengths": result.get("strengths", []),
             "weaknesses": result.get("weaknesses", []),
+            "issues": result.get("issues", []),
             "semantic_analysis": result.get("semantic_analysis", {}),
             "executive_summary": result.get("executive_summary", {}),
             "legal_analysis": result.get("legal_analysis", ""),
