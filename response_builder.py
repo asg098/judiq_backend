@@ -189,6 +189,38 @@ class ResponseBuilder:
             "draft_type_generated": engine_result.get("draft_type", "LEGAL_OPINION")
         }
 
+        # === STRATEGY GENERATION ===
+        strategy = []
+        if score >= 75:
+            strategy = [
+                "Proceed with immediate filing of criminal complaint under S.138 NI Act.",
+                "Ensure original cheque and bank memo are in safe custody.",
+                "Prepare for summons delivery to accused's last known address.",
+                "Maintain clear records of any subsequent communication from accused."
+            ]
+        elif score >= 50:
+            strategy = [
+                "Strengthen evidence of underlying debt before filing.",
+                "Attempt one final written settlement proposal to resolve out of court.",
+                "Verify jurisdictional facts (where cheque was presented/dishonoured).",
+                "Prepare rebuttal for common defenses like 'security cheque'."
+            ]
+        else:
+            strategy = [
+                "Evaluate civil recovery suit as primary alternative.",
+                "Address critical defects (notice/limitation) if still within window.",
+                "Gather missing evidence (loan agreements, bank transfers).",
+                "Consult senior counsel for specialized litigation strategy."
+            ]
+
+        # === FALLBACK WEAKNESSES (even for strong cases) ===
+        final_weaknesses = [f"{r['risk']} [{r['severity']} — conf: {r['confidence']:.0%}]" for r in ranked_weaknesses]
+        if not final_weaknesses:
+            if score >= 90:
+                final_weaknesses = ["Standard litigation delays in jurisdictional courts", "Potential for accused to dispute signature (generic risk)"]
+            else:
+                final_weaknesses = ["Evidentiary burden of proof remains on complainant", "Potential for defense to delay proceedings through procedural applications"]
+
         return {
             "score": score,
             "verdict": verdict,
@@ -196,7 +228,9 @@ class ResponseBuilder:
             "analysis_confidence": confidence_score,
             "decision": decision,
             "strengths": strengths,
-            "weaknesses": [f"{r['risk']} [{r['severity']} — conf: {r['confidence']:.0%}]" for r in ranked_weaknesses],
+            "weaknesses": final_weaknesses,
+            "legal_strategy": strategy,
+            "reasoning_trace": lawyer_reasoning,
             "semantic_analysis": {
                 "concepts_detected": concepts_for_response,
                 "total_confidence": confidence_score,
@@ -206,8 +240,8 @@ class ResponseBuilder:
                 "score": score,
                 "recommended_action": recommended_action,
                 "decision_label": decision_label,
-                "top_3_risks": [r["risk"] for r in top_3_risks] or ["None detected"],
-                "top_strengths": strengths[:3] or ["None"],
+                "top_3_risks": [r["risk"] for r in top_3_risks] or ["Standard litigation risks"],
+                "top_strengths": strengths[:3] or ["Pillar compliance"],
                 "next_steps": next_steps
             },
             "legal_analysis": "\n".join(lawyer_reasoning) if lawyer_reasoning else "Standard legal analysis applied based on provided case pillars.",
