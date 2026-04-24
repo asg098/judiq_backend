@@ -71,6 +71,12 @@ def normalize_input(data):
         "transaction_date": data.get("transaction_date", tx_obj.get("transaction_date", "")),
         "filing_date": data.get("filing_date", id_obj.get("filing_date", "")),
         
+        # New Strict Legal Fields (Expert Audit Fix)
+        "complainant_type": data.get("complainant_type", id_obj.get("complainant_type", "Individual")),
+        "is_authorized": data.get("is_authorized", comp_obj.get("is_authorized", False)),
+        "accused_type": data.get("accused_type", accu_obj.get("type", "Individual")),
+        "directors_named": data.get("directors_named", accu_obj.get("directors_named", False)),
+        
         # Defence-related
         "signature_dispute": data.get("signature_dispute", data.get("signatureDispute", False)),
         "debt_denial": data.get("debt_denial", data.get("debtDenial", False)),
