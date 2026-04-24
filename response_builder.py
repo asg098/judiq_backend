@@ -34,7 +34,7 @@ def _convert_to_lawyer_language(raw_trace: list) -> list:
         (r"-\d+\s+notice\s+defect", "The mandatory statutory demand notice has not been served — a procedural bar."),
         (r"\+\d+\s+debt\s+provenance", "Legally enforceable debt or liability is documented via independent evidence."),
         (r"-\d+\s+debt\s+not\s+established", "Absence of proof of underlying debt weakens the evidentiary presumption under S.139."),
-        (r"\+\d+\s+strong\s+case\s+synergy", "All four legal pillars are satisfied: instrument, dishonour, notice, and debt."),
+        (r"\+\d+\s+all\s+mandatory\s+procedural\s+pillars", "Procedural Prerequisite: All four statutory pillars (instrument, dishonour, notice, debt) are satisfied."),
         (r"-\d+\s+notice\s+defect\s+\(fatal\)", "Failure to serve statutory demand notice within 30 days is a fatal procedural defect."),
         (r"-\d+\s+debt\s+not\s+established", "No legally enforceable debt proven — S.139 presumption significantly weakened."),
     ]
@@ -76,10 +76,10 @@ class ResponseBuilder:
         strengths = []
         weaknesses = []
 
-        if case_data.get("cheque_present"):   strengths.append("Negotiable instrument (cheque) secured")
-        if case_data.get("dishonour_memo"):   strengths.append("Bank dishonour memo / return slip available")
-        if case_data.get("notice_sent"):      strengths.append("Statutory demand notice served (S.138b)")
-        if case_data.get("debt_proven"):      strengths.append("Legally enforceable debt established")
+        if case_data.get("cheque_present"):   strengths.append("Prerequisite: Negotiable instrument (cheque) secured")
+        if case_data.get("dishonour_memo"):   strengths.append("Prerequisite: Bank dishonour memo / return slip available")
+        if case_data.get("notice_sent"):      strengths.append("Prerequisite: Statutory demand notice served (S.138b)")
+        if case_data.get("debt_proven"):      strengths.append("Strength: Legally enforceable debt established via corroborative proof")
 
         for c in concepts:
             concept_name = c.get("concept", "")
@@ -180,6 +180,22 @@ class ResponseBuilder:
                 "If already filed, prepare defence strategy immediately"
             ]
 
+        # === COUNTER-STRATEGY LOGIC (Expert Audit Fix) ===
+        counter_strategies = {
+            "Security Cheque": "Produce contemporaneous documents (Invoices, Delivery Challans, or Loan Agreements) that prove the cheque was issued for an existing debt, not just security.",
+            "Signature Dispute": "Apply for comparison of signatures by a Government Handwriting Expert under Section 45 of the Evidence Act.",
+            "No Debt Proof": "Invoke the statutory presumption under Section 139 of the NI Act, which shifts the burden to the accused to prove 'no debt' exists.",
+            "Payment Already Made": "Rebut this by producing a bank statement showing no such credits and cross-examine the accused on the source of funds for such claimed payment.",
+            "Notice Defect": "If within window, send a corrigendum or fresh notice. If window closed, evaluate filing with a Condonation of Delay application."
+        }
+        
+        for risk_obj in top_3_risks:
+            risk_name = risk_obj["risk"]
+            if risk_name in counter_strategies:
+                risk_obj["counter_strategy"] = counter_strategies[risk_name]
+            else:
+                risk_obj["counter_strategy"] = "Strengthen documentary evidence to rebut this specific defense during cross-examination."
+
         decision = {
             "recommended_action": recommended_action,
             "decision_label": decision_label,
@@ -213,6 +229,16 @@ class ResponseBuilder:
                 "Consult senior counsel for specialized litigation strategy."
             ]
 
+        # === ALTERNATIVE EVIDENCE SUGGESTIONS (Expert Audit Fix) ===
+        alternative_evidence = []
+        if not case_data.get("debt_proven"):
+            alternative_evidence = [
+                "WhatsApp/Email correspondence admitting liability",
+                "Bank statements showing partial interest payments",
+                "Ledger account entries/Tally records",
+                "SMS logs discussing the repayment schedule"
+            ]
+
         # === FALLBACK WEAKNESSES (even for strong cases) ===
         final_weaknesses = [f"{r['risk']} [{r['severity']} — conf: {r['confidence']:.0%}]" for r in ranked_weaknesses]
         if not final_weaknesses:
@@ -230,6 +256,8 @@ class ResponseBuilder:
             "strengths": strengths,
             "weaknesses": final_weaknesses,
             "legal_strategy": strategy,
+            "alternative_evidence": alternative_evidence,
+            "judicial_caveats": engine_result.get("discretionary_caveats", []),
             "reasoning_trace": lawyer_reasoning,
             "semantic_analysis": {
                 "concepts_detected": concepts_for_response,
