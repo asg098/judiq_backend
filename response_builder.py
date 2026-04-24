@@ -2,22 +2,28 @@ import re
 import logging
 from datetime import datetime
 from typing import List, Dict, Any
+
 logger = logging.getLogger(__name__)
+
 def ensure_list(x):
     if x is None: return []
     if isinstance(x, list): return x
     return [x]
+
 NEGATIVE_CONCEPTS = {
     "signature_dispute", "notice_defect", "no_debt_proof", "security_cheque",
     "cheque_misuse", "limitation_issue", "payment_already_made", "dishonour_disputed",
     "cheque_validity_issue", "no_agreement"
 }
+
 POSITIVE_CONCEPTS = {
     "cheque_bounce", "legal_notice_compliance", "legally_enforceable_debt",
     "strong_documentary_evidence"
 }
+
 WEAKNESS_THRESHOLD = 0.22
 STRENGTH_THRESHOLD = 0.45
+
 def _convert_to_lawyer_language(raw_trace: list) -> list:
     _PHRASE_MAP = [
         (r"\+\d+\s+instrument\s+present", "Presence of a cheque supports the foundation of the claim under Section 138 NI Act."),
