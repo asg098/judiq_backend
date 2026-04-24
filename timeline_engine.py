@@ -18,11 +18,11 @@ def parse_date(date_str):
     return None
 
 def days_between(date1_str, date2_str):
-    """Calculate days between two dates"""
+    """Calculate days between two dates (date2 - date1)"""
     d1 = parse_date(date1_str)
     d2 = parse_date(date2_str)
     if d1 and d2:
-        return abs((d2 - d1).days)
+        return (d2 - d1).days
     return None
 
 class TimelineEngine:
@@ -56,9 +56,11 @@ class TimelineEngine:
             # Check 3-month validity
             if cheque_date:
                 days_diff = days_between(cheque_date, presentation_date)
-                if days_diff:
-                    if days_diff > 90:
-                        timeline.append(f"   ⚠️  CRITICAL: Presented {days_diff} days after date (>3 months - may be stale)")
+                if days_diff is not None:
+                    if days_diff < 0:
+                        timeline.append(f"   ⚠️  ANOMALY: Presented BEFORE cheque date ({abs(days_diff)} days early)")
+                    elif days_diff > 90:
+                        timeline.append(f"   ⚠️  CRITICAL: Presented {days_diff} days after date (>3 months - stale)")
                     else:
                         timeline.append(f"   ✓ Presented within validity ({days_diff} days)")
         
@@ -68,7 +70,9 @@ class TimelineEngine:
         if notice_date and dishonour_date:
             days_diff = days_between(dishonour_date, notice_date)
             if days_diff is not None:
-                if days_diff <= 30:
+                if days_diff < 0:
+                    timeline.append(f"   ⚠️  ANOMALY: Notice dated BEFORE dishonour ({abs(days_diff)} days early)")
+                elif days_diff <= 30:
                     timeline.append(f"📧 Legal notice sent on {notice_date} ({days_diff} days after dishonour ✓)")
                 else:
                     timeline.append(f"📧 Legal notice sent on {notice_date} ({days_diff} days after dishonour ⚠️  EXCEEDS 30 DAY LIMIT)")
