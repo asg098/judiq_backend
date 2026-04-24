@@ -2,7 +2,9 @@ import re
 import logging
 from typing import List, Dict, Any, Tuple
 from kb_manager import kb_manager
+
 logger = logging.getLogger(__name__)
+
 def ensure_list(x):
     if x is None: return []
     if isinstance(x, list): return x
