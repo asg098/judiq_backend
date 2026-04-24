@@ -262,6 +262,7 @@ class ResponseBuilder:
             "decision": decision,
             "strengths": strengths,
             "weaknesses": final_weaknesses,
+            "issues": [f"{r['risk']} ({r['severity']})" for r in ranked_weaknesses if r['severity'] in ['CRITICAL', 'HIGH']],
             "legal_strategy": strategy,
             "alternative_evidence": alternative_evidence,
             "judicial_caveats": engine_result.get("discretionary_caveats", []),
