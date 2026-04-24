@@ -150,16 +150,30 @@ class ScoringEngineV12:
             score += penalty
             trace.append(f"{penalty} NO DEBT PROOF - S.139 presumption significantly weakened")
         
-        # === SYNERGY BONUS/PENALTY ===
+        # === CORPORATE LIABILITY CHECK (Section 141) ===
+        accused_name = str(case_data.get("accused_name", "")).lower()
+        is_company = any(x in accused_name for x in ["pvt", "ltd", "corp", "inc", "co.", "company"])
+        
+        if is_company:
+            has_directors = bool(case_data.get("directors_named", False))
+            if not has_directors:
+                penalty = -45
+                score += penalty
+                trace.append(f"{penalty} Section 141 Risk: Corporate accused detected but Directors/Officers not specifically named.")
+            else:
+                trace.append(f"+5 Section 141 Compliance: Directors/Officers identified for vicarious liability.")
+                score += 5
+
+        # === CORROBORATIVE EVIDENCE WEIGHTAGE ===
         pillars_satisfied = sum([cheque, memo, notice, debt])
         if pillars_satisfied == 4:
-            synergy = 10
-            score += synergy
-            trace.append(f"+{synergy} ALL FOUR PILLARS SATISFIED (synergy bonus)")
+            weightage = 10
+            score += weightage
+            trace.append(f"+{weightage} all mandatory procedural pillars satisfied (corroborative weightage)")
         elif pillars_satisfied <= 2:
             penalty = -8
             score += penalty
-            trace.append(f"{penalty} multiple critical pillars missing (compounding weakness)")
+            trace.append(f"{penalty} multiple mandatory procedural pillars missing (compounding weakness)")
         
         # === CONCEPT-BASED ADJUSTMENTS ===
         catalogue = kb_manager.get_scoring_catalogue()
@@ -236,10 +250,19 @@ class ScoringEngineV12:
             trace.append(f"{penalty} weak evidence quality penalty")
         
         # === FINAL BOUNDARIES ===
-        score = max(0, min(score, 100))
+        # REFINEMENT: Cap at 95 to maintain professional realism (no legal case is 100% perfect in trial)
+        score = max(0, min(score, 95))
         
+        # === JUDICIAL DISCRETION MODE (Expert Fix) ===
+        discretion_notes = []
+        if any("Limitation" in str(t) for t in trace):
+            discretion_notes.append("Limitation Bar: While mathematically expired, courts may condone delay under Section 5 of the Limitation Act if 'sufficient cause' is proven.")
+        if any("Section 141" in str(t) for t in trace):
+            discretion_notes.append("Corporate Liability: Technical defects in naming directors can sometimes be cured through an amendment application (S.147/S.482).")
+
         return {
             "final_score": score,
             "reasoning_trace": trace,
-            "score_breakdown": score_breakdown or ["Standard scoring applied"]
+            "score_breakdown": score_breakdown or ["Standard scoring applied"],
+            "discretionary_caveats": discretion_notes
         }
