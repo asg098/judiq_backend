@@ -10,7 +10,40 @@ from database_manager import DatabaseManager
 from normalizer import normalize_input
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("JudiQ-API")
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="JudiQ Legal AI API v6", version="6.0.0")
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.options("/analyze")
+async def analyze_options():
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Accept",
+        },
+    )
+
+@app.options("/{full_path:path}")
+async def preflight(full_path: str):
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
+
 @app.on_event("startup")
 async def startup():
     DatabaseManager.init_db()
