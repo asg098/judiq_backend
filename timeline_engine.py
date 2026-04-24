@@ -95,7 +95,9 @@ class TimelineEngine:
                 if filing_date:
                     filing_dt = parse_date(filing_date)
                     if filing_dt:
-                        if filing_dt <= limitation_date:
+                        if filing_dt <= cause_of_action:
+                            timeline.append(f"   ⚠️  CRITICAL: Premature filing on {filing_date} (Wait period ends on {cause_of_action.strftime('%Y-%m-%d')})")
+                        elif filing_dt <= limitation_date:
                             timeline.append(f"✓ Complaint filed on {filing_date} (WITHIN limitation)")
                         else:
                             days_delay = (filing_dt - limitation_date).days
