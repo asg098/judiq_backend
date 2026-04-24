@@ -86,6 +86,12 @@ class ScoringEngineV12:
                 cheque_points = 20
                 trace.append(f"+{cheque_points} cheque available")
             score += cheque_points
+            
+            # Risk Interaction: PDC + Security Claim (Expert Fix)
+            if case_data.get("is_post_dated") and case_data.get("cheque_security_claim"):
+                penalty = -12
+                score += penalty
+                trace.append(f"{penalty} HIGHER RISK: Post-Dated Cheque combined with Security Cheque claim (defense stronger)")
         else: 
             penalty = -32
             score += penalty
@@ -110,18 +116,23 @@ class ScoringEngineV12:
         if notice:
             notice_proof = case_data.get("notice_served_proof", True)
             within_30_days = case_data.get("within_30_days", "Yes") == "Yes"
+            notice_mode = case_data.get("notice_mode", "").lower()
             
             if notice_proof and within_30_days:
-                notice_points = 32
-                trace.append(f"+{notice_points} statutory notice served with proof within 30 days (S.138b fully compliant)")
+                if "registered" in notice_mode or "speed" in notice_mode:
+                    notice_points = 32
+                    trace.append(f"+{notice_points} statutory notice served via Registered/Speed Post (Strong S.138b compliance)")
+                else:
+                    notice_points = 26
+                    trace.append(f"+{notice_points} statutory notice served within 30 days (Proof available)")
             elif notice_proof:
-                notice_points = 24
+                notice_points = 22
                 trace.append(f"+{notice_points} notice served with proof (timeline unclear)")
             elif within_30_days:
-                notice_points = 18
+                notice_points = 15
                 trace.append(f"+{notice_points} notice sent within 30 days (service proof weak)")
             else:
-                notice_points = 12
+                notice_points = 10
                 trace.append(f"+{notice_points} notice sent (service proof and timing unclear)")
             score += notice_points
         else:
@@ -150,7 +161,8 @@ class ScoringEngineV12:
             score += penalty
             trace.append(f"{penalty} NO DEBT PROOF - S.139 presumption significantly weakened")
         
-        # === CORPORATE LIABILITY CHECK (Section 141) ===
+        # === SECTION 141 & 142 COMPLIANCE (Expert Audit Fix) ===
+        # Accused Corporate Check (Section 141 Vicarious Liability)
         accused_name = str(case_data.get("accused_name", "")).lower()
         is_company = any(x in accused_name for x in ["pvt", "ltd", "corp", "inc", "co.", "company"])
         
@@ -159,10 +171,20 @@ class ScoringEngineV12:
             if not has_directors:
                 penalty = -45
                 score += penalty
-                trace.append(f"{penalty} Section 141 Risk: Corporate accused detected but Directors/Officers not specifically named.")
+                trace.append(f"{penalty} FATAL DEFECT: Section 141 Vicarious Liability (Directors not named for corporate accused)")
             else:
-                trace.append(f"+5 Section 141 Compliance: Directors/Officers identified for vicarious liability.")
-                score += 5
+                trace.append("✅ Section 141 Compliance: Directors/Authorized Officers named")
+
+        # Complainant Corporate Check (Section 142 Competency to File)
+        complainant_type = case_data.get("complainant_type", "Individual")
+        if complainant_type != "Individual":
+            is_authorized = bool(case_data.get("is_authorized", False))
+            if not is_authorized:
+                penalty = -30
+                score += penalty
+                trace.append(f"{penalty} STRUCTURAL DEFECT: Lack of Authorization/Board Resolution (Complainant competency)")
+            else:
+                trace.append("✅ Complainant Competency: Authorization/Board Resolution provided")
 
         # === CORROBORATIVE EVIDENCE WEIGHTAGE ===
         pillars_satisfied = sum([cheque, memo, notice, debt])
