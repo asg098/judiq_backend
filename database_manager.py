@@ -2,15 +2,17 @@ import sqlite3
 import json
 import logging
 from datetime import datetime
+
 logger = logging.getLogger(__name__)
 DB_PATH = "analytics.db"
+
 class DatabaseManager:
     @staticmethod
     def init_db():
         try:
-        conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
-            cursor.execute('''
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS saved_cases (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     case_id TEXT UNIQUE NOT NULL,
@@ -22,8 +24,8 @@ class DatabaseManager:
                     created_at TEXT,
                     updated_at TEXT
                 )
-            ''')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_cases ON saved_cases(user_id)')
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_cases ON saved_cases(user_id)")
             conn.commit()
             conn.close()
             logger.info("Database initialized successfully.")
@@ -36,17 +38,17 @@ class DatabaseManager:
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             now = datetime.now().isoformat()
-            cursor.execute('''
+            cursor.execute("""
                 INSERT OR REPLACE INTO saved_cases 
                 (case_id, user_id, case_data, analysis_result, score, verdict, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
+            """, (
                 case_id, 
                 user_id, 
                 json.dumps(case_data), 
                 json.dumps(analysis_result),
-                analysis_result.get('score', 0),
-                analysis_result.get('verdict', 'Unknown'),
+                analysis_result.get("score", 0),
+                analysis_result.get("verdict", "Unknown"),
                 now, now
             ))
             conn.commit()
@@ -62,7 +64,7 @@ class DatabaseManager:
             conn = sqlite3.connect(DB_PATH)
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute('SELECT * FROM saved_cases WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
+            cursor.execute("SELECT * FROM saved_cases WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
             rows = cursor.fetchall()
             conn.close()
             return [dict(r) for r in rows]
