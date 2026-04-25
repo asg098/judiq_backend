@@ -39,7 +39,9 @@ class KnowledgeBaseManager:
         ]
         statutes_candidates = [
             os.path.join(base_dir, "statutes.json"),
-            os.path.join(cwd, "statutes.json")
+            os.path.join(cwd, "statutes.json"),
+            os.path.join(base_dir, "status.json"),
+            os.path.join(cwd, "status.json")
         ]
         
         kb_path = next((p for p in kb_candidates if os.path.exists(p)), kb_candidates[0])
