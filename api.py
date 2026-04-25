@@ -8,6 +8,11 @@ from fastapi.responses import JSONResponse  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
 
 import importlib
+import sys
+# Inject current directory into path for Render
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.getcwd())
+
 try:
     pdfplumber = importlib.import_module("pdfplumber")
     HAS_PDFPLUMBER = True
@@ -68,10 +73,13 @@ async def startup():
 # ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/")
 async def health():
+    import os
+    files = os.listdir(".")
     return {
         "status": "operational",
         "version": "7.0.0",
-        "engine":  "JudiQ Legal AI v7 — Reasoning Architecture",
+        "files_in_root": files,
+        "cwd": os.getcwd(),
         "timestamp": datetime.now().isoformat()
     }
 
