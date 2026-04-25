@@ -182,17 +182,24 @@ class PDFGenerator:
                 elements.append(Spacer(1, 0.2*inch))
             
             # ===== LEGAL ANALYSIS =====
-            legal_analysis = analysis_result.get('legal_analysis', {})
-            if legal_analysis and legal_analysis.get('reasoning'):
+            # legal_analysis may be a str (joined text) or a dict — handle both
+            legal_analysis = analysis_result.get('legal_analysis', '')
+            reasoning_lines = []
+            if isinstance(legal_analysis, dict):
+                reasoning_lines = legal_analysis.get('reasoning', [])
+            elif isinstance(legal_analysis, str) and legal_analysis.strip():
+                # Split the joined string back into individual lines
+                reasoning_lines = [l.strip() for l in legal_analysis.split('\n') if l.strip()]
+            elif isinstance(legal_analysis, list):
+                reasoning_lines = legal_analysis
+
+            if reasoning_lines:
                 elements.append(Paragraph("Legal Reasoning", heading_style))
                 elements.append(Spacer(1, 0.1*inch))
-                
-                reasoning = legal_analysis.get('reasoning', [])
-                for reason in reasoning:
+                for reason in reasoning_lines:
                     reason_text = reason if isinstance(reason, str) else str(reason)
-                    elements.append(Paragraph(f"→ {reason_text}", body_style))
+                    elements.append(Paragraph(f"\u2192 {reason_text}", body_style))
                     elements.append(Spacer(1, 0.05*inch))
-                
                 elements.append(Spacer(1, 0.2*inch))
             
             # ===== DEFENCE STRATEGIES =====
@@ -205,6 +212,8 @@ class PDFGenerator:
                 defence_data.append(['Argument', 'Probability', 'Strength'])
                 
                 for defence in defences[:5]:  # Top 5 defences
+                    if not isinstance(defence, dict):
+                        continue
                     arg = defence.get('argument', 'N/A')
                     prob = f"{defence.get('success_probability', 0)}%"
                     strength = defence.get('strength', 'N/A')
@@ -238,9 +247,12 @@ class PDFGenerator:
                 concept_data.append(['Concept', 'Confidence', 'Impact'])
                 
                 for concept in concepts[:8]:  # Top 8 concepts
+                    if not isinstance(concept, dict):
+                        continue
                     name = concept.get('concept', 'N/A').replace('_', ' ').title()
                     conf = f"{int(concept.get('confidence', 0) * 100)}%"
-                    impact = concept.get('legal_impact', 'N/A')[:50] + '...' if len(concept.get('legal_impact', '')) > 50 else concept.get('legal_impact', 'N/A')
+                    impact_raw = concept.get('legal_impact', 'N/A') or 'N/A'
+                    impact = (impact_raw[:50] + '...') if len(impact_raw) > 50 else impact_raw
                     concept_data.append([name, conf, impact])
                 
                 concept_table = Table(concept_data, colWidths=[2*inch, 1*inch, 3*inch])
