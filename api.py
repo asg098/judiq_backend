@@ -6,11 +6,6 @@ from datetime import datetime
 from fastapi import FastAPI, Request, Response, UploadFile, File  # type: ignore
 from fastapi.responses import JSONResponse  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
-from engine_core import JudiQEngine
-from kb_manager import kb_manager
-from pdf_generator import PDFGenerator
-from database_manager import DatabaseManager
-from normalizer import normalize_input, validate_minimum_viability, ValidationError
 
 import importlib
 try:
@@ -62,6 +57,7 @@ async def preflight(full_path: str):
 # ── Startup ────────────────────────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup():
+    from database_manager import DatabaseManager
     try:
         DatabaseManager.init_db()
         logger.info("✅ JudiQ Backend Started | Database Initialized")
@@ -97,6 +93,10 @@ async def analyze(request: Request):
             "error_code": "INVALID_JSON",
             "user_message": "The request could not be read. Please refresh and try again."
         })
+
+    from engine_core import JudiQEngine
+    from normalizer import normalize_input, validate_minimum_viability, ValidationError
+    from database_manager import DatabaseManager
 
     # ── Minimum viability gate ─────────────────────────────────────────────────
     try:
@@ -208,6 +208,8 @@ async def explain_score():
 # ── PDF generation ─────────────────────────────────────────────────────────────
 @app.post("/generate-pdf")
 async def generate_pdf(request: Request):
+    from pdf_generator import PDFGenerator
+    from engine_core import JudiQEngine
     try:
         data = await request.json()
         if "score" not in data:
