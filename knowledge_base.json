@@ -51,7 +51,7 @@
       "legal_impact": "Requires impleadment of firm and all active partners under S.141"
     }
   },
-  "legal_concepts": [
+  "legal_concepts_registry": [
     "cheque_bounce",
     "legal_notice_compliance",
     "legally_enforceable_debt",
