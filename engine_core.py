@@ -6,7 +6,7 @@ from draft_engine     import DraftEngine, decide_draft_type
 from response_builder import ResponseBuilder
 from normalizer       import normalize_input, validate_minimum_viability, ValidationError
 from reasoning_engine import ReasoningEngine
-from decision_support import DecisionSupportEngine
+from decision_support_engine import DecisionSupportEngine
 import logging
 
 logger = logging.getLogger(__name__)
