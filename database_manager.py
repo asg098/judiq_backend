@@ -8,7 +8,7 @@ class DatabaseManager:
     @staticmethod
     def init_db():
         try:
-            conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS saved_cases (
