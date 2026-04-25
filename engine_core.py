@@ -147,7 +147,7 @@ class JudiQEngine:
 
         # ── Step 5: Timeline Analysis ──────────────────────────────────────────
         timeline = _safe_call(
-            TimelineEngine.extract_timeline, case_data,
+            TimelineEngine.generate_timeline, case_data,
             fallback=[],
             context="TimelineEngine"
         )
