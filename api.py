@@ -159,7 +159,14 @@ async def analyze(request: Request):
         uid = normalized.get("user_id", "ANONYMOUS")
         cid = normalized.get("case_id", "")
         if uid and cid and uid != "ANONYMOUS":
-            DatabaseManager.save_case(uid, cid, normalized, result)
+            DatabaseManager.save_case(
+                cid, 
+                uid, 
+                normalized, 
+                result, 
+                result.get("score", 0), 
+                result.get("verdict", "Unknown")
+            )
     except Exception as e:
         logger.warning(f"[{request_id}] DB persistence failed (non-fatal): {e}")
 
