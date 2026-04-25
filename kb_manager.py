@@ -120,6 +120,7 @@ class KnowledgeBaseManager:
         for concept_key, cfg in raw.items():
             # Collect all phrase lists
             all_phrases = (
+                cfg.get("patterns", []) +
                 cfg.get("exact_phrases", []) +
                 cfg.get("synonyms", []) +
                 cfg.get("related_terms", []) +
