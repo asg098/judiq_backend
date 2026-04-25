@@ -100,13 +100,8 @@
         "given as security", "for security purposes", "security deposit"
       ],
       "synonyms": [
-        "collateral cheque", "guarantee cheque", "cheque for guarantee",
-        "safety cheque", "cheque for safekeeping", "protective cheque",
-        "cheque as collateral", "cheque for protection", "advance security"
-      ],
-      "related_terms": [
-        "security", "collateral", "guarantee", "safekeeping", "protection",
-        "deposit", "earnest money", "good faith", "assurance"
+        "pledged", "guarantee", "collateral", "assurance", "token", "undated security",
+        "signed blank security", "security instrument"
       ],
       "negation_phrases": [
         "not for payment", "not to encash", "not for discharge", "not for debt",
@@ -319,8 +314,7 @@
       ],
       "weight": 0.85,
       "legal_impact": "challenges legitimate purpose of instrument under S.138"
-    }
-  },
+    },
     "vicarious_liability_issue": {
       "patterns": [
         "\\b(company\\s+accused|director\\s+not\\s+named)",
@@ -330,6 +324,70 @@
       ],
       "weight": 1.0,
       "legal_impact": "Mandatory requirement under Section 141 for corporate liability"
+    },
+    "partnership_and_firms": {
+      "patterns": [
+        "\\b(partnership\\s+firm|managing\\s+partner|partners\\s+of\\s+firm)",
+        "\\b(firm\\s+name|business\\s+run\\s+by\\s+partners)"
+      ],
+      "weight": 0.9,
+      "legal_impact": "Requires impleadment of firm and all active partners under S.141"
+    },
+    "power_of_attorney_holder": {
+      "patterns": [
+        "\\b(power\\s+of\\s+attorney|poa\\s+holder|authorized\\s+rep)",
+        "\\b(attorney\\s+holder|duly\\s+authorized)"
+      ],
+      "weight": 0.85,
+      "legal_impact": "PoA must have personal knowledge of transactions to testify"
+    },
+    "joint_account_liability": {
+      "patterns": [
+        "\\b(joint\\s+account|co-signatory|joint\\s+bank\\s+account)",
+        "\\b(non-signatory\\s+spouse|shared\\s+account)"
+      ],
+      "weight": 0.95,
+      "legal_impact": "Only the actual signatory of a joint account is liable under S.138"
+    },
+    "stop_payment_instructions": {
+      "patterns": [
+        "\\b(stop\\s+payment|payment\\s+stopped|instructions\\s+to\\s+bank)",
+        "\\b(stopped\\s+by\\s+drawer)"
+      ],
+      "weight": 0.9,
+      "legal_impact": "Stop payment attracts S.138 if debt exists"
+    },
+    "interim_compensation": {
+      "patterns": [
+        "\\b(interim\\s+compensation|section\\s+143a|20\\s+percent)",
+        "\\b(deposit\\s+20%)"
+      ],
+      "weight": 0.85,
+      "legal_impact": "Court may grant 20% interim relief under S.143A"
+    },
+    "appeal_deposit": {
+      "patterns": [
+        "\\b(section\\s+148|deposit\\s+in\\s+appeal|20%\\s+in\\s+appeal)",
+        "\\b(stay\\s+of\\s+sentence)"
+      ],
+      "weight": 0.9,
+      "legal_impact": "Mandatory 20% deposit for sentence suspension in appeal"
+    },
+    "compounding_offence": {
+      "patterns": [
+        "\\b(compounding|settlement|lok\\s+adalat|compromise)",
+        "\\b(amicable\\s+settlement|withdraw\\s+case)"
+      ],
+      "weight": 0.8,
+      "legal_impact": "Offences under NI Act are compoundable under S.147"
+    },
+    "material_alteration": {
+      "patterns": [
+        "\\b(altered\\s+cheque|overwritten|changed\\s+date)",
+        "\\b(tampered\\s+cheque|handwriting\\s+mismatch)"
+      ],
+      "weight": 0.9,
+      "legal_impact": "Material alteration without consent voids the instrument"
     }
   },
   "knowledge_base": {
