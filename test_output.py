@@ -15,7 +15,7 @@ def get_cases():
             "debt_proof_type": "loan_agreement",
             "amount": 1000000
         },
-        {
+ {
             "case_id": "CASE_VERBAL_DEBT",
             "caseDescription": "Bounced cheque of 50k. No written agreement, only verbal promise.",
             "chequePresent": True,
