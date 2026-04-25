@@ -272,6 +272,34 @@ class PDFGenerator:
                 elements.append(concept_table)
                 elements.append(Spacer(1, 0.2*inch))
             
+            # ===== STATUTORY INTERPRETATION (NEW) =====
+            statutes = analysis_result.get('statutory_interpretation', [])
+            if statutes:
+                elements.append(Paragraph("Statutory Interpretation (NI Act)", heading_style))
+                elements.append(Spacer(1, 0.1*inch))
+                
+                for s in statutes:
+                    elements.append(Paragraph(f"<b>Section {s.get('section', '')}: {s.get('title', '')}</b>", subheading_style))
+                    elements.append(Paragraph(f"Finding: {s.get('finding', '')}", body_style))
+                    elements.append(Paragraph(f"Status: {s.get('status', '')}", body_style))
+                    elements.append(Spacer(1, 0.08*inch))
+                
+                elements.append(Spacer(1, 0.2*inch))
+
+            # ===== LANDMARK PRECEDENTS (NEW) =====
+            precedents = analysis_result.get('precedents', [])
+            if precedents:
+                elements.append(Paragraph("Landmark Precedents", heading_style))
+                elements.append(Spacer(1, 0.1*inch))
+                
+                for p in precedents[:10]: # Top 10
+                    elements.append(Paragraph(f"<b>{p.get('case', '')}</b>", subheading_style))
+                    elements.append(Paragraph(f"<i>Citation: {p.get('citation', '')}</i>", body_style))
+                    elements.append(Paragraph(f"Principle: {p.get('principle', '')}", body_style))
+                    elements.append(Spacer(1, 0.1*inch))
+                
+                elements.append(Spacer(1, 0.2*inch))
+
             # ===== FOOTER =====
             elements.append(Spacer(1, 0.3*inch))
             footer_style = ParagraphStyle(
