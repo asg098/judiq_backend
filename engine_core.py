@@ -47,13 +47,37 @@ class JudiQEngine:
     def analyze_case(cls, raw_data: dict) -> dict:
         from semantic_engine  import SemanticEngineV12
         from scoring_engine   import ScoringEngineV12
-        from defence_engine   import DefenceEngineV12
+        
+        # ── Robust aliased imports ──────────────────────────────────────────
+        try:
+            from defence_engine import DefenceEngineV12
+        except ImportError:
+            try:
+                from defence_support_engine import DefenceEngineV12
+            except ImportError:
+                # Mock fallback if totally missing
+                class DefenceEngineV12:
+                    @staticmethod
+                    def analyze_defences(c): return {"score": 0, "found": []}
+                logger.warning("Defence Engine NOT found — using fallback.")
+
+        try:
+            from decision_support_engine import DecisionSupportEngine
+        except ImportError:
+            try:
+                from decesion_support import DecisionSupportEngine
+            except ImportError:
+                class DecisionSupportEngine:
+                    @staticmethod
+                    def analyze_risks(c): return []
+                logger.warning("Decision Support Engine NOT found — using fallback.")
+        # ────────────────────────────────────────────────────────────────────
+
         from timeline_engine  import TimelineEngine
         from draft_engine     import DraftEngine, decide_draft_type
         from response_builder import ResponseBuilder
         from normalizer       import normalize_input, validate_minimum_viability, ValidationError
         from reasoning_engine import ReasoningEngine
-        from decision_support_engine import DecisionSupportEngine
 
         # ── Hard gate ──────────────────────────────────────────────────────────
         validate_minimum_viability(raw_data)
