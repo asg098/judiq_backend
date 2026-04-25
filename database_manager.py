@@ -25,19 +25,20 @@ class DatabaseManager:
                     updated_at TEXT
                 )
             """)
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_cases ON saved_cases(user_id)")
             conn.commit()
             conn.close()
             logger.info("Database initialized successfully.")
         except Exception as e:
             logger.error(f"Database init failed: {e}")
+            raise e
 
     @staticmethod
-    def save_case(user_id, case_id, case_data, analysis_result):
+    def save_case(case_id, user_id, case_data, analysis_result, score, verdict):
         try:
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             now = datetime.now().isoformat()
+            
             cursor.execute("""
                 INSERT OR REPLACE INTO saved_cases 
                 (case_id, user_id, case_data, analysis_result, score, verdict, created_at, updated_at)
@@ -46,28 +47,29 @@ class DatabaseManager:
                 case_id, 
                 user_id, 
                 json.dumps(case_data), 
-                json.dumps(analysis_result),
-                analysis_result.get("score", 0),
-                analysis_result.get("verdict", "Unknown"),
-                now, now
+                json.dumps(analysis_result), 
+                score, 
+                verdict,
+                now,
+                now
             ))
+            
             conn.commit()
             conn.close()
             return True
         except Exception as e:
-            logger.error(f"Failed to save case: {e}")
+            logger.error(f"Failed to save case {case_id}: {e}")
             return False
 
     @staticmethod
-    def get_user_cases(user_id):
+    def get_case(case_id):
         try:
             conn = sqlite3.connect(DB_PATH)
-            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM saved_cases WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
-            rows = cursor.fetchall()
+            cursor.execute("SELECT * FROM saved_cases WHERE case_id = ?", (case_id,))
+            row = cursor.fetchone()
             conn.close()
-            return [dict(r) for r in rows]
+            return row
         except Exception as e:
-            logger.error(f"Failed to fetch cases: {e}")
-            return []
+            logger.error(f"Failed to fetch case {case_id}: {e}")
+            return None
