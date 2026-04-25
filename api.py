@@ -62,7 +62,21 @@ async def preflight(full_path: str):
 # ── Startup ────────────────────────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup():
+    import os
     from database_manager import DatabaseManager
+    
+    # ── Diagnostic Audit ───────────────────────────────────────────────────
+    cwd = os.getcwd()
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    logger.info(f"DIAGNOSTIC: CWD={cwd}")
+    logger.info(f"DIAGNOSTIC: SCRIPT_DIR={script_dir}")
+    try:
+        logger.info(f"FILES in CWD: {os.listdir(cwd)}")
+        logger.info(f"FILES in SCRIPT_DIR: {os.listdir(script_dir)}")
+    except Exception as ex:
+        logger.error(f"DIAGNOSTIC FAILED: {ex}")
+    # ────────────────────────────────────────────────────────────────────────
+
     try:
         DatabaseManager.init_db()
         logger.info("✅ JudiQ Backend Started | Database Initialized")
