@@ -30,8 +30,20 @@ class KnowledgeBaseManager:
 
     def _load_all(self):
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        kb_path       = os.path.join(base_dir, "knowledge_base.json")
-        statutes_path = os.path.join(base_dir, "statutes.json")
+        cwd = os.getcwd()
+        
+        # Search priority: Current file's dir, then CWD
+        kb_candidates = [
+            os.path.join(base_dir, "knowledge_base.json"),
+            os.path.join(cwd, "knowledge_base.json")
+        ]
+        statutes_candidates = [
+            os.path.join(base_dir, "statutes.json"),
+            os.path.join(cwd, "statutes.json")
+        ]
+        
+        kb_path = next((p for p in kb_candidates if os.path.exists(p)), kb_candidates[0])
+        statutes_path = next((p for p in statutes_candidates if os.path.exists(p)), statutes_candidates[0])
 
         try:
             with open(kb_path, "r", encoding="utf-8") as f:
@@ -155,6 +167,3 @@ class KnowledgeBaseManager:
 
 
 kb_manager = KnowledgeBaseManager()
-
-
-
