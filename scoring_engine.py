@@ -271,8 +271,23 @@ class ScoringEngineV12:
             score += penalty
             trace.append(f"{penalty} weak evidence quality penalty")
         
-        # === FINAL BOUNDARIES ===
-        # REFINEMENT: Cap at 95 to maintain professional realism (no legal case is 100% perfect in trial)
+        # === FINAL BOUNDARIES & STRICT STATUTORY GATES (Expert Force-Fix) ===
+        # REFINEMENT: No case is 100% perfect, but fatal defects must TANK the score.
+        score = max(0, min(score, 95))
+
+        # 🔥 HARD GATE: STATUTORY OVERRIDE
+        # If mandatory pillars are missing, the case is non-maintainable in court.
+        if not cheque:
+            score = min(score, 5)
+            trace.append("⚖️ STATUTORY OVERRIDE: FATAL - No cheque instrument. Case non-maintainable.")
+        elif not notice:
+            score = min(score, 15)
+            trace.append("⚖️ STATUTORY OVERRIDE: FATAL - No demand notice. Jurisdictional bar active.")
+        elif is_company and not has_directors:
+            score = min(score, 25)
+            trace.append("⚖️ STATUTORY OVERRIDE: CRITICAL - S.141 defect (Corporate liability). High dismissal risk.")
+        
+        # FINAL CAP
         score = max(0, min(score, 95))
         
         # === JUDICIAL DISCRETION MODE (Expert Fix) ===
