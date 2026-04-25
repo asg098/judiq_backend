@@ -200,11 +200,11 @@ class JudiQEngine:
 
         # ── Step 9: Draft Engine ──────────────────────────────────────────────
         draft_type = decide_draft_type(int(final_score), concepts, case_data)
-        draft_content = _safe_call(
-            DraftEngine.generate_draft, draft_type, case_data, concepts,
-            fallback="Legal draft generation failed. Please use manual templates.",
-            context="DraftEngine"
-        )
+        try:
+            draft_content = DraftEngine.generate_draft(draft_type, int(final_score), concepts, case_data)
+        except Exception as exc:
+            logger.error(f"[ENGINE] DraftEngine failed: {exc}", exc_info=True)
+            draft_content = "Legal draft generation failed. Please use manual templates."
 
         # ── Step 10: Final Response Assembly ──────────────────────────────────
         engine_result = {
