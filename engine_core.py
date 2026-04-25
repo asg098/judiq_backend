@@ -1,14 +1,4 @@
-from semantic_engine  import SemanticEngineV12
-from scoring_engine   import ScoringEngineV12
-from defence_engine   import DefenceEngineV12
-from timeline_engine  import TimelineEngine
-from draft_engine     import DraftEngine, decide_draft_type
-from response_builder import ResponseBuilder
-from normalizer       import normalize_input, validate_minimum_viability, ValidationError
-from reasoning_engine import ReasoningEngine
-from decision_support_engine import DecisionSupportEngine
 import logging
-
 logger = logging.getLogger(__name__)
 
 # ── Synthetic text map ─────────────────────────────────────────────────────────
@@ -55,6 +45,15 @@ class JudiQEngine:
 
     @classmethod
     def analyze_case(cls, raw_data: dict) -> dict:
+        from semantic_engine  import SemanticEngineV12
+        from scoring_engine   import ScoringEngineV12
+        from defence_engine   import DefenceEngineV12
+        from timeline_engine  import TimelineEngine
+        from draft_engine     import DraftEngine, decide_draft_type
+        from response_builder import ResponseBuilder
+        from normalizer       import normalize_input, validate_minimum_viability, ValidationError
+        from reasoning_engine import ReasoningEngine
+        from decision_support_engine import DecisionSupportEngine
 
         # ── Hard gate ──────────────────────────────────────────────────────────
         validate_minimum_viability(raw_data)
@@ -109,42 +108,36 @@ class JudiQEngine:
         statutory_interpretation = _safe_call(
             ReasoningEngine.interpret_statutes, case_data, concepts,
             fallback=[],
-            context="ReasoningEngine.interpret_statutes"
+            context="ReasoningEngine.statutes"
         )
         precedents = _safe_call(
             ReasoningEngine.match_precedents, concepts,
             fallback=[],
-            context="ReasoningEngine.match_precedents"
+            context="ReasoningEngine.precedents"
         )
         reasoning_trail = _safe_call(
             ReasoningEngine.generate_reasoning_trail, case_data, concepts,
-            fallback=["Reasoning trail unavailable — engine encountered an error."],
-            context="ReasoningEngine.generate_reasoning_trail"
+            fallback=["Engine encountered non-fatal reasoning bottleneck."],
+            context="ReasoningEngine.trail"
         )
 
-        # ── Step 5: Timeline & Evidence ────────────────────────────────────────
+        # ── Step 5: Timeline Analysis ──────────────────────────────────────────
         timeline = _safe_call(
-            TimelineEngine.generate_timeline, case_data,
+            TimelineEngine.extract_timeline, case_data,
             fallback=[],
-            context="TimelineEngine.generate_timeline"
-        )
-        limitation_result = _safe_call(
-            TimelineEngine.check_limitation, case_data,
-            fallback={"is_barred": False, "status": "ERROR"},
-            context="TimelineEngine.check_limitation"
+            context="TimelineEngine"
         )
 
-        evidence = {
-            "strength":         "STRONG" if (case_data.get("cheque_present") and case_data.get("dishonour_memo")) else "WEAK",
-            "score_multiplier": 1.0      if case_data.get("cheque_present") else 0.8
+        # ── Step 6: Scoring Engine ─────────────────────────────────────────────
+        evidence_assessment = {
+            "strength": "STRONG" if case_data.get("debt_proven") else "MODERATE",
+            "gaps": []
         }
-
-        # ── Step 6: Scoring ────────────────────────────────────────────────────
-        # Pass limitation to scoring
+        
         scoring_result = _safe_call(
-            ScoringEngineV12.calculate_score_with_trace, case_data, concepts, [], evidence,
-            fallback={"final_score": 0, "score": 0, "verdict": "WEAK", "risk_level": "HIGH",
-                      "analysis_confidence": 0, "breakdown": {}},
+            ScoringEngineV12.calculate_score_with_trace, 
+            case_data, concepts, [], evidence_assessment,
+            fallback={"final_score": 0, "reasoning_trace": ["Scoring failed due to internal error."]},
             context="ScoringEngine"
         )
         final_score = float(scoring_result.get("final_score") or scoring_result.get("score") or 0)
@@ -178,40 +171,35 @@ class JudiQEngine:
         evidence_suggestions = _safe_call(
             DecisionSupportEngine.suggest_evidence_gaps, case_data,
             fallback=[],
-            context="DecisionSupportEngine.evidence_gaps"
+            context="DecisionSupportEngine.evidence"
         )
 
-        # ── Step 9: Draft Generation ───────────────────────────────────────────
-        draft_type = _safe_call(
-            decide_draft_type, final_score, concepts, case_data,
-            fallback="LEGAL_OPINION",
-            context="decide_draft_type"
-        )
-        draft = _safe_call(
-            DraftEngine.generate_draft, draft_type, final_score, concepts, case_data,
-            fallback="Draft generation encountered an error. Please use the Draft Generator section.",
-            context="DraftEngine.generate_draft"
+        # ── Step 9: Draft Engine ──────────────────────────────────────────────
+        draft_type = decide_draft_type(int(final_score), concepts, case_data)
+        draft_content = _safe_call(
+            DraftEngine.generate_draft, draft_type, case_data, concepts,
+            fallback="Legal draft generation failed. Please use manual templates.",
+            context="DraftEngine"
         )
 
-        # ── Step 10: Assemble & Return ─────────────────────────────────────────
-        engine_output = {
-            **scoring_result,
-            "concepts":                  concepts,
-            "defences":                  defences,
-            "timeline":                  timeline,
-            "limitation":                limitation_result,
-            "draft":                     draft,
-            "draft_type":                draft_type,
-            # Reasoning Layer
-            "case_summary":              case_summary,
-            "statutory_interpretation":  statutory_interpretation,
-            "precedents":                precedents,
-            "reasoning_trail":           reasoning_trail,
-            # Decision-Support Layer
-            "risks_and_rebuttals":       risks_and_rebuttals,
-            "outcome_prediction":        outcome_prediction,
-            "translated_verdict":        translated_verdict,
-            "evidence_suggestions":      evidence_suggestions,
+        # ── Step 10: Final Response Assembly ──────────────────────────────────
+        engine_result = {
+            "final_score":              final_score,
+            "reasoning_trace":          scoring_result.get("reasoning_trace", []),
+            "score_breakdown":          scoring_result.get("score_breakdown", []),
+            "discretionary_caveats":    scoring_result.get("discretionary_caveats", []),
+            "concepts":                 concepts,
+            "defences":                 defences,
+            "risks_and_rebuttals":      risks_and_rebuttals,
+            "outcome_prediction":       outcome_prediction,
+            "translated_verdict":       translated_verdict,
+            "statutory_interpretation": statutory_interpretation,
+            "precedents":               precedents,
+            "timeline":                 timeline,
+            "reasoning_trail":          reasoning_trail,
+            "draft":                    draft_content,
+            "draft_type":               draft_type,
+            "evidence_suggestions":     evidence_suggestions
         }
-
-        return ResponseBuilder.build_final_response(engine_output, case_data)
+        
+        return ResponseBuilder.build_final_response(engine_result, case_data)
