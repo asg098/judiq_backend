@@ -220,8 +220,6 @@ async def add_caseroom_task(room_id: str, request: Request):
     data = await request.json()
     success = CaseroomManager.add_milestone(room_id, data.get("title"), data.get("due_date"), data.get("description", ""))
     return {"success": success}
-
-
 # ── PDF generation ─────────────────────────────────────────────────────────────
 @app.post("/generate-pdf")
 async def generate_pdf(request: Request):
