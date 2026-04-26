@@ -74,7 +74,6 @@ class DatabaseManager:
                     FOREIGN KEY (caseroom_id) REFERENCES caserooms(caseroom_id)
                 )
             """)
-
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS caseroom_tasks (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
