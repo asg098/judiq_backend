@@ -6,20 +6,17 @@ from datetime import datetime
 from fastapi import FastAPI, Request, Response, UploadFile, File  # type: ignore
 from fastapi.responses import JSONResponse  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
-
 import importlib
 import sys
 # Inject current directory into path for Render
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.getcwd())
-
 try:
     pdfplumber = importlib.import_module("pdfplumber")
     HAS_PDFPLUMBER = True
 except ImportError:
     HAS_PDFPLUMBER = False
     pdfplumber = None
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s"
@@ -31,8 +28,6 @@ app = FastAPI(
     version="7.0.0",
     description="Court-ready legal intelligence platform for Section 138 NI Act cases."
 )
-
-# ── CORS ───────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -40,8 +35,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# ── CORS preflight handlers ────────────────────────────────────────────────────
 @app.options("/analyze")
 async def analyze_options():
     return Response(status_code=200, headers={
