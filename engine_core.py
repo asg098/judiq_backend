@@ -120,6 +120,15 @@ class JudiQEngine:
                                   "matched_phrases": ["fallback: debt proven"],
                                   "legal_impact": "Establishes legally enforceable liability under S.139."})
 
+        # -- Step 3.5: Mandatory Litigation Risk Injection (Enemy Audit Fix) --
+        # No case is zero-risk. Every S.138 case carries inherent trial risk.
+        concepts.append({
+            "concept": "litigation_risk",
+            "confidence": 0.52,
+            "matched_phrases": ["Inherent trial risk -- mandatory audit signal"],
+            "legal_impact": "Standard procedural risk, judicial discretion, and potential litigation delays."
+        })
+
         logger.debug(f"[JUDIQ] Concepts detected: {[c.get('concept') for c in concepts]}")
 
         # -- Step 4: Reasoning Layer (each call independently guarded) --------

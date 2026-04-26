@@ -167,7 +167,7 @@ def normalize_input(data: dict) -> dict:
     cheque_present  = _safe_bool(data.get("cheque_present",  data.get("chequePresent",  cq_obj.get("cheque_present", False))))
     dishonour_memo  = _safe_bool(data.get("dishonour_memo",  data.get("dishonourMemo",  ds_obj.get("bank_memo_received", False))))
     notice_sent     = _safe_bool(data.get("notice_sent",     data.get("noticeSent",     nt_obj.get("notice_sent", False))))
-    debt_proven     = _safe_bool(data.get("debt_proven",     data.get("debtProven",     tx_obj.get("debt_acknowledged", False))))
+    debt_proven     = _safe_bool(data.get("debt_proven",     data.get("debtProven",     tx_obj.get("debt_acknowledged", tx_obj.get("debt_proven", False)))))
     directors_named = _safe_bool(data.get("directors_named", accu_obj.get("directors_named", False)))
     is_authorized   = _safe_bool(data.get("is_authorized",   comp_obj.get("is_authorized", False)))
     signature_disp  = _safe_bool(data.get("signature_dispute",     data.get("signatureDispute",     False)))
@@ -194,7 +194,7 @@ def normalize_input(data: dict) -> dict:
         "memo_type":           _safe_str(data.get("memo_type", ds_obj.get("memo_type", "original")), 50),
         "notice_served_proof": _safe_bool(data.get("notice_served_proof", nt_obj.get("notice_received", True))),
         "debt_proof_type":     _safe_str(data.get("debt_proof_type", tx_obj.get("agreement_type", "written_agreement")), 50),
-        "within_30_days":      _safe_str(data.get("within_30_days", "Yes"), 10),
+        "within_30_days":      _safe_str(data.get("within_30_days", nt_obj.get("within_statutory_period", "Yes")), 10),
 
         # Case description
         "description": description,

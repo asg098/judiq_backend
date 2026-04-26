@@ -15,7 +15,7 @@ NEGATIVE_CONCEPTS = {
     "cheque_misuse", "limitation_issue", "payment_already_made", "dishonour_disputed",
     "cheque_validity_issue", "no_agreement", "joint_account_liability",
     "stop_payment_instructions", "material_alteration", "premature_complaint",
-    "unaccounted_cash_loans", "legal_heirs_liability"
+    "unaccounted_cash_loans", "legal_heirs_liability", "litigation_risk"
 }
 
 POSITIVE_CONCEPTS = {
@@ -113,7 +113,7 @@ class ResponseBuilder:
 
         NEGATIVE_RISK_ORDER = [
             "limitation_issue", "notice_defect", "notice_not_sent",
-            "security_cheque", "signature_dispute", "no_debt_proof",
+            "litigation_risk", "security_cheque", "signature_dispute", "no_debt_proof",
             "no_agreement", "cheque_misuse", "payment_already_made",
             "cheque_validity_issue", "dishonour_disputed"
         ]

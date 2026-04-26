@@ -272,8 +272,13 @@ class ScoringEngineV12:
             trace.append(f"{penalty} weak evidence quality penalty")
         
         # === FINAL BOUNDARIES & STRICT STATUTORY GATES (Expert Force-Fix) ===
-        # REFINEMENT: No case is 100% perfect, but fatal defects must TANK the score.
-        score = max(0, min(score, 100))
+        # REFINEMENT: No case is 100% perfect. Max score is 91 to account for judicial discretion and litigation risk.
+        
+        # Apply standard litigation friction (the 9% uncertainty)
+        score -= 9
+        trace.append("-9 Standard Litigation Friction (Inherent risk of trial, judicial discretion, and procedural delays)")
+        
+        score = max(0, min(score, 91))
 
         # 🔥 HARD GATE: STATUTORY OVERRIDE
         # If mandatory pillars are missing, the case is non-maintainable in court.
@@ -288,7 +293,7 @@ class ScoringEngineV12:
             trace.append("⚖️ STATUTORY OVERRIDE: CRITICAL - S.141 defect (Corporate liability). High dismissal risk.")
         
         # FINAL CAP
-        score = max(0, min(score, 100))
+        score = max(0, min(score, 91))
         
         # === JUDICIAL DISCRETION MODE (Expert Fix) ===
         discretion_notes = []

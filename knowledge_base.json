@@ -62,7 +62,8 @@
     "notice_defect",
     "signature_dispute",
     "dishonour_disputed",
-    "payment_already_made"
+    "payment_already_made",
+    "litigation_risk"
   ],
   "reasoning_trails": {
     "cheque_bounce": [
@@ -92,5 +93,18 @@
     "limitation_issue": 0.90,
     "cheque_misuse": 0.85,
     "legally_enforceable_debt": 0.95
+  },
+  "scoring_catalogue": {
+    "security_cheque": [-25, 0.95, "Cheque issued as security creates significant defense rebuttable under S.139"],
+    "signature_dispute": [-40, 0.90, "Disputed signature is a fatal evidentiary defect requiring forensic validation"],
+    "signature_disputed": [-40, 0.90, "Disputed signature is a fatal evidentiary defect requiring forensic validation"],
+    "no_debt_proof": [-35, 0.90, "Lack of documentary proof of debt weakens the S.139 presumption"],
+    "notice_defect": [-45, 0.85, "Defective or unserved notice is a jurisdictional bar to prosecution"],
+    "notice_not_sent": [-45, 0.95, "Failure to send statutory notice is a fatal procedural defect"],
+    "limitation_issue": [-40, 0.90, "Time-barred complaints are non-maintainable under Section 142"],
+    "cheque_misuse": [-30, 0.85, "Allegation of cheque misuse/theft requires strong rebuttal evidence"],
+    "dishonour_disputed": [-20, 0.80, "Dispute over bank return reason weakens the primary evidence"],
+    "payment_already_made": [-35, 0.95, "Proof of payment prior to notice expiry voids the cause of action"],
+    "litigation_risk": [-10, 0.50, "Standard trial uncertainty and judicial discretion impact"]
   }
 }
