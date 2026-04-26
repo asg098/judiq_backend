@@ -154,9 +154,20 @@ class JudiQEngine:
             context="TimelineEngine"
         )
 
-        # -- Step 6: Scoring Engine -------------------------------------------
+        # -- Step 6: Scoring Engine (Nuanced Assessment) -----------------------
+        evidence_score = 0
+        if case_data.get("cheque_proof_type") == "original": evidence_score += 2
+        if case_data.get("memo_type") == "original": evidence_score += 1
+        if case_data.get("bank_statements"): evidence_score += 2
+        if case_data.get("witnesses_available"): evidence_score += 1
+        if case_data.get("receipts_available"): evidence_score += 1
+        
+        evidence_strength = "MODERATE"
+        if evidence_score >= 5: evidence_strength = "STRONG"
+        elif evidence_score <= 1: evidence_strength = "WEAK"
+
         evidence_assessment = {
-            "strength": "STRONG" if case_data.get("debt_proven") else "MODERATE",
+            "strength": evidence_strength,
             "gaps": []
         }
 
