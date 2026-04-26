@@ -3,9 +3,7 @@ import uuid
 import sqlite3
 from datetime import datetime
 from database_manager import DatabaseManager, DB_PATH
-
 logger = logging.getLogger(__name__)
-
 class CaseroomManager:
     @staticmethod
     def initialize_caseroom_for_case(case_id, owner_id):
