@@ -155,27 +155,78 @@ async def analyze(request: Request):
 
     # ── Persist (non-fatal) ────────────────────────────────────────────────────
     try:
-        normalized = normalize_input(raw_data)
-        uid = normalized.get("user_id", "ANONYMOUS")
-        cid = normalized.get("case_id", "")
+        # Use the result from the engine which is already normalized
+        uid = result.get("metadata", {}).get("user_id", "ANONYMOUS")
+        cid = result.get("case_id", "")
         if uid and cid and uid != "ANONYMOUS":
+            case_data = result.get("case_data", {})
             DatabaseManager.save_case(
                 cid, 
                 uid, 
-                normalized, 
+                case_data, 
                 result, 
                 result.get("score", 0), 
                 result.get("verdict", "Unknown")
             )
+            # --- AUTO-INITIALIZE CASEROOM ---
+            from caseroom_logic import CaseroomManager
+            # Check if caseroom already exists to avoid duplicates
+            existing_room_id = DatabaseManager.get_caseroom_by_case_id(cid)
+            if not existing_room_id:
+                CaseroomManager.initialize_caseroom_for_case(cid, uid)
     except Exception as e:
-        logger.warning(f"[{request_id}] DB persistence failed (non-fatal): {e}")
+        logger.warning(f"[{request_id}] DB/Caseroom persistence failed (non-fatal): {e}")
 
     # ── Build response ─────────────────────────────────────────────────────────
     # Spread all result fields to the top level AND keep 'data' for compatibility
     response_body = {"success": True, "request_id": request_id}
     response_body.update(result)          # spread: score, verdict, draft, etc. at top level
+    
+    # Include Caseroom ID if it exists
+    from database_manager import DatabaseManager
+    response_body["caseroom_id"] = DatabaseManager.get_caseroom_by_case_id(cid)
+    
     response_body["data"] = result        # keep nested copy for any legacy consumers
     return response_body
+
+
+# ── Caseroom Management ────────────────────────────────────────────────────────
+@app.post("/caseroom/create")
+async def create_caseroom(request: Request):
+    from caseroom_logic import CaseroomManager
+    data = await request.json()
+    cid = data.get("case_id")
+    uid = data.get("user_id")
+    room_id = CaseroomManager.initialize_caseroom_for_case(cid, uid)
+    return {"success": True, "caseroom_id": room_id}
+
+@app.get("/caseroom/{room_id}")
+async def get_caseroom(room_id: str):
+    from caseroom_logic import CaseroomManager
+    data = CaseroomManager.get_full_caseroom_state(room_id)
+    if not data: return JSONResponse(status_code=404, content={"error": "Room not found"})
+    return {"success": True, "data": data}
+
+@app.post("/caseroom/{room_id}/invite")
+async def invite_to_caseroom(room_id: str, request: Request):
+    from caseroom_logic import CaseroomManager
+    data = await request.json()
+    success = CaseroomManager.invite_collaborator(room_id, data.get("user_id"), data.get("role"))
+    return {"success": success}
+
+@app.post("/caseroom/{room_id}/message")
+async def send_caseroom_message(room_id: str, request: Request):
+    from caseroom_logic import CaseroomManager
+    data = await request.json()
+    success = CaseroomManager.post_comment(room_id, data.get("user_id"), data.get("content"))
+    return {"success": success}
+
+@app.post("/caseroom/{room_id}/task")
+async def add_caseroom_task(room_id: str, request: Request):
+    from caseroom_logic import CaseroomManager
+    data = await request.json()
+    success = CaseroomManager.add_milestone(room_id, data.get("title"), data.get("due_date"), data.get("description", ""))
+    return {"success": success}
 
 
 # ── PDF generation ─────────────────────────────────────────────────────────────
@@ -198,3 +249,15 @@ async def generate_pdf(request: Request):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("api:app", host="0.0.0.0", port=port, reload=True)
+
+
+
+
+
+
+
+
+
+
+
+
