@@ -11,7 +11,7 @@ import sys
 # Inject current directory into path for Render
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.getcwd())
-try:
+:
     pdfplumber = importlib.import_module("pdfplumber")
     HAS_PDFPLUMBER = True
 except ImportError:
