@@ -164,7 +164,7 @@ def normalize_input(data: dict) -> dict:
     dishonour_reason = _safe_str(raw_reason, max_len=100, field_name="dishonour_reason")
 
     # ── Booleans ───────────────────────────────────────────────────────────────
-    cheque_present  = _safe_bool(data.get("cheque_present",  data.get("chequePresent",  bool(cq_obj.get("cheque_number")))))
+    cheque_present  = _safe_bool(data.get("cheque_present",  data.get("chequePresent",  cq_obj.get("cheque_present", False))))
     dishonour_memo  = _safe_bool(data.get("dishonour_memo",  data.get("dishonourMemo",  ds_obj.get("bank_memo_received", False))))
     notice_sent     = _safe_bool(data.get("notice_sent",     data.get("noticeSent",     nt_obj.get("notice_sent", False))))
     debt_proven     = _safe_bool(data.get("debt_proven",     data.get("debtProven",     tx_obj.get("debt_acknowledged", False))))

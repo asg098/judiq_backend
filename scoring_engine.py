@@ -273,7 +273,7 @@ class ScoringEngineV12:
         
         # === FINAL BOUNDARIES & STRICT STATUTORY GATES (Expert Force-Fix) ===
         # REFINEMENT: No case is 100% perfect, but fatal defects must TANK the score.
-        score = max(0, min(score, 95))
+        score = max(0, min(score, 100))
 
         # 🔥 HARD GATE: STATUTORY OVERRIDE
         # If mandatory pillars are missing, the case is non-maintainable in court.
@@ -288,7 +288,7 @@ class ScoringEngineV12:
             trace.append("⚖️ STATUTORY OVERRIDE: CRITICAL - S.141 defect (Corporate liability). High dismissal risk.")
         
         # FINAL CAP
-        score = max(0, min(score, 95))
+        score = max(0, min(score, 100))
         
         # === JUDICIAL DISCRETION MODE (Expert Fix) ===
         discretion_notes = []

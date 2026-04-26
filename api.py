@@ -171,13 +171,11 @@ async def analyze(request: Request):
         logger.warning(f"[{request_id}] DB persistence failed (non-fatal): {e}")
 
     # ── Build response ─────────────────────────────────────────────────────────
-    return {
-        "success":             True,
-        "request_id":          request_id,
-        "score":               result.get("score"),
-        "verdict":             result.get("verdict"),
-        "data":                result
-    }
+    # Spread all result fields to the top level AND keep 'data' for compatibility
+    response_body = {"success": True, "request_id": request_id}
+    response_body.update(result)          # spread: score, verdict, draft, etc. at top level
+    response_body["data"] = result        # keep nested copy for any legacy consumers
+    return response_body
 
 
 # ── PDF generation ─────────────────────────────────────────────────────────────

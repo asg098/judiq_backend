@@ -136,13 +136,3 @@ class EnhancedSemanticExtractor:
             "method": "SemanticEngineV12_enhanced_compat",
             "text_analyzed": result.get("text_analyzed", "")
         }
-
-
-
-
-
-
-
-
-
-
