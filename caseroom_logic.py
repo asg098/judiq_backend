@@ -16,7 +16,6 @@ class CaseroomManager:
             DatabaseManager.send_message(caseroom_id, "SYSTEM", f"Welcome to the Caseroom for Case {case_id}. Strategy discussions and evidence management starts here.")
             return caseroom_id
         return None
-
     @staticmethod
     def invite_collaborator(caseroom_id, user_id, role):
         """Invites a new lawyer/collaborator to the caseroom."""
