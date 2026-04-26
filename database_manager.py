@@ -243,18 +243,3 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to send message in {caseroom_id}: {e}")
             return False
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
