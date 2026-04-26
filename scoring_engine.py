@@ -63,7 +63,7 @@ class ScoringEngineV12:
         """
         concepts = cls.resolve_conflicts(ensure_list(concepts))
         trace = []
-        base_score = 15
+        base_score = 10
         score = base_score
         trace.append(f"Base score: {base_score}")
         
@@ -77,13 +77,13 @@ class ScoringEngineV12:
         if cheque: 
             cheque_type = case_data.get("cheque_proof_type", "original").lower()
             if cheque_type == "original":
-                cheque_points = 28
+                cheque_points = 22
                 trace.append(f"+{cheque_points} original cheque secured (critical pillar)")
             elif "copy" in cheque_type or "xerox" in cheque_type:
-                cheque_points = 14
+                cheque_points = 11
                 trace.append(f"+{cheque_points} photocopy cheque (reduced evidentiary value)")
             else:
-                cheque_points = 20
+                cheque_points = 16
                 trace.append(f"+{cheque_points} cheque available")
             score += cheque_points
             
@@ -101,10 +101,10 @@ class ScoringEngineV12:
         if memo:
             memo_type = case_data.get("memo_type", "original").lower()
             if memo_type == "original":
-                memo_points = 15
+                memo_points = 12
                 trace.append(f"+{memo_points} original bank dishonour memo (strong evidence)")
             else:
-                memo_points = 8
+                memo_points = 6
                 trace.append(f"+{memo_points} memo copy available (acceptable)")
             score += memo_points
         else:
@@ -120,19 +120,19 @@ class ScoringEngineV12:
             
             if notice_proof and within_30_days:
                 if "registered" in notice_mode or "speed" in notice_mode:
-                    notice_points = 32
+                    notice_points = 28
                     trace.append(f"+{notice_points} statutory notice served via Registered/Speed Post (Strong S.138b compliance)")
                 else:
-                    notice_points = 26
+                    notice_points = 22
                     trace.append(f"+{notice_points} statutory notice served within 30 days (Proof available)")
             elif notice_proof:
-                notice_points = 22
+                notice_points = 18
                 trace.append(f"+{notice_points} notice served with proof (timeline unclear)")
             elif within_30_days:
-                notice_points = 15
+                notice_points = 12
                 trace.append(f"+{notice_points} notice sent within 30 days (service proof weak)")
             else:
-                notice_points = 10
+                notice_points = 8
                 trace.append(f"+{notice_points} notice sent (service proof and timing unclear)")
             score += notice_points
         else:
@@ -161,13 +161,13 @@ class ScoringEngineV12:
                         score += penalty
                         trace.append(f"🚨 CYNICAL AUDIT: Financial Capacity Risk. Complainant's ability to lend ₹{amount:,.0f} in cash without ITR/Bank proof will be torn apart by a skilled defense (Basalingappa v. Mudibasappa).")
             elif proof_method in ["loan_agreement", "written_agreement", "promissory_note"]:
-                debt_points = 28
+                debt_points = 22
                 trace.append(f"+{debt_points} strong written debt proof ({proof_method})")
             elif proof_method == "invoice":
-                debt_points = 22
+                debt_points = 18
                 trace.append(f"+{debt_points} commercial invoice/bill proof")
             else:
-                debt_points = 15
+                debt_points = 12
                 trace.append(f"+{debt_points} debt proof acknowledged")
             score += debt_points
         else:
@@ -203,11 +203,11 @@ class ScoringEngineV12:
         # === CORROBORATIVE EVIDENCE WEIGHTAGE ===
         pillars_satisfied = sum([cheque, memo, notice, debt])
         if pillars_satisfied == 4:
-            weightage = 10
+            weightage = 8
             score += weightage
             trace.append(f"+{weightage} all mandatory procedural pillars satisfied (corroborative weightage)")
         elif pillars_satisfied <= 2:
-            penalty = -8
+            penalty = -10
             score += penalty
             trace.append(f"{penalty} multiple mandatory procedural pillars missing (compounding weakness)")
         
@@ -216,10 +216,9 @@ class ScoringEngineV12:
         score_breakdown = []
         
         positive_concepts = {
-            "legally_enforceable_debt": 8,
-            "legal_notice_compliance": 6,
-            "strong_documentary_evidence": 7,
-            "cheque_bounce": 5
+            "strong_documentary_evidence": 6,
+            "interim_compensation_eligible": 4,
+            "bank_statements_verified": 4
         }
         
         for concept_det in concepts:
@@ -289,15 +288,17 @@ class ScoringEngineV12:
         # === CYNICAL RISK SCORING (Defense Attorney Mode) ===
         # Skilled defense lawyers look for 'compound weaknesses'
         if score < 60 and pillars_satisfied <= 2:
-            cynical_multiplier = 0.85
+            cynical_multiplier = 0.80
             score = int(score * cynical_multiplier)
-            trace.append(f"📉 CYNICAL MODE: Score reduced by 15% (multiplier: {cynical_multiplier}). A defense lawyer will exploit the compounded absence of mandatory pillars to create 'reasonable doubt'.")
+            trace.append(f"📉 CYNICAL MODE: Score reduced by 20% (multiplier: {cynical_multiplier}). A defense lawyer will exploit the compounded absence of mandatory pillars to create 'reasonable doubt'.")
 
-        # Apply standard litigation friction (the 9% uncertainty)
-        score -= 9
-        trace.append("-9 Standard Litigation Friction (Inherent risk of trial, judicial discretion, and procedural delays)")
-        
-        score = max(0, min(score, 91))
+        # Dynamic Litigation Friction (10% inherent risk)
+        friction = int(score * 0.10)
+        score -= friction
+        trace.append(f"-{friction} Standard Litigation Friction (10% inherent risk of trial and judicial discretion)")
+
+        # Cap at 100 before statutory overrides
+        score = max(0, min(score, 100))
 
         # 🔥 HARD GATE: STATUTORY OVERRIDE
         # If mandatory pillars are missing, the case is non-maintainable in court.
@@ -362,8 +363,8 @@ class ScoringEngineV12:
                 score += penalty
                 trace.append(f"{penalty} EVIDENTIARY RISK: WhatsApp/Digital evidence requires a mandatory Section 65B Certificate. Missing certificate renders evidence inadmissible.")
 
-        # FINAL CAP
-        score = max(0, min(score, 91))
+        # FINAL CAP - Realistic limit (nothing is 100% in law, but 91 was too restrictive)
+        score = max(0, min(score, 99))
         
         # === JUDICIAL DISCRETION MODE (Expert Fix) ===
         discretion_notes = []
