@@ -52,24 +52,18 @@ class JudiQEngine:
         try:
             from defence_engine import DefenceEngineV12
         except ImportError:
-            try:
-                from defence_support_engine import DefenceEngineV12
-            except ImportError:
-                class DefenceEngineV12:
-                    @staticmethod
-                    def analyze_defences(c): return {"score": 0, "found": []}
-                logger.warning("Defence Engine NOT found -- using fallback.")
+            class DefenceEngineV12:
+                @staticmethod
+                def analyze_defences(c): return {"score": 0, "found": []}
+            logger.warning("Defence Engine NOT found -- using fallback.")
 
         try:
             from decision_support_engine import DecisionSupportEngine
         except ImportError:
-            try:
-                from decesion_support import DecisionSupportEngine
-            except ImportError:
-                class DecisionSupportEngine:
-                    @staticmethod
-                    def analyze_risks(c): return []
-                logger.warning("Decision Support Engine NOT found -- using fallback.")
+            class DecisionSupportEngine:
+                @staticmethod
+                def analyze_risks(c): return []
+            logger.warning("Decision Support Engine NOT found -- using fallback.")
         # ---------------------------------------------------------------------
 
         from timeline_engine  import TimelineEngine

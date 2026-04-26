@@ -125,8 +125,9 @@ On behalf of: {complainant}
 """
 
 
-def generate_complaint(case_data: Dict, concepts: List[Dict]) -> str:
+def generate_complaint(case_data: Dict, concepts: List[Dict], tone: str = "standard") -> str:
     today, amount_str = _case_meta(case_data)
+    is_aggressive = tone.lower() == "aggressive"
 
     complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[COMPLAINANT NAME]"
     complainant_addr = case_data.get("complainant_address") or case_data.get("complainantAddress") or "[COMPLAINANT ADDRESS]"
@@ -167,23 +168,61 @@ def generate_complaint(case_data: Dict, concepts: List[Dict]) -> str:
     elif purpose:
         transaction_nature = purpose[:100]
 
-    # Authorization Clause Logic
+    # Authorization Clause Logic - ADVOCATE HARDENED
     auth_clause = ""
     if complainant_type != "Individual":
         is_auth = case_data.get("is_authorized", False)
         if is_auth:
-            auth_clause = f"The Complainant is a {complainant_type} and is represented by its Authorized Signatory, who is duly empowered by way of a Board Resolution/Letter of Authority dated _________, produced herewith as ANNEXURE-A."
+            auth_clause = f"The Complainant is a {complainant_type} and is represented by its Authorized Signatory, who is duly empowered by way of a Board Resolution and a Letter of Authority dated _________, produced herewith as ANNEXURE-A. The said representative is fully conversant with the facts and circumstances of the present case and is competent to depose on behalf of the Complainant."
         else:
-            auth_clause = f"The Complainant is a {complainant_type} filing through its representative. [WARNING: Authorization documents not yet verified]"
+            auth_clause = f"The Complainant is a {complainant_type} filing through its representative. [CRITICAL WARNING: Board Resolution/Authorization must be annexed to satisfy procedural mandates of S.141]."
 
-    # Vicarious Liability Clause (Sec 141)
+    # Vicarious Liability Clause (Sec 141) - BATTLE READY
     liability_clause = ""
     if accused_type != "Individual":
         has_directors = case_data.get("directors_named", False)
-        if has_directors:
-            liability_clause = f"3. That the Accused No. 1 is a {accused_type} and Accused Nos. 2 onwards are its Directors/Officers who were, at the time the offence was committed, in charge of and responsible for the conduct of the business of the company as per Section 141 of the NI Act."
+        director_names = case_data.get("director_names", "")
+        
+        if has_directors and director_names:
+            liability_clause = f"""3. THE VICARIOUS LIABILITY (SEC. 141):
+    That the Accused No. 1 is a {accused_type}, and Accused Nos. 2 onwards, namely {director_names}, are the Directors/Partners/Officers of the said Accused No. 1.
+    That at the time the offence was committed, the said Accused Nos. 2 onwards were in charge of, and were responsible to the Accused No. 1 for the conduct of its business. 
+    They were actively involved in the day-to-day management and decision-making processes of the Accused No. 1, and the dishonoured cheque in question was issued with their full knowledge, consent, and connivance, thereby making them liable under Section 141 of the NI Act."""
+        elif has_directors:
+            liability_clause = f"3. THE VICARIOUS LIABILITY (SEC. 141): That the Accused No. 1 is a {accused_type} and the other Accused persons are its Directors/Officers who were in charge of and responsible for the conduct of the business as per Section 141 of the NI Act."
         else:
-            liability_clause = f"3. That the Accused is a {accused_type}. [WARNING: Individual Directors must be named for Section 141 liability]"
+            liability_clause = f"3. That the Accused is a {accused_type}. [CRITICAL WARNING: Specific Directors/Officers must be named and their roles defined to satisfy the mandates of Section 141 NI Act and the law laid down in Aneeta Hada vs. Godfather Travels]."
+
+    # ── DELAY CONDONATION (Advocate Hardening) ───────────────────────────
+    delay_para = ""
+    within_30_days = case_data.get("within_30_days", "Yes") == "Yes"
+    if not within_30_days:
+        delay_para = f"\n7A. CONDONATION OF DELAY: That there has been a technical delay of ____ days in issuing the statutory demand notice. The Complainant has filed a separate application under Section 142(1)(b) of the NI Act showing sufficient cause for the same, which may be read as part and parcel of this complaint.\n"
+
+    # ── EVIDENCE PLEADINGS (Advocate Hardening) ──────────────────────────
+    if is_aggressive:
+        debt_pleading = f"""The Complainant categorically asserts that the Accused is heavily indebted to the tune of {amount_str}. This sum represents a crystallized, legally enforceable liability arising from {transaction_nature}. 
+    This debt is not merely an entry in a ledger but is fortified by unassailable documentary evidence, including [Bank Statements/Ledger Accounts/Invoices], which unequivocally prove the flow of consideration. 
+    The Accused has deliberately and with mala fide intent exploited the Complainant's professional trust, and the issuance of the dishonoured cheque was a calculated act of deception aimed at causing wrongful loss to the Complainant and wrongful gain to the Accused."""
+    else:
+        debt_pleading = f"The Complainant states that the Accused is indebted to the Complainant for a sum of {amount_str} arising from {transaction_nature}. The said debt is legally enforceable and constitutes a valid liability under law."
+    
+    if case_data.get("communication_records"):
+        if is_aggressive:
+            debt_pleading += f" The Accused's culpability is further established by an unassailable digital trail of WhatsApp messages and Emails, where the debt was repeatedly admitted. This evidence is fortified by a mandatory Section 65B Evidence Act Certificate, making it trial-ready and inadmissible to denial."
+        else:
+            debt_pleading += f" The Accused has repeatedly acknowledged the said debt and liability via various communications, including WhatsApp messages and Emails, which are produced herewith along with the mandatory Certificate under Section 65B of the Indian Evidence Act."
+    elif case_data.get("debt_proof_type") == "verbal_agreement" or case_data.get("agreement_type") == "Verbal Agreement":
+        if is_aggressive:
+            debt_pleading += " Despite the trust-based nature of the initial transaction, the Accused's subsequent conduct, the issuance of the cheque, and the resulting statutory presumption under Section 139 constitute an unequivocal admission of the debt, which the Accused is now dishonestly attempting to evade."
+        else:
+            debt_pleading += " The said transaction was entered into based on mutual trust, and the Accused had verbally promised to repay the amount within the stipulated time."
+
+    prayer_compensation = ""
+    if is_aggressive:
+        prayer_compensation = "(c) Direct the Accused to pay MAXIMUM INTERIM COMPENSATION of 20% under Section 143A of the NI Act, as the Accused's defense is prima facie meritless and intended only to delay justice;"
+    else:
+        prayer_compensation = "(c) Direct the Accused to pay INTERIM COMPENSATION under Section 143A of the NI Act (20% of cheque amount);"
 
     return f"""{_header("CRIMINAL COMPLAINT UNDER SECTION 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881")}
 
@@ -204,6 +243,10 @@ ACCUSED:        {accused}
                 {accused_addr}
                                                         ... ACCUSED
 
+
+                THROUGH: __________________, ADVOCATE
+                FOR THE COMPLAINANT
+
 COMPLAINT U/S 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881
 
 RESPECTFULLY SHOWETH:
@@ -217,7 +260,7 @@ RESPECTFULLY SHOWETH:
 {liability_clause}
 
 4. THE LEGALLY ENFORCEABLE DEBT:
-   The Complainant states that the Accused is indebted to the Complainant for a sum of {amount_str} arising from {transaction_nature}. The said debt is legally enforceable and constitutes a valid liability under law.
+   {debt_pleading}
 
 5. ISSUANCE OF CHEQUE:
    In discharge of the aforesaid legal liability, the Accused issued a cheque bearing No. {cheque_no}, dated {cheque_date}, drawn on {bank_full}, for an amount of {amount_str} in favour of the Complainant.
@@ -226,7 +269,7 @@ RESPECTFULLY SHOWETH:
    The Complainant duly presented the said cheque for encashment through its banker. However, the said cheque was returned/dishonoured on {dishonour_date} with the bank memo citing "{dishonour_reason}", thereby constituting an offence under Section 138 of the NI Act, 1881.
 
 7. STATUTORY DEMAND NOTICE:
-   As mandated under Section 138(b) of the NI Act, the Complainant caused a legal demand notice to be served upon the Accused on {notice_date} through Registered Post (AD)/Speed Post, demanding payment of {amount_str} within 15 days of receipt of the notice.
+   As mandated under Section 138(b) of the NI Act, the Complainant caused a legal demand notice to be served upon the Accused on {notice_date} through Registered Post (AD)/Speed Post, demanding payment of {amount_str} within 15 days of receipt of the notice. {delay_para}
 
 8. FAILURE TO PAY:
    Despite receipt of the aforesaid notice, the Accused has wilfully and deliberately failed, neglected, and refused to make payment of the said amount within the statutory period, thereby committing an offence punishable under Section 138 of the Negotiable Instruments Act, 1881.
@@ -238,8 +281,8 @@ RESPECTFULLY SHOWETH:
     It is, therefore, most respectfully prayed that this Hon'ble Court may be pleased to:
     (a) Take cognizance of the offence committed by the Accused under Section 138 of the NI Act, 1881;
     (b) Issue summons/process to the Accused;
-    (c) Direct the Accused to pay INTERIM COMPENSATION under Section 143A of the NI Act (20% of cheque amount);
-    (d) On conviction, sentence the Accused to imprisonment and/or impose a fine of twice the cheque amount; and
+    {prayer_compensation}
+    (d) On conviction, sentence the Accused to imprisonment for the maximum term and/or impose a fine of twice the cheque amount to meet the ends of justice; and
     (e) Pass such other order(s) as this Hon'ble Court may deem fit in the interest of justice.
 
 LIST OF ANNEXURES:
@@ -248,6 +291,7 @@ ANNEXURE-B: Original Dishonoured Cheque No. {cheque_no}
 ANNEXURE-C: Original Bank Dishonour Memo dated {dishonour_date}
 ANNEXURE-D: Office Copy of Legal Demand Notice dated {notice_date}
 ANNEXURE-E: Original Postal Receipt and A.D. Card / Tracking Report
+ANNEXURE-F: Section 65B Evidence Act Certificate for WhatsApp/Email records (Mandatory)
 
 VERIFICATION:
 I, {complainant}, do hereby solemnly verify that the contents of the above Complaint are true and correct to the best of my knowledge, information, and belief. Nothing material has been concealed therefrom, and all supporting documents are annexed herewith.
@@ -510,10 +554,13 @@ class DraftEngine:
 
     @staticmethod
     def generate_draft(draft_type: str, score: int, concepts: List[Dict], case_data: Dict) -> str:
+        # Get tone from case_data or default to standard
+        tone = case_data.get("draft_tone", "standard")
+        
         if draft_type == "LEGAL_NOTICE":
             return generate_legal_notice(case_data)
         elif draft_type == "COMPLAINT":
-            return generate_complaint(case_data, concepts)
+            return generate_complaint(case_data, concepts, tone=tone)
         elif draft_type in ("DEFENCE_STRATEGY", "DEFENCE_REPLY"):
             return generate_defence_strategy(case_data, concepts, score)
         elif draft_type == "SETTLEMENT":

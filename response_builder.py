@@ -41,6 +41,8 @@ def _convert_to_lawyer_language(raw_trace: list) -> list:
         (r"\+\d+\s+all\s+mandatory\s+procedural\s+pillars", "Statutory Audit: All four mandatory pillars (Instrument, Dishonour, Notice, Debt) are satisfied."),
         (r"-\d+\s+notice\s+defect\s+\(fatal\)", "FATAL: Jurisdictional defect in statutory notice service renders complaint non-maintainable."),
         (r"OVERRIDE:\s+FATAL", "AUTHORITATIVE OVERRIDE: The case suffers from a fatal statutory defect that precludes legal success."),
+        (r"BASALINGAPPA\s+PENALTY", "EVIDENTIARY GAP: High-value debt based solely on verbal testimony is highly vulnerable to 'Financial Capacity' rebuttals (Basalingappa v. Mudibasappa)."),
+        (r"FATAL\s+ERROR:\s+PREMATURE", "FATAL PROCEDURAL ERROR: Premature filing before the expiry of the 15-day cure period (Yogendra Pratap Singh v. Savitri Pandey)."),
     ]
 
     clean_trace = []
@@ -98,7 +100,62 @@ class ResponseBuilder:
             elif concept_name in POSITIVE_CONCEPTS and conf >= STRENGTH_THRESHOLD:
                 strengths.append(f"{label} detected (conf: {conf:.0%})")
 
+        # ── EVIDENTIARY HARDENING (Advocate Grade) ──────────────────────────
+        desc_lower = (case_data.get("description") or "").lower()
+        if any(x in desc_lower for x in ["whatsapp", "email", "sms", "digital", "screenshot"]):
+             weaknesses.append("Mandatory Admissibility Barrier [CRITICAL]: Missing Section 65B Certificate for digital evidence.")
+        
+        limitation = engine_result.get("limitation", {})
+        if limitation.get("is_premature"):
+            weaknesses.append("FATAL PROCEDURAL DEFECT [CRITICAL]: Complaint is Premature. Non-curable defect under NI Act.")
+        elif limitation.get("notice_delay_days", 0) > 0:
+             weaknesses.append(f"Jurisdictional Bar [HIGH]: Statutory notice delayed by {limitation['notice_delay_days']} days. Application for condonation mandatory.")
+
+        # ── Improvement Suggestions (Aggressive Tone) ────────────────────────
+        suggestions = []
+        if limitation.get("is_premature"):
+             suggestions.append({
+                 "id": "action_withdraw",
+                 "title": "IMMEDIATE ACTION: Withdraw Complaint",
+                 "description": "Withdraw the current complaint with liberty to re-file. Continuing with a premature complaint will lead to final dismissal and waste of time.",
+                 "severity": "CRITICAL"
+             })
+        
+        if limitation.get("notice_delay_days", 0) > 0:
+             suggestions.append({
+                 "id": "action_condonation",
+                 "title": "FILE: S.142(1)(b) Condonation Application",
+                 "description": "Prepare a formal application showing 'sufficient cause' for the notice delay (e.g., illness, administrative error).",
+                 "severity": "HIGH"
+             })
+
+        if any(x in desc_lower for x in ["whatsapp", "email", "sms"]):
+             suggestions.append({
+                 "id": "action_65b",
+                 "title": "PREPARE: Section 65B Certificate",
+                 "description": "You MUST file an affidavit/certificate under S.65B of the Indian Evidence Act to make WhatsApp/Email records admissible.",
+                 "severity": "HIGH"
+             })
+
+        if score < 60 and case_data.get("debt_evidence_type") == "Verbal":
+             suggestions.append({
+                 "id": "action_evidence_corroboration",
+                 "title": "COLLECT: Indirect Debt Proof",
+                 "description": "Gather bank statements showing the withdrawal of the loan amount or witness affidavits to counter the 'Financial Capacity' rebuttal.",
+                 "severity": "HIGH"
+             })
+
         confidence_score = round(sum(c.get("confidence", 0) for c in concepts) / len(concepts), 2) if concepts else None
+        
+        # ── ADVOCATE AUDIT (Hardening Summary) ───────────────────────────────
+        is_cynical = score < 65 or any("CYNICAL" in str(t) for t in trace)
+        audit = {
+            "mode": "Cynical Advocate" if is_cynical else "Standard Analysis",
+            "risk_status": "HIGHLY VULNERABLE" if score < 50 else ("CAUTION" if score < 75 else "BATTLE READY"),
+            "critical_vulnerability": weaknesses[0] if weaknesses else "None Detected",
+            "strategic_recommendation": suggestions[0]['title'] if suggestions else "Proceed with Caution"
+        }
+
         lawyer_reasoning = _convert_to_lawyer_language(trace)
 
         concepts_for_response = [
@@ -311,6 +368,8 @@ class ResponseBuilder:
             "outcome_prediction":        engine_result.get("outcome_prediction", {}),
             "translated_verdict":        engine_result.get("translated_verdict", ""),
             "evidence_suggestions":      engine_result.get("evidence_suggestions", []),
+            "advocate_audit":            audit,
+            "case_data":                 case_data,
             "timestamp":      datetime.now().isoformat(),
             "engine_version": "v20.0-JUDIQ-ARCH"
         }

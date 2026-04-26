@@ -82,26 +82,31 @@ class TimelineEngine:
             timeline.append(f"   ⚠️  CRITICAL: No legal notice sent yet (mandatory within 30 days of {dishonour_date})")
         
         # Calculate cause of action
-        if notice_date:
-            notice_dt = parse_date(notice_date)
-            if notice_dt:
-                cause_of_action = notice_dt + timedelta(days=15)
-                timeline.append(f"⏳ 15-day payment period expires on {cause_of_action.strftime('%Y-%m-%d')}")
+        notice_base_date = case_data.get("notice_received_date") or case_data.get("notice_date")
+        if notice_base_date:
+            base_dt = parse_date(notice_base_date)
+            if base_dt:
+                # S.138(c): 15 days from RECEIPT. Cause of action arises on 16th day.
+                cause_of_action_end = base_dt + timedelta(days=15)
+                first_filing_day = base_dt + timedelta(days=16)
                 
-                limitation_date = cause_of_action + timedelta(days=30)
-                timeline.append(f"⚖️  Limitation period expires on {limitation_date.strftime('%Y-%m-%d')} (1 month from cause of action)")
+                timeline.append(f"⏳ 15-day cure period for Accused expires on {cause_of_action_end.strftime('%Y-%m-%d')}")
+                timeline.append(f"⚖️  Cause of Action arises on {first_filing_day.strftime('%Y-%m-%d')} (First day you can file)")
+                
+                limitation_date = first_filing_day + timedelta(days=30)
+                timeline.append(f"📅 Limitation period for filing expires on {limitation_date.strftime('%Y-%m-%d')} (1 month from COA)")
                 
                 # Check if filed
                 if filing_date:
                     filing_dt = parse_date(filing_date)
                     if filing_dt:
-                        if filing_dt <= cause_of_action:
-                            timeline.append(f"   ⚠️  CRITICAL: Premature filing on {filing_date} (Wait period ends on {cause_of_action.strftime('%Y-%m-%d')})")
+                        if filing_dt < first_filing_day:
+                            timeline.append(f"   🚨 CRITICAL: PREMATURE FILING on {filing_date} (You must wait until {first_filing_day.strftime('%Y-%m-%d')})")
                         elif filing_dt <= limitation_date:
-                            timeline.append(f"✓ Complaint filed on {filing_date} (WITHIN limitation)")
+                            timeline.append(f"   ✓ Complaint filed on {filing_date} (WITHIN limitation)")
                         else:
                             days_delay = (filing_dt - limitation_date).days
-                            timeline.append(f"⚠️  Complaint filed on {filing_date} (DELAYED by {days_delay} days - needs condonation)")
+                            timeline.append(f"   ⚠️  Complaint filed on {filing_date} (DELAYED by {days_delay} days - S.142(1)(b) condonation required)")
         
         return timeline if timeline else ["Timeline data unavailable - provide dates for detailed analysis"]
 

@@ -194,7 +194,11 @@ def normalize_input(data: dict) -> dict:
         "memo_type":           _safe_str(data.get("memo_type", ds_obj.get("memo_type", "original")), 50),
         "notice_served_proof": _safe_bool(data.get("notice_served_proof", nt_obj.get("notice_received", True))),
         "debt_proof_type":     _safe_str(data.get("debt_proof_type", tx_obj.get("agreement_type", "written_agreement")), 50),
+        "debt_evidence_type":  _safe_str(data.get("debt_evidence_type", "Documentary"), 50), 
         "within_30_days":      _safe_str(data.get("within_30_days", nt_obj.get("within_statutory_period", "Yes")), 10),
+        
+        # Digital Evidence (Advocate Hardening)
+        "communication_records": _safe_bool(data.get("communication_records", nt_obj.get("communication_records", data.get("evidence", {}).get("communication_records", False)))),
 
         # Case description
         "description": description,
@@ -217,17 +221,19 @@ def normalize_input(data: dict) -> dict:
 
         # Dishonour details
         "dishonour_date":    _safe_str(data.get("dishonour_date",    ds_obj.get("dishonour_date",    "")), 30, "dishonour_date"),
+        "memo_date":         _safe_str(data.get("memo_date",         ds_obj.get("memo_date",         "")), 30, "memo_date"),
         "dishonour_reason":  dishonour_reason,
         "presentation_date": _safe_str(data.get("presentation_date", ds_obj.get("presentation_date", "")), 30, "presentation_date"),
 
         # Notice details
-        "notice_date":     _safe_str(data.get("notice_date",     nt_obj.get("notice_date",     "")), 30, "notice_date"),
-        "notice_mode":     _safe_str(data.get("notice_mode",     nt_obj.get("notice_mode",     "")), 50, "notice_mode"),
-        "notice_received": _safe_str(data.get("notice_received", nt_obj.get("notice_received", "")), 30, "notice_received"),
+        "notice_date":          _safe_str(data.get("notice_date",     nt_obj.get("notice_date",     "")), 30, "notice_date"),
+        "notice_mode":          _safe_str(data.get("notice_mode",     nt_obj.get("notice_mode",     "")), 50, "notice_mode"),
+        "notice_received_type": _safe_str(data.get("notice_received", nt_obj.get("notice_received", "")), 30, "notice_received"),
+        "notice_received_date": _safe_str(data.get("notice_received_date", nt_obj.get("notice_received_date", "")), 30, "notice_received_date"),
 
         # Timeline
         "transaction_date": _safe_str(data.get("transaction_date", tx_obj.get("transaction_date", "")), 30, "transaction_date"),
-        "filing_date":      _safe_str(data.get("filing_date",      id_obj.get("filing_date",      "")), 30, "filing_date"),
+        "filing_date":      _safe_str(data.get("filing_date",      data.get("filing_date", id_obj.get("filing_date", ""))), 30, "filing_date"),
 
         # Legal type fields
         "complainant_type": _safe_str(data.get("complainant_type", id_obj.get("complainant_type", "Individual")), 50),
@@ -235,14 +241,19 @@ def normalize_input(data: dict) -> dict:
         "accused_type":     accused_type,
         "directors_named":  directors_named,
 
+        # Financial Capacity (Advocate Hardening)
+        "complainant_itr_available": _safe_bool(data.get("complainant_itr_available", False)),
+        "loan_via_bank":             _safe_bool(data.get("loan_via_bank", False)),
+
+        # Draft Customization
+        "draft_tone": _safe_str(data.get("draft_tone", "standard"), 50),
+
         # Defence signals
         "signature_dispute":     signature_disp,
         "debt_denial":           debt_denial,
         "cheque_security_claim": security_claim,
+        "director_names":        _safe_str(data.get("director_names", accu_obj.get("director_names", "")), 500, "director_names"),
     }
 
-    logger.debug(f"[NORMALIZER] Normalized case_id={normalized['case_id']} | "
-                 f"pillars: cheque={cheque_present}, memo={dishonour_memo}, "
-                 f"notice={notice_sent}, debt={debt_proven} | amount={amount}")
-
     return normalized
+

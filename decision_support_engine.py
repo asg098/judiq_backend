@@ -54,17 +54,33 @@ RISK_CATALOGUE = [
         "description": "For corporate accused, failure to specifically name and aver the role of directors is fatal per Aneeta Hada (2012).",
         "rebuttal": "Ensure the complaint contains specific averments that the named directors were 'in charge of and responsible for the conduct of business'. Company must be co-accused.",
         "case_law": "Aneeta Hada v. Godfather Travels (2012)"
+    },
+    {
+        "concept_trigger": "digital_evidence",
+        "risk": "Electronic Evidence Admissibility (S.65B)",
+        "severity": "HIGH",
+        "description": "WhatsApp/Email records are inadmissible without a mandatory certificate under Section 65B(4) of the Indian Evidence Act.",
+        "rebuttal": "Per 'Arjun Panditrao Khotkar v. Kailash Kushanrao Gorantyal (2020)', the certificate is a condition precedent for admissibility. Prepare certificate signed by the person in control of the device.",
+        "case_law": "Arjun Panditrao Khotkar (2020)"
+    },
+    {
+        "concept_trigger": "interim_compensation",
+        "risk": "Interim Compensation Opportunity (S.143A)",
+        "severity": "MEDIUM",
+        "description": "Section 143A allows the court to order the accused to pay up to 20% of the cheque amount as interim compensation.",
+        "rebuttal": "Proactively file an application under S.143A at the time of framing of notice/charge. This exerts financial pressure and incentivizes settlement.",
+        "case_law": "L.G.R. Enterprises v. P.V. Ramakrishna (2019)"
     }
 ]
 
 
-# Mapping from score → prediction
+# Mapping from score → prediction (Cynical Advocate Tuning)
 OUTCOME_MAP = [
-    (85, "Likely Conviction",                  "Strong documentary evidence, full statutory compliance, and S.139 presumption intact. Case primed for conviction or early plea."),
-    (70, "Probable Conviction (Trial Required)","Core ingredients met. Prosecution likely to succeed subject to cross-examination — especially on debt nature and notice service."),
-    (55, "Moderate Chances — Outcome Uncertain","Mixed evidence. Conviction possible but defense can raise reasonable doubt. Strengthen weak pillars before trial."),
-    (40, "Considerable Risk of Acquittal",      "Significant defects in evidence or procedure. Criminal prosecution is high-risk. Explore settlement or civil recovery alternatives."),
-    ( 0, "High Risk of Acquittal / Dismissal",  "Fatal defects present (notice lapse, limitation, no instrument). Filing in current state will likely result in dismissal."),
+    (88, "High Probability of Conviction",      "Exceptional documentary trail. Presumptions are nearly impossible to rebut. Subject to trial technicalities."),
+    (75, "Likely Conviction (Trial Risk)",       "Strong pillars, but 'reasonable doubt' remains a tactical weapon for the defense. Successful cross-examination is vital."),
+    (60, "Contested Case — 50/50 Outcome",       "Case survives prima facie, but financial capacity or notice technicalities present significant acquittal risks."),
+    (45, "High Risk of Acquittal",               "Defense will likely rebut presumptions. Procedural gaps provide multiple 'escape routes' for the accused."),
+    ( 0, "Non-Maintainable / Fatal Defects",     "Complaint is procedurally or substantively DOA. Expect dismissal at pre-summoning or discharge stage."),
 ]
 
 TRANSLATIONS = {
@@ -138,6 +154,26 @@ class DecisionSupportEngine:
         # Sort: FATAL → CRITICAL → HIGH → MEDIUM
         order = {"FATAL": 0, "CRITICAL": 1, "HIGH": 2, "MEDIUM": 3, "LOW": 4}
         risks.sort(key=lambda r: order.get(r["severity"], 99))
+
+        # Hard-coded strategy triggers based on case data
+        if case_data.get("communication_records"):
+            risks.append({
+                "risk": "Digital Proof & S.65B Compliance",
+                "severity": "HIGH",
+                "description": "Case relies on digital trails (WhatsApp/Email) which are subject to strict admissibility rules.",
+                "rebuttal": "File a mandatory Section 65B Evidence Act Certificate alongside the complaint to ensure these records are read in evidence.",
+                "case_law": "Arjun Panditrao Khotkar (2020)"
+            })
+        
+        if case_data.get("amount", 0) >= 50000:
+            risks.append({
+                "risk": "Strategic Recovery: S.143A Application",
+                "severity": "MEDIUM",
+                "description": "High-value cheque detected. Opportunity to secure 20% of the amount during trial.",
+                "rebuttal": "Include a prayer for Interim Compensation under Section 143A to secure partial recovery and pressure the accused for settlement.",
+                "case_law": "S.143A NI Act (2018 Amendment)"
+            })
+
         return risks
 
     @staticmethod
@@ -171,11 +207,17 @@ class DecisionSupportEngine:
         suggestions: List[str] = []
         if not case_data.get("debt_proven"):
             suggestions += [
-                "WhatsApp/Email correspondence where accused acknowledges the debt",
+                "WhatsApp/Email correspondence where accused acknowledges the debt (Requires S.65B Certificate)",
                 "Bank transfer records or UPI transaction receipts for the original loan disbursement",
                 "Ledger account entries / Tally printout showing receivable",
                 "Promissory note or acknowledgement of debt signed by accused",
                 "SMS logs discussing repayment timeline or outstanding balance",
+            ]
+        
+        if case_data.get("communication_records"):
+            suggestions += [
+                "Mandatory: Prepare Section 65B Evidence Act Certificate for WhatsApp/Email printouts",
+                "Ensure digital records show a clear admission of liability or acknowledgment of the specific cheque",
             ]
         if not case_data.get("notice_sent"):
             suggestions += [
