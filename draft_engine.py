@@ -125,6 +125,52 @@ On behalf of: {complainant}
 """
 
 
+def generate_certificate_65b(case_data: Dict) -> str:
+    today, _ = _case_meta(case_data)
+    complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[YOUR NAME]"
+    device_type = case_data.get("device_type", "Smartphone / Personal Computer")
+    
+    return f"""{_header("CERTIFICATE UNDER SECTION 65B OF THE INDIAN EVIDENCE ACT, 1872")}
+
+IN THE COURT OF THE LEARNED JUDICIAL MAGISTRATE / METROPOLITAN MAGISTRATE
+AT [COURT LOCATION]
+
+COMPLAINT NO.: _____ / {datetime.now().year}
+
+IN THE MATTER OF:
+{complainant}                                              ... COMPLAINANT
+VERSUS
+[ACCUSED NAME]                                             ... ACCUSED
+
+AFFIDAVIT / CERTIFICATE UNDER SECTION 65B(4) OF THE INDIAN EVIDENCE ACT, 1872 FOR ADMISSIBILITY OF ELECTRONIC RECORDS
+
+I, {complainant}, adult, residing at [ADDRESS], do hereby solemnly affirm and state as under:
+
+1. That I am the Complainant in the present case and I am fully conversant with the facts and circumstances of the case and am competent to depose to this affidavit.
+
+2. That for the purpose of the present case, I am relying upon electronic records in the form of [WhatsApp Messages / Email Correspondence / SMS Logs] exchanged between me and the Accused.
+
+3. That the said electronic records were produced by a computer/communication device, namely a {device_type}, which was owned/operated by me and was used regularly to store or process information for the purposes of my activities.
+
+4. That during the period to which the electronic records relate, information was regularly fed into the device in the ordinary course of the said activities.
+
+5. That throughout the material part of the said period, the computer/device was operating properly or, if not, that in respect of any period in which it was not operating properly or was out of operation during that part of that period, was not such as to affect the electronic record or the accuracy of its contents.
+
+6. That the information contained in the electronic record reproduces or is derived from information fed into the device in the ordinary course of the said activities.
+
+7. That the printouts/digital copies of the [WhatsApp/Email] records produced herewith as ANNEXURE-____ are true and faithful reproductions of the originals stored in the electronic device and have been prepared under my personal supervision.
+
+8. That the contents of this certificate are true to the best of my knowledge and belief.
+
+DEPONENT
+
+VERIFICATION:
+Verified at [PLACE] on this {today} that the contents of the above affidavit are true and correct to my knowledge and nothing material has been concealed therefrom.
+
+                                                            DEPONENT
+"""
+
+
 def generate_complaint(case_data: Dict, concepts: List[Dict], tone: str = "standard") -> str:
     today, amount_str = _case_meta(case_data)
     is_aggressive = tone.lower() == "aggressive"
@@ -585,6 +631,8 @@ class DraftEngine:
             return generate_legal_notice(case_data)
         elif draft_type == "COMPLAINT":
             return generate_complaint(case_data, concepts, tone=tone)
+        elif draft_type == "CERTIFICATE_65B":
+            return generate_certificate_65b(case_data)
         elif draft_type in ("DEFENCE_STRATEGY", "DEFENCE_REPLY"):
             return generate_defence_strategy(case_data, concepts, score)
         elif draft_type == "SETTLEMENT":
