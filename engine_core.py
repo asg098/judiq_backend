@@ -71,6 +71,7 @@ class JudiQEngine:
         from response_builder import ResponseBuilder
         from normalizer       import normalize_input, validate_minimum_viability, ValidationError
         from reasoning_engine import ReasoningEngine
+        from simulator_engine import SimulatorEngine
 
         # -- Hard gate --------------------------------------------------------
         validate_minimum_viability(raw_data)
@@ -256,6 +257,13 @@ class JudiQEngine:
             fallback="Legal draft generation failed. Please use manual templates.",
             context="DraftEngine"
         )
+        
+        # -- Step 9.5: Cross-Examination Simulator -----------------------------
+        cross_exam_prep = _safe_call(
+            SimulatorEngine.generate_simulation, concepts, float(case_data.get("amount") or 0),
+            fallback=[],
+            context="SimulatorEngine"
+        )
 
         # -- Step 10: Final Response Assembly ---------------------------------
         engine_result = {
@@ -284,7 +292,9 @@ class JudiQEngine:
             "probability_trend":        probability_trend,
             "closest_precedent":        precedents[0] if precedents else None,
             "analysis_mode":            case_data.get("analysis_mode", "detailed"),
-            "proof_present":            case_data.get("proof_present", True)
+            "proof_present":            case_data.get("proof_present", True),
+            "cross_exam_prep":          cross_exam_prep,
+            "cri_score":                score_data.get("cri_score", 0)
         }
 
         return ResponseBuilder.build_final_response(engine_result, case_data)

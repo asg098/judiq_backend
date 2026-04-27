@@ -152,14 +152,32 @@ class ScoringEngineV12:
         # Strategic Score: Derived from final strength
         strat_score = final_score
 
+        # ── COURTROOM READINESS INDEX (CRI) ───────────────────────────
+        # A measure of 'Trial Readiness' beyond just legal compliance.
+        cri_components = []
+        if cheque: cri_components.append(25) # Original doc
+        if memo: cri_components.append(15)   # Official record
+        if notice: cri_components.append(15) # Procedural compliance
+        if debt: cri_components.append(20)   # Evidence strength
+        if case_data.get("communication_records"): cri_components.append(10) # Corroboration
+        if case_data.get("is_authorized"): cri_components.append(15) # Authorization
+        
+        cri_score = sum(cri_components)
+        if "limitation_issue" in existing_concepts: cri_score -= 20
+        if "notice_defect" in existing_concepts: cri_score -= 15
+        
+        cri_final = max(0, min(100, cri_score))
+
         return {
             "score": int(final_score),
             "final_score": int(final_score), # Compatibility
             "compliance_pct": int(compliance_pct),
+            "cri_score": int(cri_final),
             "breakdown": {
                 "procedural": int(max(0, min(100, pro_score))),
                 "evidentiary": int(max(0, min(100, evi_score))),
-                "strategic": int(max(0, min(100, strat_score)))
+                "strategic": int(max(0, min(100, strat_score))),
+                "readiness": int(cri_final)
             },
             "reasoning_trace": trace,
             "score_breakdown": trace, # Compatibility

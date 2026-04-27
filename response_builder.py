@@ -356,7 +356,8 @@ class ResponseBuilder:
                 "decision_label":     decision_label,
                 "top_3_risks":        [r["risk"] for r in top_3_risks] or ["Standard litigation risks"],
                 "top_strengths":      strengths[:3] or ["Pillar compliance"],
-                "next_steps":         next_steps
+                "next_steps":         next_steps,
+                "readiness_index":    engine_result.get("cri_score", 0)
             },
             "legal_analysis":    "\n".join(lawyer_reasoning) if lawyer_reasoning else "Standard legal analysis applied based on provided case pillars.",
             "analysis_details": {
@@ -385,5 +386,7 @@ class ResponseBuilder:
             "analysis_mode":             case_data.get("analysis_mode", "detailed"),
             "proof_present":             case_data.get("proof_present", True),
             "timestamp":      datetime.now().isoformat(),
-            "engine_version": "v20.0-JUDIQ-ARCH"
+            "engine_version": "v20.0-JUDIQ-ARCH",
+            "cri_score":      engine_result.get("cri_score", 0),
+            "cross_exam":     engine_result.get("cross_exam_prep", [])
         }
