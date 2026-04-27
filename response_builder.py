@@ -160,12 +160,22 @@ class ResponseBuilder:
             {"area": "Recovery", "current": "Standard Trial", "targeted": "S.143A Relief (20%)"}
         ]
 
+        # ── SENTENCING & PENALTY FORECASTING ──────────────────────────────
+        cheque_amount = float(case_data.get("amount") or 0)
+        penalty_forecast = {
+            "min_fine": f"₹{cheque_amount * 1.2:,.0f}",
+            "max_fine": f"₹{cheque_amount * 2.0:,.0f} (Statutory Max)",
+            "imprisonment_risk": "HIGH" if score > 75 else "MEDIUM",
+            "realistic_outcome": f"Fine of ₹{cheque_amount * 1.5:,.0f} + 6 months simple imprisonment (Suspended if first offence)."
+        }
+
         audit = {
             "mode": "Cynical Advocate" if is_cynical else "Standard Analysis",
             "risk_status": "HIGHLY VULNERABLE" if score < 50 else ("CAUTION" if score < 75 else "BATTLE READY"),
             "critical_vulnerability": weaknesses[0] if weaknesses else "None Detected",
             "strategic_recommendation": suggestions[0]['title'] if suggestions else "Proceed with Caution",
-            "improvement_metrics": improvement_metrics
+            "improvement_metrics": improvement_metrics,
+            "penalty_forecast": penalty_forecast
         }
 
         lawyer_reasoning = _convert_to_lawyer_language(trace)
