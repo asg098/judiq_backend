@@ -1,6 +1,6 @@
 JudiQ is an AI‑powered litigation assistant designed to transform how lawyers, firms, and even ordinary citizens interact with the justice system. It is not just a tool—it is a digital courtroom companion that ensures no case collapses on technicalities, while empowering teams to collaborate, strategize, and preserve knowledge for the future.
 
-🌟 Core Capabilities
+ Core Capabilities
 Procedural Mastery: Detects and prevents errors in jurisdiction, limitation, and notice timelines.
 
 Court‑Ready Drafting: Generates petitions and applications with precise statutory language.
@@ -11,7 +11,7 @@ Citation Alignment: Links arguments to Supreme Court and High Court precedents.
 
 Strategic Recommendations: Suggests tactical moves like interim compensation or condonation of delay.
 
-👥 Collaborative Caserooms
+ Collaborative Caserooms
 Automatic Creation: Every new case opens a secure Caseroom.
 
 Multi‑Lawyer Chat: 2–3 lawyers (or more) collaborate in real time.
@@ -28,7 +28,7 @@ Scenario Simulation: Change one input, and JudiQ recalculates instantly.
 
 Legacy Archive: Closed cases become precedents for future teams.
 
-🚀 Why JudiQ Matters
+ Why JudiQ Matters
 For Lawyers: A shield against mistakes and a sword for strategy.
 
 For Firms: A collaborative litigation engine that saves time and builds institutional memory.
