@@ -122,10 +122,19 @@ class ScoringEngineV12:
         # 3. BREAKDOWN CALCULATION
         existing_concepts = [c["concept"] for c in concepts]
         
+        # ── PROCEDURAL KILL-SWITCH (Hardening) ──────────────────────────
+        if "limitation_issue" in existing_concepts:
+            score -= 30
+            trace.append("-30 CRITICAL: Limitation Period delay detected (S.142 violation)")
+        
+        if "notice_defect" in existing_concepts:
+            score -= 25
+            trace.append("-25 CRITICAL: Defective statutory notice")
+
         # Procedural Score: Pillars + Limitation
         pro_score = (sum([1 for p in [cheque, memo, notice] if p]) / 3.0) * 100
         if "notice_defect" in existing_concepts or "limitation_issue" in existing_concepts:
-            pro_score *= 0.4
+            pro_score *= 0.35 # Even harsher penalty
         
         # Evidentiary Score: Debt + Proof presence
         evi_score = (90 if debt else 30)
@@ -135,6 +144,11 @@ class ScoringEngineV12:
         # Final Score Cap
         final_score = max(0, min(99, score))
         
+        # FATAL CAP: If original cheque or notice is missing, score cannot exceed 30
+        if not cheque or not notice:
+            final_score = min(final_score, 30)
+            trace.append("! SCORE CAPPED: Fatal statutory defect identified.")
+
         # Strategic Score: Derived from final strength
         strat_score = final_score
 

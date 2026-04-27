@@ -13,6 +13,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.getcwd())
 
+from ocr_engine import OCREngine
+
 try:
     pdfplumber = importlib.import_module("pdfplumber")
     HAS_PDFPLUMBER = True
@@ -244,6 +246,47 @@ async def generate_pdf(request: Request):
     except Exception as e:
         logger.error(f"PDF error: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# ── Evidence Verification (OCR) ────────────────────────────────────────────────
+@app.post("/verify-memo")
+async def verify_memo(
+    file: UploadFile = File(...),
+    claimed_reason: str = "Insufficient Funds"
+):
+    """
+    Endpoint to verify uploaded bank memo against the user's claimed reason.
+    """
+    logger.info(f"Received memo verification request for file: {file.filename}")
+    
+    # 1. Read file
+    content = await file.read()
+    extracted_text = ""
+
+    # 2. Extract Text (PDF support via pdfplumber)
+    if file.filename.lower().endswith(".pdf"):
+        if HAS_PDFPLUMBER:
+            import io
+            with pdfplumber.open(io.BytesIO(content)) as pdf:
+                extracted_text = "\n".join([page.extract_text() or "" for page in pdf.pages])
+        else:
+            extracted_text = "[Error: pdfplumber not installed on server]"
+    else:
+        # Fallback for images or raw text
+        try:
+            extracted_text = content.decode("utf-8", errors="ignore")
+        except:
+            extracted_text = "[Unsupported file format for direct text extraction]"
+
+    # 3. Verification Logic
+    verification_result = OCREngine.verify_evidence_consistency(extracted_text, claimed_reason)
+    
+    return {
+        "success": True,
+        "filename": file.filename,
+        "claimed_reason": claimed_reason,
+        "verification": verification_result
+    }
 
 
 if __name__ == "__main__":

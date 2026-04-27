@@ -430,8 +430,21 @@ Basis: Amicable resolution preferred over protracted litigation for moderate str
 def generate_delay_condonation(case_data: Dict) -> str:
     today, amount_str = _case_meta(case_data)
     complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[COMPLAINANT NAME]"
+    accused = case_data.get("accused_name") or case_data.get("accusedName") or "[ACCUSED NAME]"
+    delay_days = case_data.get("delay_days", "___")
+    
+    # Dynamic Reason Selection
+    delay_reason = case_data.get("delay_reason", "").lower()
+    reason_text = "[DESCRIBE GENUINE REASONS — e.g., Complainant was suffering from severe viral fever (attach medical certificate) / Counsel was unavailable due to personal exigency / Administrative error in calculating limitation date]."
+    
+    if "medical" in delay_reason or "illness" in delay_reason:
+        reason_text = "The Complainant was suffering from severe medical ailments (Details: __________) during the period of limitation, which prevented the timely filing of the complaint. Supporting medical certificates are annexed herewith."
+    elif "travel" in delay_reason:
+        reason_text = "The Complainant was required to travel urgently for unavoidable professional/personal reasons, leading to a slight delay in coordinating with the legal counsel."
+    elif "advocate" in delay_reason:
+        reason_text = "The delay occurred due to the sudden unavailability of the Complainant's counsel and the subsequent time taken to engage new legal representation."
 
-    return f"""{_header("APPLICATION FOR CONDONATION OF DELAY — SECTION 142 NI ACT r/w SECTION 5 LIMITATION ACT")}
+    return f"""{_header("APPLICATION FOR CONDONATION OF DELAY — SECTION 142(1)(b) NI ACT")}
 
 IN THE COURT OF THE LEARNED JUDICIAL MAGISTRATE / METROPOLITAN MAGISTRATE
 AT [COURT LOCATION]
@@ -441,36 +454,46 @@ COMPLAINT NO.: _____ / {datetime.now().year}
 IN THE MATTER OF:
 {complainant}                                              ... COMPLAINANT
 VERSUS
-[ACCUSED NAME]                                             ... ACCUSED
+{accused}                                                  ... ACCUSED
 
-APPLICATION FOR CONDONATION OF DELAY IN FILING COMPLAINT U/S 138 NI ACT
+APPLICATION UNDER SECTION 142(1)(b) OF THE NEGOTIABLE INSTRUMENTS ACT, 1881 READ WITH SECTION 5 OF THE LIMITATION ACT, 1963 FOR CONDONATION OF DELAY.
 
 RESPECTFULLY SHOWETH:
 
-1. The Complainant has filed a Complaint under Section 138 of the Negotiable Instruments Act, 1881.
+1. THE COMPLAINT:
+   The Complainant has filed the accompanying Complaint under Section 138 of the NI Act against the Accused. The contents of the said Complaint may be read as part and parcel of this application.
 
-2. The cheque was dishonoured on [DISHONOUR DATE] and the statutory demand notice was served on [NOTICE DATE]. The 15-day period expired on [EXPIRY DATE].
+2. THE DELAY:
+   That there has been a technical delay of {delay_days} days in filing the present Complaint. The limitation period expired on [DATE], and the Complaint is being filed today.
 
-3. The Complaint ought to have been filed by [LIMITATION DATE]. However, the Complaint has been filed on {today}, resulting in a delay of approximately ___ days.
+3. SUFFICIENT CAUSE:
+   That the said delay occurred due to the following bona fide reasons:
+   {reason_text}
 
-4. REASONS FOR DELAY (SUFFICIENT CAUSE):
-   [Describe genuine reasons — illness, unavailability of advocate, miscommunication, etc.]
+4. LEGAL POSITION:
+   That the proviso to Section 142(1)(b) of the NI Act specifically empowers this Hon'ble Court to take cognizance of a complaint after the prescribed period if the Complainant satisfies the Court that he had "sufficient cause" for not making a complaint within such period.
 
-5. The Complainant submits that the delay was not intentional or deliberate and occurred due to circumstances beyond the Complainant's control.
+5. PRECEDENTS:
+   The Complainant relies on the following landmark rulings:
+   (a) 'MSR Leathers v. S. Palaniappan' (2013): Wherein the Hon'ble Supreme Court held that the power to condone delay should be exercised liberally to ensure that the object of the Act is not defeated by technicalities.
+   (b) 'Saketh India Ltd. v. India Securities Ltd.' (1999): Reaffirming the liberal approach in condoning short delays where no negligence is found.
 
-6. The Complainant relies upon the settled principle that courts should adopt a liberal approach in condonation matters where sufficient cause is shown, and that technical delay should not defeat substantive justice. (Saketh India Ltd. v. India Securities Ltd., 1999)
-
-7. No prejudice will be caused to the Accused by condoning the said delay.
+6. ABSENCE OF MALA FIDE:
+   The Complainant submits that the delay was neither intentional nor deliberate. No prejudice will be caused to the Accused if the delay is condoned, whereas the Complainant will suffer irreparable loss if the Complaint is dismissed on technical grounds.
 
 PRAYER:
-It is prayed that this Hon'ble Court may be pleased to condone the delay of ___ days in filing this Complaint and admit the Complaint for hearing.
+It is, therefore, most respectfully prayed that this Hon'ble Court may be pleased to:
+(a) Condone the delay of {delay_days} days in filing the accompanying Complaint;
+(b) Admit the Complaint and proceed with the trial in the interest of justice.
 
 Place: [PLACE]
 Date: {today}
 
                                                         {complainant}
                                                         (Complainant)
-Advocate: [ADVOCATE NAME]
+Through:
+[ADVOCATE NAME]
+Advocate for Complainant
 """
 
 

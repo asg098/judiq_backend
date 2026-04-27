@@ -152,11 +152,20 @@ class ResponseBuilder:
         
         # ── ADVOCATE AUDIT (Hardening Summary) ───────────────────────────────
         is_cynical = score < 65 or any("CYNICAL" in str(t) for t in trace)
+        
+        # IMPROVEMENT METRICS (The Peer Critique implementation)
+        improvement_metrics = [
+            {"area": "Procedural", "current": "Delayed" if "limitation_issue" in [c['concept'] for c in concepts] else "Compliant", "targeted": "S.142(1)(b) Filed"},
+            {"area": "Evidence", "current": "Risk (Digital)" if "whatsapp" in desc_lower else "Standard", "targeted": "S.65B Compliant"},
+            {"area": "Recovery", "current": "Standard Trial", "targeted": "S.143A Relief (20%)"}
+        ]
+
         audit = {
             "mode": "Cynical Advocate" if is_cynical else "Standard Analysis",
             "risk_status": "HIGHLY VULNERABLE" if score < 50 else ("CAUTION" if score < 75 else "BATTLE READY"),
             "critical_vulnerability": weaknesses[0] if weaknesses else "None Detected",
-            "strategic_recommendation": suggestions[0]['title'] if suggestions else "Proceed with Caution"
+            "strategic_recommendation": suggestions[0]['title'] if suggestions else "Proceed with Caution",
+            "improvement_metrics": improvement_metrics
         }
 
         lawyer_reasoning = _convert_to_lawyer_language(trace)
