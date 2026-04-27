@@ -33,7 +33,6 @@ class CaseroomManager:
     def post_comment(caseroom_id, user_id, text):
         """Posts a message/strategy comment in the caseroom."""
         return DatabaseManager.send_message(caseroom_id, user_id, text)
-
     @staticmethod
     def add_milestone(caseroom_id, title, due_date, description=""):
         """Adds a task or milestone to the caseroom timeline."""
