@@ -15,7 +15,6 @@ DEFENCE_ONLY_NEGATIVE_CONCEPTS = {
     "notice_not_sent", "notice_defect", "limitation_issue", "cheque_misuse",
     "no_agreement", "cheque_validity_issue", "payment_already_made", "dishonour_disputed"
 }
-
 POSITIVE_CONCEPTS_NO_DEFENCE = {
     "cheque_bounce", "legal_notice_compliance", "legally_enforceable_debt",
     "strong_documentary_evidence"
