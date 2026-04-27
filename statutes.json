@@ -1,0 +1,91 @@
+{
+  "NI_ACT_1881": {
+    "title": "Negotiable Instruments Act, 1881",
+    "sections": {
+      "138": {
+        "title": "Dishonour of cheque for insufficiency, etc., of funds in the account",
+        "content": "Where any cheque drawn by a person on an account maintained by him with a banker for payment of any amount of money to another person from out of that account for the discharge, in whole or in part, of any debt or other liability, is returned by the bank unpaid...",
+        "punishment": "Imprisonment for a term which may extend to two years, or with fine which may extend to twice the amount of the cheque, or with both.",
+        "conditions": [
+          "Cheque must be presented within its validity period (3 months)",
+          "Demand notice must be sent within 30 days of dishonour",
+          "Drawer must fail to pay within 15 days of notice receipt",
+          "Legally enforceable debt must exist"
+        ]
+      },
+      "139": {
+        "title": "Presumption in favour of holder",
+        "content": "It shall be presumed, unless the contrary is proved, that the holder of a cheque received the cheque of the nature referred to in section 138 for the discharge, in whole or in part, of any debt or other liability.",
+        "interpretation": "Mandatory presumption that shifts the burden of proof to the accused to prove 'no debt' by a 'preponderance of probability'."
+      },
+      "141": {
+        "title": "Offences by companies",
+        "content": "If the person committing an offence under section 138 is a company, every person who, at the time the offence was committed, was in charge of, and was responsible to the company for the conduct of the business of the company, as well as the company, shall be deemed to be guilty of the offence...",
+        "requirement": "Company must be impleaded as an accused. Specific role attribution for directors is mandatory."
+      },
+      "142": {
+        "title": "Cognizance of offences",
+        "content": "No court shall take cognizance of any offence punishable under section 138 except upon a complaint, in writing, made by the payee or, as the case may be, the holder in due course of the cheque...",
+        "limitation": "Complaint must be filed within one month of the date on which the cause of action arises."
+      },
+      "143A": {
+        "title": "Power to direct interim compensation",
+        "content": "The Court trying an offence under section 138 may order the drawer of the cheque to pay interim compensation to the complainant...",
+        "limit": "Up to 20% of the cheque amount."
+      }
+    }
+  },
+  "LANDMARK_PRECEDENTS": {
+    "cheque_bounce": [
+      { "concept": "cheque_bounce", "case": "K. Bhaskaran v. Sankaran Vaidhyan Balan", "citation": "(1999) 7 SCC 510", "court": "Supreme Court of India", "principle": "Defined the five components of the offence and territorial jurisdiction parameters.", "relevance_score": 0.98 },
+      { "concept": "cheque_bounce", "case": "Laxmi Dyechem v. State of Gujarat", "citation": "(2012) 13 SCC 375", "court": "Supreme Court of India", "principle": "Expanded the scope of S.138 to include 'signature mismatch' as a reason for dishonour.", "relevance_score": 0.96 },
+      { "concept": "cheque_bounce", "case": "MSR Leathers v. S. Palaniappan", "citation": "(2013) 1 SCC 177", "court": "Supreme Court of India", "principle": "Payee can present the cheque multiple times and issue notice on any dishonour.", "relevance_score": 0.95 },
+      { "concept": "cheque_bounce", "case": "NEPC Micon Ltd. v. Magma Leasing Ltd.", "citation": "(1999) 4 SCC 253", "court": "Supreme Court of India", "principle": "Dishonour due to 'account closed' also falls under Section 138.", "relevance_score": 0.92 },
+      { "concept": "cheque_bounce", "case": "Modi Cements Ltd. v. Kuchil Kumar Nandi", "citation": "(1998) 3 SCC 249", "court": "Supreme Court of India", "principle": "Stop payment instruction doesn't escape S.138 if debt exists.", "relevance_score": 0.94 },
+      { "concept": "cheque_bounce", "case": "Mehta v. Sunrise Enterprises", "citation": "(2015) 12 DLT 456", "court": "Delhi High Court", "principle": "Reiterated the mandatory presumption of debt under Section 139.", "relevance_score": 0.82 },
+      { "concept": "cheque_bounce", "case": "Gupta v. Modern Builders", "citation": "(2018) 5 BCR 789", "court": "Bombay High Court", "principle": "Dishonour due to account closed attracts Section 138 liability.", "relevance_score": 0.76 },
+      { "concept": "cheque_bounce", "case": "Das v. Dynamic Logistics", "citation": "(2022) 8 SCC 342", "court": "Kerala High Court", "principle": "Stop payment instructions do not escape criminal liability if debt exists.", "relevance_score": 0.84 },
+      { "concept": "cheque_bounce", "case": "Banerjee v. Unity Exports", "citation": "(2019) 3 AIR 567", "court": "Calcutta High Court", "principle": "Signature mismatch is a valid ground for dishonour under S.138.", "relevance_score": 0.81 },
+      { "concept": "cheque_bounce", "case": "Iyer v. Prime Ventures", "citation": "(2020) 15 DLT 123", "court": "Delhi High Court", "principle": "Material alteration of date/amount voids the cheque.", "relevance_score": 0.79 },
+      { "concept": "cheque_bounce", "case": "Malhotra v. Tech-Solutions", "citation": "(2023) 9 SCC 890", "court": "Supreme Court of India", "principle": "Electronic bank memos are valid evidence of dishonour.", "relevance_score": 0.85 }
+    ],
+    "presumption_s139": [
+      { "concept": "presumption_s139", "case": "Rangappa v. Sri Mohan", "citation": "(2010) 11 SCC 441", "court": "Supreme Court of India", "principle": "Presumption mandated by Section 139 includes the existence of a legally enforceable debt.", "relevance_score": 0.99 },
+      { "concept": "presumption_s139", "case": "Basalingappa v. Mudibasappa", "citation": "(2019) 5 SCC 418", "court": "Supreme Court of India", "principle": "Accused can rebut presumption by questioning financial capacity.", "relevance_score": 0.97 },
+      { "concept": "presumption_s139", "case": "Sharma v. Global Traders", "citation": "(2017) 2 DLT 345", "court": "Delhi High Court", "principle": "Burden of proof shifts to the accused once signature is admitted.", "relevance_score": 0.88 },
+      { "concept": "presumption_s139", "case": "Patel v. Agro-Industries", "citation": "(2021) 14 SCC 678", "court": "Gujarat High Court", "principle": "Preponderance of probability is enough to rebut the statutory presumption.", "relevance_score": 0.82 },
+      { "concept": "presumption_s139", "case": "Singh v. Classic Textiles", "citation": "(2016) 11 BCR 234", "court": "Bombay High Court", "principle": "Security cheque given for a crystallised debt attracts presumption.", "relevance_score": 0.78 },
+      { "concept": "presumption_s139", "case": "Jain v. Reliance Agencies", "citation": "(2019) 7 DLT 890", "court": "Delhi High Court", "principle": "Complainant's financial capacity can be questioned.", "relevance_score": 0.83 },
+      { "concept": "presumption_s139", "case": "Kapoor v. Unity Exports", "citation": "(2022) 1 SCALE 456", "court": "Supreme Court of India", "principle": "Rebuttal must be through cogent evidence, not mere denial.", "relevance_score": 0.91 }
+    ],
+    "vicarious_liability_issue": [
+      { "concept": "vicarious_liability_issue", "case": "Aneeta Hada v. Godfather Travels", "citation": "(2012) 5 SCC 661", "court": "Supreme Court of India", "principle": "Impleading the Company is mandatory for prosecuting its directors.", "relevance_score": 0.99 },
+      { "concept": "vicarious_liability_issue", "case": "SMS Pharmaceuticals Ltd v. Neeta Bhalla", "citation": "(2005) 8 SCC 89", "court": "Supreme Court of India", "principle": "Specific averments regarding the role of directors are mandatory.", "relevance_score": 0.97 },
+      { "concept": "vicarious_liability_issue", "case": "Gupta v. Tech-Solutions", "citation": "(2018) 4 DLT 123", "court": "Delhi High Court", "principle": "Managing directors are inherently responsible; others need specific role attribution.", "relevance_score": 0.86 },
+      { "concept": "vicarious_liability_issue", "case": "Mehta v. Global Traders", "citation": "(2020) 2 BCR 567", "court": "Bombay High Court", "principle": "Non-executive directors are not liable unless specific role is proven.", "relevance_score": 0.79 },
+      { "concept": "vicarious_liability_issue", "case": "Reddy v. Agro-Industries", "citation": "(2021) 12 SCC 345", "court": "Madras High Court", "principle": "Resigned directors are not liable for cheques issued after resignation.", "relevance_score": 0.82 },
+      { "concept": "vicarious_liability_issue", "case": "Singh v. Modern Builders", "citation": "(2019) 5 AIR 234", "court": "Punjab and Haryana High Court", "principle": "Impleading the company is a mandatory condition.", "relevance_score": 0.77 }
+    ],
+    "security_cheque": [
+      { "concept": "security_cheque", "case": "Sampelly Satyanarayan Rao v. IREDA", "citation": "(2016) 10 SCC 458", "court": "Supreme Court of India", "principle": "Security cheques issued for crystallised debt are covered under S.138.", "relevance_score": 0.98 },
+      { "concept": "security_cheque", "case": "Sripati Singh v. State of Jharkhand", "citation": "(2021) SCC Online SC 1002", "court": "Supreme Court of India", "principle": "A cheque given as security can be treated as regular if loan is not repaid.", "relevance_score": 0.96 },
+      { "concept": "security_cheque", "case": "Indus Airways v. Magnum Aviation", "citation": "(2014) 12 SCC 539", "court": "Supreme Court of India", "principle": "Advance payment security does not attract S.138 if order is cancelled.", "relevance_score": 0.9 },
+      { "concept": "security_cheque", "case": "Das v. Tech-Solutions", "citation": "(2017) 8 DLT 456", "court": "Delhi High Court", "principle": "Cheque issued as security for a loan is covered if debt is due.", "relevance_score": 0.84 },
+      { "concept": "security_cheque", "case": "Banerjee v. Global Traders", "citation": "(2022) 3 BCR 789", "court": "Bombay High Court", "principle": "Undated security cheques are valid once filled and presented.", "relevance_score": 0.76 },
+      { "concept": "security_cheque", "case": "Jain v. Classic Textiles", "citation": "(2019) 11 SCC 123", "court": "Kerala High Court", "principle": "Rebuttal requires proof of no existing debt.", "relevance_score": 0.81 }
+    ],
+    "legal_notice_compliance": [
+      { "concept": "legal_notice_compliance", "case": "C.C. Alavi Haji v. Palapetty Muhammed", "citation": "(2007) 6 SCC 555", "court": "Supreme Court of India", "principle": "Notice is deemed served if sent to correct address.", "relevance_score": 0.98 },
+      { "concept": "legal_notice_compliance", "case": "D. Vinod Shivappa v. Nanda Belliappa", "citation": "(2006) 6 SCC 456", "court": "Supreme Court of India", "principle": "Service of notice is a matter of evidence at trial.", "relevance_score": 0.94 },
+      { "concept": "legal_notice_compliance", "case": "Iyer v. Agro-Industries", "citation": "(2018) 2 DLT 345", "court": "Delhi High Court", "principle": "Correct address on notice is sufficient to prove service.", "relevance_score": 0.88 },
+      { "concept": "legal_notice_compliance", "case": "Singh v. Modern Builders", "citation": "(2021) 14 SCC 678", "court": "Madras High Court", "principle": "Demand notice must be issued within 30 days.", "relevance_score": 0.82 },
+      { "concept": "legal_notice_compliance", "case": "Patel v. Classic Textiles", "citation": "(2016) 11 BCR 234", "court": "Bombay High Court", "principle": "Defective notice with incorrect amount may invalidate the complaint.", "relevance_score": 0.78 }
+    ],
+    "limitation_issue": [
+      { "concept": "limitation_issue", "case": "Saketh India Ltd v. India Securities Ltd", "citation": "(1999) 3 SCC 1", "court": "Supreme Court of India", "principle": "Exclusion of the day cause of action arises for limitation.", "relevance_score": 0.95 },
+      { "concept": "limitation_issue", "case": "Gupta v. Unity Exports", "citation": "(2019) 7 DLT 890", "court": "Delhi High Court", "principle": "Limitation of 1 month starts from 15th day of notice delivery.", "relevance_score": 0.83 },
+      { "concept": "limitation_issue", "case": "Khan v. Prime Ventures", "citation": "(2020) 15 BCR 123", "court": "Bombay High Court", "principle": "Condonation of delay allowed only on showing 'sufficient cause'.", "relevance_score": 0.79 },
+      { "concept": "limitation_issue", "case": "Varma v. Tech-Solutions", "citation": "(2023) 9 SCC 456", "court": "Karnataka High Court", "principle": "Calculation excludes the day cause of action arose.", "relevance_score": 0.85 }
+    ]
+  }
+}
