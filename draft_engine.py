@@ -187,11 +187,12 @@ def generate_complaint(case_data: Dict, concepts: List[Dict], tone: str = "stand
             liability_clause = f"""3. THE VICARIOUS LIABILITY (SEC. 141):
     That the Accused No. 1 is a {accused_type}, and Accused Nos. 2 onwards, namely {director_names}, are the Directors/Partners/Officers of the said Accused No. 1.
     That at the time the offence was committed, the said Accused Nos. 2 onwards were in charge of, and were responsible to the Accused No. 1 for the conduct of its business. 
-    They were actively involved in the day-to-day management and decision-making processes of the Accused No. 1, and the dishonoured cheque in question was issued with their full knowledge, consent, and connivance, thereby making them liable under Section 141 of the NI Act."""
+    They were actively involved in the day-to-day management and decision-making processes of the Accused No. 1, and the dishonoured cheque in question was issued with their full knowledge, consent, and connivance.
+    The Accused Nos. 2 onwards are thus vicariously liable for the acts of the Accused No. 1 as per the mandatory provisions of Section 141 of the Negotiable Instruments Act, 1881 and the law laid down by the Hon'ble Supreme Court in 'Aneeta Hada v. Godfather Travels'."""
         elif has_directors:
             liability_clause = f"3. THE VICARIOUS LIABILITY (SEC. 141): That the Accused No. 1 is a {accused_type} and the other Accused persons are its Directors/Officers who were in charge of and responsible for the conduct of the business as per Section 141 of the NI Act."
         else:
-            liability_clause = f"3. That the Accused is a {accused_type}. [CRITICAL WARNING: Specific Directors/Officers must be named and their roles defined to satisfy the mandates of Section 141 NI Act and the law laid down in Aneeta Hada vs. Godfather Travels]."
+            liability_clause = f"3. That the Accused is a {accused_type}. [🚨 FATAL DEFECT WARNING: You must name the specific Directors/Officers in charge of the company and describe their roles to satisfy Section 141 and avoid dismissal at the threshold stage per 'Aneeta Hada' ruling]."
 
     # ── DELAY CONDONATION (Advocate Hardening) ───────────────────────────
     delay_para = ""
@@ -280,8 +281,8 @@ RESPECTFULLY SHOWETH:
 10. PRAYER:
     It is, therefore, most respectfully prayed that this Hon'ble Court may be pleased to:
     (a) Take cognizance of the offence committed by the Accused under Section 138 of the NI Act, 1881;
-    (b) Issue summons/process to the Accused;
-    {prayer_compensation}
+    (b) Issue summons/process to the Accused to face trial;
+    (c) Direct the Accused to pay INTERIM COMPENSATION of 20% of the cheque amount to the Complainant as per Section 143A of the NI Act (as amended in 2018);
     (d) On conviction, sentence the Accused to imprisonment for the maximum term and/or impose a fine of twice the cheque amount to meet the ends of justice; and
     (e) Pass such other order(s) as this Hon'ble Court may deem fit in the interest of justice.
 

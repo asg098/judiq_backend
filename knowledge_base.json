@@ -49,6 +49,14 @@
       ],
       "weight": 0.9,
       "legal_impact": "Requires impleadment of firm and all active partners under S.141"
+    },
+    "financial_capacity_risk": {
+      "patterns": [
+        "\\b(cash\\s+loan|no\\s+itr|financial\\s+capacity|capacity\\s+to\\s+lend)",
+        "\\b(source\\s+of\\s+funds|unaccounted\\s+cash|basalingappa)"
+      ],
+      "weight": 0.85,
+      "legal_impact": "Complainant's financial capacity to lend large cash amounts can be challenged (Basalingappa rule)"
     }
   },
   "legal_concepts_registry": [
@@ -105,6 +113,29 @@
     "cheque_misuse": [-30, 0.85, "Allegation of cheque misuse/theft requires strong rebuttal evidence"],
     "dishonour_disputed": [-20, 0.80, "Dispute over bank return reason weakens the primary evidence"],
     "payment_already_made": [-35, 0.95, "Proof of payment prior to notice expiry voids the cause of action"],
-    "litigation_risk": [-10, 0.50, "Standard trial uncertainty and judicial discretion impact"]
+    "litigation_risk": [-10, 0.50, "Standard trial uncertainty and judicial discretion impact"],
+    "financial_capacity_risk": [-22, 0.85, "High-value cash loans without source-of-fund proof are vulnerable to 'Financial Capacity' rebuttal"]
+  },
+  "defence_templates": {
+    "security_cheque": [
+      "The cheque was issued as a security for a future transaction and not for any existing legally enforceable debt.",
+      "The S.139 presumption is rebuttable; if the accused shows that the debt was not crystallized on the presentation date, the case fails (Sampelly Satyanarayan Rao v. IREDA).",
+      "Sampelly Satyanarayan Rao v. IREDA (2016) 10 SCC 458"
+    ],
+    "signature_dispute": [
+      "The signature on the cheque is forged and does not belong to the accused.",
+      "Apply for forensic examination under S.45 Evidence Act. If forgery is proven, the entire S.138 action collapses as the instrument is void.",
+      "Section 45, Indian Evidence Act"
+    ],
+    "financial_capacity_risk": [
+      "The complainant lacked the financial capacity to lend such a large sum of money in cash as claimed.",
+      "Shift the burden to the complainant to prove the source of funds. Lack of ITR or bank trail for large cash loans makes the transaction suspicious (Basalingappa v. Mudibasappa).",
+      "Basalingappa v. Mudibasappa (2019) 5 SCC 418"
+    ],
+    "notice_defect": [
+      "The statutory demand notice was not served within the mandatory 30-day window or contains material defects in the claim amount.",
+      "Section 138(b) compliance is a jurisdictional prerequisite. Any delay or defect in notice service is fatal to the prosecution.",
+      "C.C. Alavi Haji v. Palapetty Muhammed (2007) 6 SCC 555"
+    ]
   }
 }

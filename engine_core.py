@@ -113,6 +113,19 @@ class JudiQEngine:
                 concepts.append({"concept": "legally_enforceable_debt", "confidence": 0.75,
                                   "matched_phrases": ["fallback: debt proven"],
                                   "legal_impact": "Establishes legally enforceable liability under S.139."})
+        
+        # -- Step 3.2: Financial Capacity Logic (Expert Hardening) -------------
+        # If high amount cash loan without ITR/Bank proof
+        amt = float(case_data.get("amount") or 0)
+        if amt > 150000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
+            if "financial_capacity_risk" not in existing_concepts:
+                concepts.append({
+                    "concept": "financial_capacity_risk",
+                    "confidence": 0.82,
+                    "matched_phrases": ["Inherent financial capacity risk for cash loans"],
+                    "legal_impact": "Basalingappa v. Mudibasappa rule: Complainant's source of funds can be challenged."
+                })
+                existing_concepts.add("financial_capacity_risk")
 
         # -- Step 3.5: Mandatory Litigation Risk Injection (Enemy Audit Fix) --
         # No case is zero-risk. Every S.138 case carries inherent trial risk.
@@ -125,21 +138,50 @@ class JudiQEngine:
 
         logger.debug(f"[JUDIQ] Concepts detected: {[c.get('concept') for c in concepts]}")
 
-        # -- Step 4: Reasoning Layer (each call independently guarded) --------
+        # -- Step 6: Scoring & Compliance Scorecard --------------------------
+        score_data = _safe_call(
+            ScoringEngineV12.calculate_score_with_trace,
+            case_data, concepts, [], {},
+            fallback={"score": 50, "compliance_pct": 50, "breakdown": {}},
+            context="ScoringEngine"
+        )
+        final_score = score_data.get("score", 50)
+        compliance_scorecard = {
+            "percentage": score_data.get("compliance_pct", 50),
+            "breakdown": score_data.get("breakdown", {})
+        }
+        
+        # -- Step 7: Reasoning & Precedent Match -----------------------------
         case_summary = _safe_call(
-            ReasoningEngine.summarize_case, case_data,
-            fallback="Case summary could not be generated. Please review case details manually.",
-            context="ReasoningEngine.summarize_case"
+            ReasoningEngine.generate_case_summary, concepts, final_score,
+            fallback="Standard legal analysis summary.",
+            context="ReasoningEngine.summary"
         )
-        statutory_interpretation = _safe_call(
-            ReasoningEngine.interpret_statutes, case_data, concepts,
-            fallback=[],
-            context="ReasoningEngine.statutes"
-        )
+        
         precedents = _safe_call(
-            ReasoningEngine.match_precedents, concepts,
+            ReasoningEngine.find_relevant_precedents, concepts,
             fallback=[],
             context="ReasoningEngine.precedents"
+        )
+        
+        # Proof Presence Auto-Check
+        proof_card = {
+            "status": "VALIDATED" if case_data.get("proof_present", True) else "MISSING",
+            "detected_docs": [k for k,v in case_data.items() if v is True and k in ["cheque_present", "dishonour_memo", "notice_sent", "debt_proven"]]
+        }
+        
+        # Client Friendly Summary
+        client_summary = _safe_call(
+            ReasoningEngine.generate_client_summary, {"score": final_score, "concepts": concepts},
+            fallback="Analysis complete. Review documents for details.",
+            context="ReasoningEngine.client_summary"
+        )
+        
+        # Conviction Probability Trend
+        probability_trend = _safe_call(
+            ReasoningEngine.determine_trend, final_score,
+            fallback="STABLE",
+            context="ReasoningEngine.trend"
         )
         reasoning_trail = _safe_call(
             ReasoningEngine.generate_reasoning_trail, case_data, concepts,
@@ -147,22 +189,6 @@ class JudiQEngine:
             context="ReasoningEngine.trail"
         )
 
-        # -- Step 5: Timeline Analysis ----------------------------------------
-        timeline = _safe_call(
-            TimelineEngine.generate_timeline, case_data,
-            fallback=[],
-            context="TimelineEngine"
-        )
-
-        # -- Step 6: Scoring Engine (Nuanced Assessment) -----------------------
-        evidence_score = 0
-        if case_data.get("cheque_proof_type") == "original": evidence_score += 2
-        if case_data.get("memo_type") == "original": evidence_score += 1
-        if case_data.get("bank_statements"): evidence_score += 2
-        if case_data.get("witnesses_available"): evidence_score += 1
-        if case_data.get("receipts_available"): evidence_score += 1
-        
-        evidence_strength = "MODERATE"
         if evidence_score >= 5: evidence_strength = "STRONG"
         elif evidence_score <= 1: evidence_strength = "WEAK"
 
@@ -210,14 +236,26 @@ class JudiQEngine:
             fallback=[],
             context="DecisionSupportEngine.evidence"
         )
+        
+        # -- Step 8.5: Litigation Strategy Map (Expert Hardening) -------------
+        from strategy_engine import StrategyEngine
+        litigation_strategy = _safe_call(
+            StrategyEngine.generate_litigation_map, case_data, final_score, concepts,
+            fallback={"prosecution_map": {}, "defence_map": {}, "overall_strategy": "Standard"},
+            context="StrategyEngine"
+        )
 
         # -- Step 9: Draft Engine ---------------------------------------------
-        draft_type = decide_draft_type(int(final_score), concepts, case_data)
-        try:
-            draft_content = DraftEngine.generate_draft(draft_type, int(final_score), concepts, case_data)
-        except Exception as exc:
-            logger.error(f"[ENGINE] DraftEngine failed: {exc}", exc_info=True)
-            draft_content = "Legal draft generation failed. Please use manual templates."
+        draft_type = _safe_call(
+            decide_draft_type, int(final_score), concepts, case_data,
+            fallback="LEGAL_OPINION",
+            context="DraftTypeDecider"
+        )
+        draft_content = _safe_call(
+            DraftEngine.generate_draft, draft_type, int(final_score), concepts, case_data,
+            fallback="Legal draft generation failed. Please use manual templates.",
+            context="DraftEngine"
+        )
 
         # -- Step 10: Final Response Assembly ---------------------------------
         engine_result = {
@@ -238,6 +276,13 @@ class JudiQEngine:
             "draft":                    draft_content,
             "draft_type":               draft_type,
             "evidence_suggestions":     evidence_suggestions,
+            "litigation_strategy":      litigation_strategy,
+            "compliance_scorecard":     compliance_scorecard,
+            "timeline_visualizer":      timeline_visualizer,
+            "proof_card":               proof_card,
+            "client_summary":           client_summary,
+            "probability_trend":        probability_trend,
+            "closest_precedent":        precedents[0] if precedents else None,
             "analysis_mode":            case_data.get("analysis_mode", "detailed"),
             "proof_present":            case_data.get("proof_present", True)
         }

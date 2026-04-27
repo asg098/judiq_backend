@@ -1,0 +1,33 @@
+{
+  "updates": [
+    {
+      "title": "Basalingappa v. Mudibasappa",
+      "citation": "(2019) 5 SCC 418",
+      "impact_area": "financial_capacity_risk",
+      "summary": "Reiterated that the accused can rebut the Section 139 presumption by raising a probable defense regarding the complainant's financial capacity to lend.",
+      "timestamp": "2024-04-27T10:00:00Z"
+    },
+    {
+      "title": "Arjun Panditrao Khotkar v. Kailash Kushanrao Gorantyal",
+      "citation": "(2020) 7 SCC 1",
+      "impact_area": "digital_evidence",
+      "summary": "Clarified that a Section 65B(4) certificate is a condition precedent for the admissibility of electronic evidence like WhatsApp and Emails.",
+      "timestamp": "2024-04-27T11:00:00Z"
+    },
+    {
+      "title": "Aneeta Hada v. Godfather Travels",
+      "citation": "(2012) 5 SCC 661",
+      "impact_area": "vicarious_liability_issue",
+      "summary": "Held that for corporate liability under Section 141, the company must be made a co-accused along with the responsible directors.",
+      "timestamp": "2024-04-27T12:00:00Z"
+    },
+    {
+      "title": "P. Mohanraj v. Shah Brothers Ispat Pvt. Ltd.",
+      "citation": "(2021) 6 SCC 258",
+      "impact_area": "litigation_risk",
+      "summary": "Clarified that Section 138 proceedings are 'quasi-criminal' and the IBC moratorium under Section 14 applies to the corporate debtor but not to directors.",
+      "timestamp": "2024-04-27T13:00:00Z"
+    }
+  ],
+  "last_sync": "2024-04-27T14:00:00Z"
+}

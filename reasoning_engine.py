@@ -58,7 +58,44 @@ class ReasoningEngine:
             else:
                 summary += f" FATAL DEFECT: Corporate accused ({accused_type}) impleaded WITHOUT naming responsible officers (S.141)."
 
+        # Financial Capacity (Basalingappa)
+        amount_val = 0
+        try: amount_val = float(amount)
+        except: pass
+        if amount_val > 150000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
+            summary += " 🚨 EVIDENTIARY RISK: Complainant's financial capacity to lend this amount in cash may be challenged under the Basalingappa rule."
+
         return summary
+
+    @staticmethod
+    def generate_client_summary(analysis_result: Dict) -> str:
+        """Generates a plain-language summary for the client."""
+        score = analysis_result.get("score", 0)
+        verdict = analysis_result.get("verdict", "Unknown")
+        
+        if score >= 75:
+            msg = "Your case is very strong. All legal requirements are met."
+        elif score >= 50:
+            msg = "Your case is moderate. We have the core documents, but the defense may challenge some details."
+        else:
+            msg = "Your case has significant risks. Some mandatory legal steps appear missing or defective."
+            
+        # Add specific warnings
+        existing_concepts = [c["concept"] for c in analysis_result.get("concepts", [])]
+        if "notice_defect" in existing_concepts:
+            msg += " Specifically, there is an issue with the legal notice timing."
+        if "no_debt_proof" in existing_concepts:
+            msg += " We need better proof that the money was actually owed."
+            
+        return msg
+
+    @staticmethod
+    def determine_trend(score: int) -> str:
+        """Determines the conviction probability trend."""
+        if score >= 80: return "STRONG_UPWARD"
+        if score >= 60: return "STABLE_POSITIVE"
+        if score >= 40: return "VOLATILE"
+        return "CRITICAL_DOWNWARD"
 
 
     # ── 2. Precedent Matching ─────────────────────────────────────────────────

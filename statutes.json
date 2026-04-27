@@ -31,7 +31,13 @@
       "143A": {
         "title": "Power to direct interim compensation",
         "content": "The Court trying an offence under section 138 may order the drawer of the cheque to pay interim compensation to the complainant...",
-        "limit": "Up to 20% of the cheque amount."
+        "limit": "Up to 20% of the cheque amount.",
+        "applicability": "Applies at the stage of framing of notice/charge. If accused is acquitted, complainant must repay with interest (Bank rate + 2%)."
+      },
+      "148": {
+        "title": "Power of Appellate Court to order payment pending appeal",
+        "content": "In an appeal by the drawer against conviction under section 138, the Appellate Court may order the appellant to deposit such sum which shall be a minimum of twenty per cent of the fine or compensation awarded by the trial Court.",
+        "impact": "Crucial for preventing delay-tactics in appeals. Deposit is mandatory for suspension of sentence in many jurisdictions."
       }
     }
   },

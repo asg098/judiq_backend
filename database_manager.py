@@ -22,7 +22,8 @@ class DatabaseManager:
                     score REAL,
                     verdict TEXT,
                     created_at TEXT,
-                    updated_at TEXT
+                    updated_at TEXT,
+                    tags TEXT
                 )
             """)
             
@@ -104,10 +105,16 @@ class DatabaseManager:
             cursor = conn.cursor()
             now = datetime.now().isoformat()
             
+            # Generate Tags for Legacy Archive
+            tags = [verdict]
+            if case_data.get("accused_type") != "Individual": tags.append("CORPORATE")
+            if score > 75: tags.append("HIGH_STRENGTH")
+            elif score < 40: tags.append("WEAK_DEFENCE")
+            
             cursor.execute("""
                 INSERT OR REPLACE INTO saved_cases 
-                (case_id, user_id, case_data, analysis_result, score, verdict, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (case_id, user_id, case_data, analysis_result, score, verdict, created_at, updated_at, tags)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 case_id, 
                 user_id, 
@@ -116,7 +123,8 @@ class DatabaseManager:
                 score, 
                 verdict,
                 now,
-                now
+                now,
+                ",".join(tags)
             ))
             
             conn.commit()

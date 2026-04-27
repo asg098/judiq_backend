@@ -27,9 +27,9 @@ def days_between(date1_str, date2_str):
 
 class TimelineEngine:
     @staticmethod
-    def generate_timeline(case_data: Dict[str, Any]) -> List[str]:
-        """Generate chronological timeline with actual dates"""
-        timeline = []
+    def generate_timeline_data(case_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate structured timeline milestones for visualization"""
+        steps = []
         
         transaction_date = case_data.get("transaction_date")
         cheque_date = case_data.get("cheque_date")
@@ -39,76 +39,35 @@ class TimelineEngine:
         filing_date = case_data.get("filing_date")
         
         if transaction_date:
-            timeline.append(f"📋 Transaction/Debt created on {transaction_date}")
+            steps.append({"milestone": "Debt Created", "date": transaction_date, "status": "success", "details": "Transaction or debt creation event."})
         
         if cheque_date:
-            timeline.append(f"📝 Cheque issued/dated {cheque_date}")
+            steps.append({"milestone": "Cheque Issued", "date": cheque_date, "status": "success", "details": f"Cheque No. {case_data.get('cheque_number', 'N/A')} issued."})
             
-            # Check if post-dated
-            if transaction_date:
-                days_diff = days_between(transaction_date, cheque_date)
-                if days_diff and days_diff > 0:
-                    timeline.append(f"   ⚠️  Post-dated by {days_diff} days")
-        
         if presentation_date:
-            timeline.append(f"🏦 Cheque presented to bank on {presentation_date}")
+            days_from_cheque = days_between(cheque_date, presentation_date)
+            status = "success" if days_from_cheque and days_from_cheque <= 90 else "error"
+            steps.append({"milestone": "Cheque Presented", "date": presentation_date, "status": status, "details": f"Presented to bank. Validity: {days_from_cheque} days."})
             
-            # Check 3-month validity
-            if cheque_date:
-                days_diff = days_between(cheque_date, presentation_date)
-                if days_diff is not None:
-                    if days_diff < 0:
-                        timeline.append(f"   ⚠️  ANOMALY: Presented BEFORE cheque date ({abs(days_diff)} days early)")
-                    elif days_diff > 90:
-                        timeline.append(f"   ⚠️  CRITICAL: Presented {days_diff} days after date (>3 months - stale)")
-                    else:
-                        timeline.append(f"   ✓ Presented within validity ({days_diff} days)")
-        
         if dishonour_date:
-            timeline.append(f"❌ Cheque dishonoured by bank on {dishonour_date}")
-        
-        if notice_date and dishonour_date:
-            days_diff = days_between(dishonour_date, notice_date)
-            if days_diff is not None:
-                if days_diff < 0:
-                    timeline.append(f"   ⚠️  ANOMALY: Notice dated BEFORE dishonour ({abs(days_diff)} days early)")
-                elif days_diff <= 30:
-                    timeline.append(f"📧 Legal notice sent on {notice_date} ({days_diff} days after dishonour ✓)")
-                else:
-                    timeline.append(f"📧 Legal notice sent on {notice_date} ({days_diff} days after dishonour ⚠️  EXCEEDS 30 DAY LIMIT)")
-        elif notice_date:
-            timeline.append(f"📧 Legal notice sent on {notice_date}")
-        elif dishonour_date:
-            timeline.append(f"   ⚠️  CRITICAL: No legal notice sent yet (mandatory within 30 days of {dishonour_date})")
-        
-        # Calculate cause of action
-        notice_base_date = case_data.get("notice_received_date") or case_data.get("notice_date")
-        if notice_base_date:
-            base_dt = parse_date(notice_base_date)
-            if base_dt:
-                # S.138(c): 15 days from RECEIPT. Cause of action arises on 16th day.
-                cause_of_action_end = base_dt + timedelta(days=15)
-                first_filing_day = base_dt + timedelta(days=16)
-                
-                timeline.append(f"⏳ 15-day cure period for Accused expires on {cause_of_action_end.strftime('%Y-%m-%d')}")
-                timeline.append(f"⚖️  Cause of Action arises on {first_filing_day.strftime('%Y-%m-%d')} (First day you can file)")
-                
-                limitation_date = first_filing_day + timedelta(days=30)
-                timeline.append(f"📅 Limitation period for filing expires on {limitation_date.strftime('%Y-%m-%d')} (1 month from COA)")
-                
-                # Check if filed
-                if filing_date:
-                    filing_dt = parse_date(filing_date)
-                    if filing_dt:
-                        if filing_dt < first_filing_day:
-                            timeline.append(f"   🚨 CRITICAL: PREMATURE FILING on {filing_date} (You must wait until {first_filing_day.strftime('%Y-%m-%d')})")
-                        elif filing_dt <= limitation_date:
-                            timeline.append(f"   ✓ Complaint filed on {filing_date} (WITHIN limitation)")
-                        else:
-                            days_delay = (filing_dt - limitation_date).days
-                            timeline.append(f"   ⚠️  Complaint filed on {filing_date} (DELAYED by {days_delay} days - S.142(1)(b) condonation required)")
-        
-        return timeline if timeline else ["Timeline data unavailable - provide dates for detailed analysis"]
+            steps.append({"milestone": "Cheque Dishonoured", "date": dishonour_date, "status": "error", "details": f"Reason: {case_data.get('dishonour_reason', 'Funds Insufficient')}"})
+            
+        if notice_date:
+            days_from_dishonour = days_between(dishonour_date, notice_date)
+            status = "success" if days_from_dishonour and days_from_dishonour <= 30 else "error"
+            steps.append({"milestone": "Notice Dispatched", "date": notice_date, "status": status, "details": f"Statutory notice sent within {days_from_dishonour} days."})
+            
+        if filing_date:
+            steps.append({"milestone": "Complaint Filed", "date": filing_date, "status": "success", "details": "Case entered jurisdictional court."})
+            
+        return steps
+
+    @staticmethod
+    def generate_timeline(case_data: Dict[str, Any]) -> List[str]:
+        """Legacy string-based timeline"""
+        data = TimelineEngine.generate_timeline_data(case_data)
+        return [f"{s['milestone']} ({s['date']}): {s['details']}" for s in data]
+
 
     @staticmethod
     def check_limitation(case_data: Dict[str, Any]) -> Dict[str, Any]:

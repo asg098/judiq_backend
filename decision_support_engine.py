@@ -1,6 +1,8 @@
 import logging
 from typing import List, Dict, Any
+
 logger = logging.getLogger(__name__)
+
 # ── Risk catalogue ─────────────────────────────────────────────────────────────
 RISK_CATALOGUE = [
     {
@@ -68,6 +70,14 @@ RISK_CATALOGUE = [
         "description": "Section 143A allows the court to order the accused to pay up to 20% of the cheque amount as interim compensation.",
         "rebuttal": "Proactively file an application under S.143A at the time of framing of notice/charge. This exerts financial pressure and incentivizes settlement.",
         "case_law": "L.G.R. Enterprises v. P.V. Ramakrishna (2019)"
+    },
+    {
+        "concept_trigger": "financial_capacity_risk",
+        "risk": "Financial Capacity Rebuttal (Basalingappa Rule)",
+        "severity": "HIGH",
+        "description": "Accused challenges the complainant's ability/means to lend the alleged high-value cash amount.",
+        "rebuttal": "Counter by showing specific source of funds (bank withdrawal receipts, sale of assets, or high ITR income). Per 'Basalingappa (2019)', if the accused creates a 'probable defense' regarding financial capacity, the burden shifts back to the complainant.",
+        "case_law": "Basalingappa v. Mudibasappa (2019)"
     }
 ]
 

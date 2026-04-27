@@ -13,8 +13,10 @@ def ensure_number(x, default=0):
 DEFENCE_ONLY_NEGATIVE_CONCEPTS = {
     "security_cheque", "signature_dispute", "signature_disputed", "no_debt_proof",
     "notice_not_sent", "notice_defect", "limitation_issue", "cheque_misuse",
-    "no_agreement", "cheque_validity_issue", "payment_already_made", "dishonour_disputed"
+    "no_agreement", "cheque_validity_issue", "payment_already_made", "dishonour_disputed",
+    "financial_capacity_risk"
 }
+
 POSITIVE_CONCEPTS_NO_DEFENCE = {
     "cheque_bounce", "legal_notice_compliance", "legally_enforceable_debt",
     "strong_documentary_evidence"
@@ -95,6 +97,7 @@ class DefenceEngineV12:
                 "payment_already_made": 1.1,  # If provable, strong
                 "cheque_misuse": 0.8,  # Hard to prove
                 "no_agreement": 1.15,  # Challenges enforceability
+                "financial_capacity_risk": 1.25, # Strong rebuttal under Basalingappa rule
             }
             
             concept_mod = concept_modifiers.get(concept, 1.0)
