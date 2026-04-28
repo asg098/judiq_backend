@@ -110,9 +110,21 @@ class OCREngine:
         }
 
     @classmethod
+    def verify_stamp_duty(cls, text: str) -> bool:
+        """Checks if a formal agreement contains references to stamp duty, e-stamp, or notary."""
+        text_lower = text.lower()
+        return any(w in text_lower for w in ["stamp duty", "e-stamp", "notary", "registration", "stamp paper", "rupees one hundred"])
+
+    @classmethod
+    def extract_jurisdiction_pins(cls, text: str) -> List[str]:
+        """Extracts Indian postal pin codes to verify jurisdiction alignment."""
+        # 6 digit Indian pin codes
+        return list(set(re.findall(r'\b[1-9][0-9]{5}\b', text)))
+
+    @classmethod
     def analyze_document(cls, extracted_text: str, doc_type: str, user_claimed_reason: str = "") -> Dict[str, Any]:
         """
-        Extracts key evidence metrics (Dates, Amounts, Reasons, Tracking) based on document type.
+        Extracts key evidence metrics (Dates, Amounts, Reasons, Tracking, Jurisdiction) based on document type.
         """
         result = {
             "is_verified": False,
@@ -121,6 +133,8 @@ class OCREngine:
             "extracted_amounts": cls.extract_amounts(extracted_text),
             "extracted_cheque_numbers": cls.extract_cheque_numbers(extracted_text),
             "postal_tracking_numbers": cls.extract_postal_tracking(extracted_text),
+            "extracted_pin_codes": cls.extract_jurisdiction_pins(extracted_text),
+            "has_stamp_duty": cls.verify_stamp_duty(extracted_text) if doc_type.upper() == "DEBT_PROOF" else False,
             "debt_proof_class": cls.classify_debt_proof(extracted_text) if doc_type.upper() == "DEBT_PROOF" else None,
             "notice_compliance": cls.verify_notice_statutory_compliance(extracted_text) if doc_type.upper() == "NOTICE" else None,
             "warning": None,
@@ -146,9 +160,14 @@ class OCREngine:
                 result["verification_confidence"] = 0.80
 
         elif doc_type.upper() == "CHEQUE":
+            # Signature Verification Logic (Basic string heuristics for cheque bounding boxes)
+            has_signature_indicators = any(w in extracted_text.lower() for w in ["authorized signatory", "for ", "director", "proprietor", "signature"])
+            
             if result["extracted_amounts"] and result["extracted_cheque_numbers"]:
                 result["is_verified"] = True
                 result["verification_confidence"] = 0.95
+                if not has_signature_indicators:
+                    result["warning"] = "WARNING: Cheque details extracted, but no signature/signatory block detected. Ensure cheque is signed."
             elif result["extracted_amounts"]:
                 result["is_verified"] = True
                 result["verification_confidence"] = 0.85

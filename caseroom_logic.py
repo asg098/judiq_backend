@@ -54,7 +54,23 @@ class CaseroomManager:
 
     @staticmethod
     def upload_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status="PENDING", extracted_data=None):
-        """Records a new document upload in the caseroom."""
+        """Records a new document upload in the caseroom with Duplicate Detection."""
+        # 1. Duplicate Document Detection
+        caseroom_state = DatabaseManager.get_caseroom_data(caseroom_id)
+        if caseroom_state and "documents" in caseroom_state:
+            for doc in caseroom_state["documents"]:
+                if doc["file_name"] == file_name and doc["doc_type"] == doc_type:
+                    logger.warning(f"Duplicate upload blocked: {file_name}")
+                    return None # Silently block or return a specific error flag
+
+                # Check semantic duplicates (same cheque number uploaded under different name)
+                if doc_type == "CHEQUE" and extracted_data and doc.get("extracted_data"):
+                    existing_chq = doc["extracted_data"].get("extracted_cheque_numbers", [])
+                    new_chq = extracted_data.get("extracted_cheque_numbers", [])
+                    if existing_chq and new_chq and existing_chq[0] == new_chq[0]:
+                        logger.warning(f"Duplicate Cheque Number detected: {new_chq[0]}")
+                        return None
+
         return DatabaseManager.save_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status, extracted_data)
 
     @staticmethod
@@ -127,10 +143,22 @@ class CaseroomManager:
 
             elif dtype == "DEBT_PROOF":
                 dp_class = ext.get("debt_proof_class")
+                is_stamped = ext.get("has_stamp_duty", False)
                 if dp_class:
                     case_data["debt_proof_type"] = dp_class
                     updates.append(f"Debt Proof Classification -> {dp_class}")
+                if dp_class == "FORMAL_AGREEMENT" and not is_stamped:
+                    if "concepts" not in case_data: case_data["concepts"] = []
+                    case_data["concepts"].append({"concept": "unstamped_agreement"})
+                    updates.append("WARNING: Formal agreement appears unstamped/unregistered. Inadmissible under Sec 35 Indian Stamp Act.")
         
+        # Section 65B Certificate Auto-Check
+        has_65b = any(str(d.get("doc_type")).upper() == "65B_CERTIFICATE" for d in documents)
+        if case_data.get("debt_proof_type") == "ELECTRONIC_COMMUNICATION" and not has_65b:
+            if "concepts" not in case_data: case_data["concepts"] = []
+            case_data["concepts"].append({"concept": "missing_65b_certificate"})
+            updates.append("FATAL DEFECT: Electronic evidence relied upon, but Section 65B Certificate is missing!")
+            
         if not updates:
             return True, "No new data extracted from documents to update."
             
