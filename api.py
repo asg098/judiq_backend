@@ -3,7 +3,7 @@ import os
 import shutil
 import uvicorn  # type: ignore
 from datetime import datetime
-from fastapi import FastAPI, Request, Response, UploadFile, File  # type: ignore
+from fastapi import FastAPI, Request, Response, UploadFile, File, Form  # type: ignore
 from fastapi.responses import JSONResponse  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
 
@@ -158,10 +158,10 @@ async def analyze(request: Request):
     # ── Persist (non-fatal) ────────────────────────────────────────────────────
     try:
         # Use the result from the engine which is already normalized
-        uid = result.get("metadata", {}).get("user_id", "ANONYMOUS")
-        cid = result.get("case_id", "")
+        case_data = result.get("case_data", {})
+        uid = case_data.get("user_id", "ANONYMOUS")
+        cid = case_data.get("case_id", "")
         if uid and cid and uid != "ANONYMOUS":
-            case_data = result.get("case_data", {})
             DatabaseManager.save_case(
                 cid, 
                 uid, 
@@ -229,6 +229,66 @@ async def add_caseroom_task(room_id: str, request: Request):
     data = await request.json()
     success = CaseroomManager.add_milestone(room_id, data.get("title"), data.get("due_date"), data.get("description", ""))
     return {"success": success}
+
+@app.post("/caseroom/{room_id}/upload")
+async def upload_caseroom_document(
+    room_id: str,
+    file: UploadFile = File(...),
+    user_id: str = Form(...),
+    doc_type: str = Form("EVIDENCE"),
+    claimed_reason: str = Form("None")
+):
+    from caseroom_logic import CaseroomManager
+    
+    # Ensure uploads directory exists
+    upload_dir = os.path.join(os.getcwd(), "uploads", room_id)
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    file_path = os.path.join(upload_dir, file.filename)
+    
+    content = await file.read()
+    
+    # Save file to disk
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    # 1. Extract Text
+    extracted_text = ""
+    if file.filename.lower().endswith(".pdf"):
+        if HAS_PDFPLUMBER:
+            import io
+            with pdfplumber.open(io.BytesIO(content)) as pdf:
+                extracted_text = "\n".join([page.extract_text() or "" for page in pdf.pages])
+        else:
+            extracted_text = "[Error: pdfplumber not installed on server]"
+    else:
+        try:
+            extracted_text = content.decode("utf-8", errors="ignore")
+        except:
+            extracted_text = "[Unsupported file format for direct text extraction]"
+
+    # 2. Verification
+    verification_status = "PENDING"
+    verification_result = None
+    if doc_type.upper() == "MEMO":
+        verification_result = OCREngine.verify_evidence_consistency(extracted_text, claimed_reason)
+        verification_status = "VERIFIED" if verification_result.get("is_consistent") else "FAILED"
+    elif doc_type.upper() == "CHEQUE":
+        # Simplified validation for cheque, assuming existence and basic text extraction is valid for now
+        verification_status = "VERIFIED" if len(extracted_text.strip()) > 10 else "REVIEW_REQUIRED"
+    else:
+        verification_status = "UPLOADED"
+
+    # 3. Save metadata to DB
+    doc_id = CaseroomManager.upload_document(room_id, user_id, file.filename, file_path, doc_type, verification_status)
+    
+    return {
+        "success": bool(doc_id),
+        "doc_id": doc_id,
+        "filename": file.filename,
+        "verification_status": verification_status,
+        "verification_details": verification_result
+    }
 
 
 # ── PDF generation ─────────────────────────────────────────────────────────────

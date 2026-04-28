@@ -224,12 +224,17 @@ class DatabaseManager:
             cursor.execute("SELECT id, title, status, due_date FROM caseroom_tasks WHERE caseroom_id = ?", (caseroom_id,))
             tasks = [{"id": r[0], "title": r[1], "status": r[2], "due_date": r[3]} for r in cursor.fetchall()]
             
+            # Fetch documents
+            cursor.execute("SELECT id, uploader_id, file_name, file_path, doc_type, validation_status, created_at FROM caseroom_documents WHERE caseroom_id = ?", (caseroom_id,))
+            documents = [{"id": r[0], "uploader_id": r[1], "file_name": r[2], "file_path": r[3], "doc_type": r[4], "validation_status": r[5], "created_at": r[6]} for r in cursor.fetchall()]
+            
             conn.close()
             return {
                 "room_info": room,
                 "participants": participants,
                 "messages": messages,
-                "tasks": tasks
+                "tasks": tasks,
+                "documents": documents
             }
         except Exception as e:
             logger.error(f"Failed to fetch caseroom data for {caseroom_id}: {e}")
@@ -251,3 +256,36 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to send message in {caseroom_id}: {e}")
             return False
+
+    @staticmethod
+    def save_document(caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status="PENDING"):
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            now = datetime.now().isoformat()
+            cursor.execute("""
+                INSERT INTO caseroom_documents (caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status, now))
+            
+            doc_id = cursor.lastrowid
+            
+            conn.commit()
+            conn.close()
+            return doc_id
+        except Exception as e:
+            logger.error(f"Failed to save document in {caseroom_id}: {e}")
+            return None
+            
+    @staticmethod
+    def get_caseroom_documents(caseroom_id):
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, uploader_id, file_name, file_path, doc_type, validation_status, created_at FROM caseroom_documents WHERE caseroom_id = ?", (caseroom_id,))
+            docs = [{"id": r[0], "uploader_id": r[1], "file_name": r[2], "file_path": r[3], "doc_type": r[4], "validation_status": r[5], "created_at": r[6]} for r in cursor.fetchall()]
+            conn.close()
+            return docs
+        except Exception as e:
+            logger.error(f"Failed to fetch documents for {caseroom_id}: {e}")
+            return []

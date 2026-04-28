@@ -51,3 +51,8 @@ class CaseroomManager:
         except Exception as e:
             logger.error(f"Failed to add task: {e}")
             return False
+
+    @staticmethod
+    def upload_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status="PENDING"):
+        """Records a new document upload in the caseroom."""
+        return DatabaseManager.save_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status)

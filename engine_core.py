@@ -190,6 +190,8 @@ class JudiQEngine:
             context="ReasoningEngine.trail"
         )
 
+        evidence_score = score_data.get("evidence_score", 3)
+        evidence_strength = "MODERATE"
         if evidence_score >= 5: evidence_strength = "STRONG"
         elif evidence_score <= 1: evidence_strength = "WEAK"
 
