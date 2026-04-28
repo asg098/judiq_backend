@@ -56,3 +56,78 @@ class CaseroomManager:
     def upload_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status="PENDING", extracted_data=None):
         """Records a new document upload in the caseroom."""
         return DatabaseManager.save_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status, extracted_data)
+
+    @staticmethod
+    def reanalyze_case_from_documents(caseroom_id, user_id="SYSTEM"):
+        """Aggregates OCR extracted data, overrides case_data, and re-analyzes for Reality Score."""
+        import json
+        from engine_core import JudiQEngine
+        
+        caseroom_data = DatabaseManager.get_caseroom_data(caseroom_id)
+        if not caseroom_data or not caseroom_data.get("room_info"):
+            return False, "Caseroom not found"
+            
+        case_id = caseroom_data["room_info"][1]  # caseroom_info = (caseroom_id, case_id, owner_id, created_at)
+        
+        original_case = DatabaseManager.get_case(case_id)
+        if not original_case:
+            return False, "Original case not found"
+            
+        try:
+            case_data = json.loads(original_case[2])  # case_data is index 2
+        except:
+            return False, "Invalid case data format"
+            
+        documents = caseroom_data.get("documents", [])
+        updates = []
+        
+        for doc in documents:
+            dtype = str(doc.get("doc_type")).upper()
+            ext = doc.get("extracted_data") or {}
+            
+            dates = ext.get("extracted_dates", [])
+            amounts = ext.get("extracted_amounts", [])
+            
+            if dtype == "CHEQUE":
+                if amounts:
+                    case_data["amount"] = amounts[0]
+                    updates.append(f"Cheque Amount -> {amounts[0]}")
+                if dates:
+                    case_data["cheque_date"] = dates[0]
+                    updates.append(f"Cheque Date -> {dates[0]}")
+                    
+            elif dtype == "MEMO":
+                if dates:
+                    case_data["dishonour_date"] = dates[0]
+                    updates.append(f"Dishonour Date -> {dates[0]}")
+                reasons = ext.get("detected_reasons", [])
+                if reasons:
+                    case_data["dishonour_reason"] = reasons[0]
+                    updates.append(f"Dishonour Reason -> {reasons[0]}")
+                    
+            elif dtype == "NOTICE":
+                if dates:
+                    case_data["notice_date"] = dates[0]
+                    updates.append(f"Notice Date -> {dates[0]}")
+        
+        if not updates:
+            return True, "No new data extracted from documents to update."
+            
+        case_data["analysis_mode"] = "reality_verified"
+        
+        # Run the engine with the physically verified data
+        new_result = JudiQEngine.analyze_case(case_data)
+        
+        DatabaseManager.save_case(
+            case_id=case_id,
+            user_id=original_case[1],
+            case_data=case_data,
+            analysis_result=new_result,
+            score=new_result.get("score", 0),
+            verdict=new_result.get("verdict", "Unknown")
+        )
+        
+        msg = f"Re-analyzed case using physical documents. Verified Facts:\n" + "\n".join(updates)
+        DatabaseManager.send_message(caseroom_id, user_id, msg)
+        
+        return True, "Case re-analyzed successfully."

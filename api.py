@@ -282,6 +282,14 @@ async def upload_caseroom_document(
         "verification_details": verification_result
     }
 
+@app.post("/caseroom/{room_id}/reanalyze")
+async def reanalyze_caseroom(room_id: str):
+    from caseroom_logic import CaseroomManager
+    success, msg = CaseroomManager.reanalyze_case_from_documents(room_id)
+    if not success:
+        return JSONResponse(status_code=400, content={"error": msg})
+    return {"success": True, "message": msg}
+
 
 # ── PDF generation ─────────────────────────────────────────────────────────────
 @app.post("/generate-pdf")
