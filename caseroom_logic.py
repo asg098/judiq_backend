@@ -95,6 +95,10 @@ class CaseroomManager:
                 if dates:
                     case_data["cheque_date"] = dates[0]
                     updates.append(f"Cheque Date -> {dates[0]}")
+                chq_nums = ext.get("extracted_cheque_numbers", [])
+                if chq_nums:
+                    case_data["cheque_number"] = chq_nums[0]
+                    updates.append(f"Cheque Number -> {chq_nums[0]}")
                     
             elif dtype == "MEMO":
                 if dates:
@@ -109,6 +113,16 @@ class CaseroomManager:
                 if dates:
                     case_data["notice_date"] = dates[0]
                     updates.append(f"Notice Date -> {dates[0]}")
+                tracking = ext.get("postal_tracking_numbers", [])
+                if tracking:
+                    case_data["notice_tracking_number"] = tracking[0]
+                    updates.append(f"Postal Tracking -> {tracking[0]}")
+
+            elif dtype == "DEBT_PROOF":
+                dp_class = ext.get("debt_proof_class")
+                if dp_class:
+                    case_data["debt_proof_type"] = dp_class
+                    updates.append(f"Debt Proof Classification -> {dp_class}")
         
         if not updates:
             return True, "No new data extracted from documents to update."
