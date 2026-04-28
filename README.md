@@ -35,5 +35,5 @@ For Firms: A collaborative litigation engine that saves time and builds institut
 
 For Society: A bridge that makes justice transparent and accessible, especially for small traders, workers, and vulnerable citizens.
 
-🏁 In Plain Words
+ In Plain Words
 JudiQ is not just software—it’s the beginning of a legacy platform. It captures every move in a case, empowers collaboration, and preserves knowledge so that justice becomes smarter, faster, and fairer.
