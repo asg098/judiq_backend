@@ -272,7 +272,7 @@ async def upload_caseroom_document(
     verification_result = None
     if doc_type.upper() == "MEMO":
         verification_result = OCREngine.verify_evidence_consistency(extracted_text, claimed_reason)
-        verification_status = "VERIFIED" if verification_result.get("is_consistent") else "FAILED"
+        verification_status = "VERIFIED" if verification_result.get("is_verified") else "FAILED"
     elif doc_type.upper() == "CHEQUE":
         # Simplified validation for cheque, assuming existence and basic text extraction is valid for now
         verification_status = "VERIFIED" if len(extracted_text.strip()) > 10 else "REVIEW_REQUIRED"

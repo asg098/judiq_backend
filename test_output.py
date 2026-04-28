@@ -47,7 +47,7 @@ def generate_multi_json():
             "case_id": c["case_id"],
             "score": res.get("score"),
             "verdict": res.get("verdict"),
-            "concepts": len(res.get("legal_analysis", {}).get("issues", []))
+            "issues_count": len(res.get("issues", []))
         })
     print(json.dumps(results, indent=2))
 

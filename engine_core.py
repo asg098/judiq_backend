@@ -154,15 +154,33 @@ class JudiQEngine:
         
         # -- Step 7: Reasoning & Precedent Match -----------------------------
         case_summary = _safe_call(
-            ReasoningEngine.generate_case_summary, concepts, final_score,
+            ReasoningEngine.summarize_case, case_data,
             fallback="Standard legal analysis summary.",
             context="ReasoningEngine.summary"
         )
         
         precedents = _safe_call(
-            ReasoningEngine.find_relevant_precedents, concepts,
+            ReasoningEngine.match_precedents, concepts,
             fallback=[],
             context="ReasoningEngine.precedents"
+        )
+
+        statutory_interpretation = _safe_call(
+            ReasoningEngine.interpret_statutes, case_data, concepts,
+            fallback=[],
+            context="ReasoningEngine.interpret_statutes"
+        )
+
+        timeline = _safe_call(
+            TimelineEngine.generate_timeline, case_data,
+            fallback=[],
+            context="TimelineEngine.timeline"
+        )
+
+        timeline_visualizer = _safe_call(
+            TimelineEngine.generate_timeline_data, case_data,
+            fallback=[],
+            context="TimelineEngine.timeline_visualizer"
         )
         
         # Proof Presence Auto-Check
@@ -190,7 +208,7 @@ class JudiQEngine:
             context="ReasoningEngine.trail"
         )
 
-        evidence_score = score_data.get("evidence_score", 3)
+        evidence_score = score_data.get("breakdown", {}).get("evidentiary", 30) / 10.0
         evidence_strength = "MODERATE"
         if evidence_score >= 5: evidence_strength = "STRONG"
         elif evidence_score <= 1: evidence_strength = "WEAK"
@@ -296,7 +314,7 @@ class JudiQEngine:
             "analysis_mode":            case_data.get("analysis_mode", "detailed"),
             "proof_present":            case_data.get("proof_present", True),
             "cross_exam_prep":          cross_exam_prep,
-            "cri_score":                score_data.get("cri_score", 0)
+            "cri_score":                scoring_result.get("cri_score", 0)
         }
 
         return ResponseBuilder.build_final_response(engine_result, case_data)
