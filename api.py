@@ -268,19 +268,11 @@ async def upload_caseroom_document(
             extracted_text = "[Unsupported file format for direct text extraction]"
 
     # 2. Verification
-    verification_status = "PENDING"
-    verification_result = None
-    if doc_type.upper() == "MEMO":
-        verification_result = OCREngine.verify_evidence_consistency(extracted_text, claimed_reason)
-        verification_status = "VERIFIED" if verification_result.get("is_verified") else "FAILED"
-    elif doc_type.upper() == "CHEQUE":
-        # Simplified validation for cheque, assuming existence and basic text extraction is valid for now
-        verification_status = "VERIFIED" if len(extracted_text.strip()) > 10 else "REVIEW_REQUIRED"
-    else:
-        verification_status = "UPLOADED"
+    verification_result = OCREngine.analyze_document(extracted_text, doc_type, claimed_reason)
+    verification_status = "VERIFIED" if verification_result.get("is_verified") else "FAILED"
 
     # 3. Save metadata to DB
-    doc_id = CaseroomManager.upload_document(room_id, user_id, file.filename, file_path, doc_type, verification_status)
+    doc_id = CaseroomManager.upload_document(room_id, user_id, file.filename, file_path, doc_type, verification_status, verification_result)
     
     return {
         "success": bool(doc_id),

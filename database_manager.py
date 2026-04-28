@@ -72,11 +72,18 @@ class DatabaseManager:
                     file_path TEXT NOT NULL,
                     doc_type TEXT, -- CHEQUE, MEMO, NOTICE, 65B, etc.
                     validation_status TEXT DEFAULT 'PENDING',
+                    extracted_data TEXT, -- JSON holding dates, amounts, etc.
                     version INTEGER DEFAULT 1,
                     created_at TEXT,
                     FOREIGN KEY (caseroom_id) REFERENCES caserooms(caseroom_id)
                 )
             """)
+
+            # Safe migration for existing DB
+            try:
+                cursor.execute("ALTER TABLE caseroom_documents ADD COLUMN extracted_data TEXT")
+            except sqlite3.OperationalError:
+                pass # Column already exists
 
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS caseroom_tasks (
@@ -225,8 +232,16 @@ class DatabaseManager:
             tasks = [{"id": r[0], "title": r[1], "status": r[2], "due_date": r[3]} for r in cursor.fetchall()]
             
             # Fetch documents
-            cursor.execute("SELECT id, uploader_id, file_name, file_path, doc_type, validation_status, created_at FROM caseroom_documents WHERE caseroom_id = ?", (caseroom_id,))
-            documents = [{"id": r[0], "uploader_id": r[1], "file_name": r[2], "file_path": r[3], "doc_type": r[4], "validation_status": r[5], "created_at": r[6]} for r in cursor.fetchall()]
+            cursor.execute("SELECT id, uploader_id, file_name, file_path, doc_type, validation_status, extracted_data, created_at FROM caseroom_documents WHERE caseroom_id = ?", (caseroom_id,))
+            documents = []
+            for r in cursor.fetchall():
+                ext_data = {}
+                if r[6]:
+                    try:
+                        ext_data = json.loads(r[6])
+                    except:
+                        pass
+                documents.append({"id": r[0], "uploader_id": r[1], "file_name": r[2], "file_path": r[3], "doc_type": r[4], "validation_status": r[5], "extracted_data": ext_data, "created_at": r[7]})
             
             conn.close()
             return {
@@ -258,15 +273,16 @@ class DatabaseManager:
             return False
 
     @staticmethod
-    def save_document(caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status="PENDING"):
+    def save_document(caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status="PENDING", extracted_data=None):
         try:
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             now = datetime.now().isoformat()
+            ext_json = json.dumps(extracted_data) if extracted_data else None
             cursor.execute("""
-                INSERT INTO caseroom_documents (caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status, now))
+                INSERT INTO caseroom_documents (caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status, extracted_data, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status, ext_json, now))
             
             doc_id = cursor.lastrowid
             

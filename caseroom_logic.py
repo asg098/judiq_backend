@@ -53,6 +53,6 @@ class CaseroomManager:
             return False
 
     @staticmethod
-    def upload_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status="PENDING"):
+    def upload_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status="PENDING", extracted_data=None):
         """Records a new document upload in the caseroom."""
-        return DatabaseManager.save_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status)
+        return DatabaseManager.save_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status, extracted_data)
