@@ -98,6 +98,18 @@ class OCREngine:
         return "UNCLASSIFIED_RECORD"
 
     @classmethod
+    def verify_notice_statutory_compliance(cls, text: str) -> Dict[str, bool]:
+        """Checks if a Legal Notice contains the mandatory 15-day statutory demand under Section 138(b)."""
+        text_lower = text.lower()
+        has_15_days = "15 days" in text_lower or "fifteen days" in text_lower
+        has_demand = any(w in text_lower for w in ["demand", "pay", "remit", "transfer"])
+        return {
+            "has_15_day_clause": has_15_days,
+            "has_payment_demand": has_demand,
+            "is_statutorily_valid": has_15_days and has_demand
+        }
+
+    @classmethod
     def analyze_document(cls, extracted_text: str, doc_type: str, user_claimed_reason: str = "") -> Dict[str, Any]:
         """
         Extracts key evidence metrics (Dates, Amounts, Reasons, Tracking) based on document type.
@@ -110,6 +122,7 @@ class OCREngine:
             "extracted_cheque_numbers": cls.extract_cheque_numbers(extracted_text),
             "postal_tracking_numbers": cls.extract_postal_tracking(extracted_text),
             "debt_proof_class": cls.classify_debt_proof(extracted_text) if doc_type.upper() == "DEBT_PROOF" else None,
+            "notice_compliance": cls.verify_notice_statutory_compliance(extracted_text) if doc_type.upper() == "NOTICE" else None,
             "warning": None,
             "verification_confidence": 0.0,
             "extracted_snippet": extracted_text[:200] + "..." if len(extracted_text) > 200 else extracted_text
@@ -145,9 +158,15 @@ class OCREngine:
                 result["verification_confidence"] = 0.30
                 
         elif doc_type.upper() == "NOTICE":
+            compliance = result["notice_compliance"]
             if result["extracted_dates"] and result["postal_tracking_numbers"]:
-                result["is_verified"] = True
-                result["verification_confidence"] = 0.98
+                if compliance and compliance["is_statutorily_valid"]:
+                    result["is_verified"] = True
+                    result["verification_confidence"] = 0.99
+                else:
+                    result["is_verified"] = False
+                    result["verification_confidence"] = 0.20
+                    result["warning"] = "FATAL DEFECT: The notice is missing the mandatory '15-day' demand clause required under Section 138(b)."
             elif result["extracted_dates"]:
                 result["is_verified"] = True
                 result["verification_confidence"] = 0.85

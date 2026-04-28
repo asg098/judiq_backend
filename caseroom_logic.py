@@ -117,6 +117,13 @@ class CaseroomManager:
                 if tracking:
                     case_data["notice_tracking_number"] = tracking[0]
                     updates.append(f"Postal Tracking -> {tracking[0]}")
+                
+                compliance = ext.get("notice_compliance", {})
+                if compliance and not compliance.get("is_statutorily_valid"):
+                    if "concepts" not in case_data:
+                        case_data["concepts"] = []
+                    case_data["concepts"].append({"concept": "notice_defect"})
+                    updates.append("FATAL STATUTORY DEFECT: Notice missing '15-day' demand mandate.")
 
             elif dtype == "DEBT_PROOF":
                 dp_class = ext.get("debt_proof_class")
