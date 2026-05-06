@@ -134,7 +134,7 @@ def generate_complaint(case_data: Dict, concepts: List[Dict]) -> str:
     cheque_date = case_data.get("cheque_date", "[CHEQUE DATE]")
     bank = case_data.get("bank_name", "[BANK NAME]")
     dishonour_date = case_data.get("dishonour_date", "[DISHONOUR DATE]")
-    notice_date = case_data.get("notice_date", "[NOTICE DATE]")
+    notice_date = case_data.get("notice_date", case_data.get("notice_dispatch_date", "[NOTICE DATE]"))
 
     return f"""{_header(section_title)}
 
@@ -180,7 +180,7 @@ RESPECTFULLY SHOWETH:
    Despite receipt of the aforesaid notice, the Accused has wilfully and deliberately failed, neglected, and refused to make payment of the said amount, thereby committing an offence punishable under Section 138 of the Negotiable Instruments Act, 1881.
 
 8. CAUSE OF ACTION:
-   The cause of action for this Complaint arose on the date of dishonour ({dishonour_date}) and further on expiry of the 15-day notice period. This Complaint is being filed within the limitation period prescribed under Section 142 of the NI Act, 1881.
+   The cause of action for this Complaint arose strictly upon the expiry of the 15-day notice period following the receipt of the statutory demand notice. This Complaint is being filed within the limitation period prescribed under Section 142 of the NI Act, 1881.
 
 9. JURISDICTION:
    This Hon'ble Court has jurisdiction to try this Complaint as the cheque was drawn/presented/dishonoured and/or the notice was dispatched from within the territorial jurisdiction of this Court.

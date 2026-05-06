@@ -48,6 +48,7 @@ async def analyze(request: Request):
             "predicted_defences": result.get("defence_strategy", []),
             "draft": result.get("draft", ""),
             "draft_type": result.get("draft_type", "LEGAL_OPINION"),
+            "auxiliary_drafts": result.get("auxiliary_drafts", {}),
             "timeline": result.get("timeline", []),
             "data": result
         }
