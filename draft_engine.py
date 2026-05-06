@@ -4,12 +4,11 @@ from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
-
 def decide_draft_type(score: int, concepts: List[Dict], case_data: Dict) -> str:
     concept_names = {c.get("concept", "") for c in concepts}
-    if not case_data.get("notice_sent"):
+    if not case_data.get("notice_sent") and not case_data.get("notice_dispatch_date"):
         return "LEGAL_NOTICE"
-    if "limitation_issue" in concept_names:
+    if "limitation_barred" in concept_names or "limitation_issue" in concept_names:
         return "DELAY_CONDONATION"
     if score > 75:
         return "COMPLAINT"
@@ -27,7 +26,7 @@ def _header(title: str) -> str:
     return f"{line}\n{title}\n{line}"
 
 
-def _case_meta(case_data: Dict):
+def _case_meta(case_data: Dict) -> str:
     today = datetime.now().strftime("%d %B %Y")
     amount = case_data.get("amount", "[AMOUNT]")
     if isinstance(amount, (int, float)) and amount > 0:
@@ -56,39 +55,28 @@ def _num_to_words(n: int) -> str:
 
 def generate_legal_notice(case_data: Dict) -> str:
     today, amount_str = _case_meta(case_data)
-
-    complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[YOUR NAME]"
-    accused = case_data.get("accused_name") or case_data.get("accusedName") or "[ACCUSED NAME]"
-    accused_addr = case_data.get("accused_address") or case_data.get("accusedAddress") or "[ACCUSED ADDRESS]"
-
-    cheque_no = case_data.get("cheque_number") or case_data.get("chequeNumber") or "______"
-    cheque_date = case_data.get("cheque_date") or case_data.get("chequeDate") or "[DATE]"
-    bank = case_data.get("bank_name") or case_data.get("bankName") or "[BANK NAME]"
-    branch = case_data.get("branch_name") or case_data.get("branchName") or ""
-    bank_full = f"{bank}, {branch}" if branch else bank
-
-    dishonour_date = case_data.get("dishonour_date") or case_data.get("dishonourDate") or "[DATE]"
-    dishonour_reason = case_data.get("dishonour_reason") or case_data.get("dishonourReason") or "Funds Insufficient"
-
-    description = case_data.get("description", "")
-    purpose = case_data.get("purpose", "")
-
-    transaction_nature = "a legally enforceable debt/liability"
-    if "loan" in description.lower() or "loan" in purpose.lower():
-        transaction_nature = "a loan advanced"
-    elif "goods" in description.lower() or "supply" in purpose.lower():
-        transaction_nature = "goods supplied"
-    elif "service" in description.lower():
-        transaction_nature = "services rendered"
-    elif purpose:
-        transaction_nature = purpose[:100]
+    complainant = case_data.get("complainant_name", "[COMPLAINANT NAME]")
+    accused = case_data.get("accused_name", "[ACCUSED NAME]")
+    accused_company = case_data.get("accused_company_name")
+    accused_director = case_data.get("accused_director_name", "[DIRECTOR NAME]")
+    
+    if accused_company:
+        accused_block = f"1. {accused_company}\n2. {accused_director} (Director/Authorized Signatory)"
+    else:
+        accused_block = accused
+        
+    accused_addr = case_data.get("accused_address", "[ACCUSED ADDRESS]")
+    cheque_no = case_data.get("cheque_number", "[CHEQUE NUMBER]")
+    cheque_date = case_data.get("cheque_date", "[CHEQUE DATE]")
+    bank = case_data.get("bank_name", "[BANK NAME]")
+    dishonour_date = case_data.get("dishonour_date", "[DISHONOUR DATE]")
 
     return f"""{_header("LEGAL NOTICE UNDER SECTION 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881")}
 
 Date: {today}
 
 To,
-{accused}
+{accused_block}
 {accused_addr}
 
 THROUGH REGISTERED POST (AD)
@@ -100,13 +88,13 @@ Sir/Madam,
 Under instructions from and on behalf of my client {complainant}, I hereby serve upon you the following legal notice:
 
 1. BACKGROUND OF TRANSACTION:
-   My client states that you are indebted to my client for a sum of {amount_str} in respect of {transaction_nature} made between you and my client.
+   My client states that you are indebted to my client for a sum of {amount_str} in respect of a legally enforceable debt/liability arising out of [NATURE OF TRANSACTION — e.g., loan advanced / goods supplied / services rendered] made between you and my client.
 
 2. THE CHEQUE:
-   In discharge of the aforesaid legally enforceable liability, you issued a cheque bearing No. {cheque_no}, dated {cheque_date}, drawn on {bank_full}, in favour of my client for {amount_str}.
+   In discharge of the aforesaid legally enforceable liability, you issued a cheque bearing No. {cheque_no}, dated {cheque_date}, drawn on {bank}, in favour of my client for {amount_str}.
 
 3. DISHONOUR OF CHEQUE:
-   When my client presented the said cheque for encashment through banking channels, the same was returned/dishonoured on {dishonour_date} with the bank memo citing the reason "{dishonour_reason}".
+   When my client presented the said cheque for encashment through banking channels, the same was returned/dishonoured on {dishonour_date} with the bank memo citing the reason "[REASON AS PER MEMO — e.g., Funds Insufficient / Account Closed / Stop Payment]".
 
 4. DEMAND FOR PAYMENT:
    By this notice, my client hereby demands that you pay the said sum of {amount_str} together with interest thereon within FIFTEEN (15) DAYS from the date of receipt of this notice.
@@ -125,228 +113,98 @@ On behalf of: {complainant}
 """
 
 
-def generate_certificate_65b(case_data: Dict) -> str:
-    today, _ = _case_meta(case_data)
-    complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[YOUR NAME]"
-    device_type = case_data.get("device_type", "Smartphone / Personal Computer")
-    
-    return f"""{_header("CERTIFICATE UNDER SECTION 65B OF THE INDIAN EVIDENCE ACT, 1872")}
-
-IN THE COURT OF THE LEARNED JUDICIAL MAGISTRATE / METROPOLITAN MAGISTRATE
-AT [COURT LOCATION]
-
-COMPLAINT NO.: _____ / {datetime.now().year}
-
-IN THE MATTER OF:
-{complainant}                                              ... COMPLAINANT
-VERSUS
-[ACCUSED NAME]                                             ... ACCUSED
-
-AFFIDAVIT / CERTIFICATE UNDER SECTION 65B(4) OF THE INDIAN EVIDENCE ACT, 1872 FOR ADMISSIBILITY OF ELECTRONIC RECORDS
-
-I, {complainant}, adult, residing at [ADDRESS], do hereby solemnly affirm and state as under:
-
-1. That I am the Complainant in the present case and I am fully conversant with the facts and circumstances of the case and am competent to depose to this affidavit.
-
-2. That for the purpose of the present case, I am relying upon electronic records in the form of [WhatsApp Messages / Email Correspondence / SMS Logs] exchanged between me and the Accused.
-
-3. That the said electronic records were produced by a computer/communication device, namely a {device_type}, which was owned/operated by me and was used regularly to store or process information for the purposes of my activities.
-
-4. That during the period to which the electronic records relate, information was regularly fed into the device in the ordinary course of the said activities.
-
-5. That throughout the material part of the said period, the computer/device was operating properly or, if not, that in respect of any period in which it was not operating properly or was out of operation during that part of that period, was not such as to affect the electronic record or the accuracy of its contents.
-
-6. That the information contained in the electronic record reproduces or is derived from information fed into the device in the ordinary course of the said activities.
-
-7. That the printouts/digital copies of the [WhatsApp/Email] records produced herewith as ANNEXURE-____ are true and faithful reproductions of the originals stored in the electronic device and have been prepared under my personal supervision.
-
-8. That the contents of this certificate are true to the best of my knowledge and belief.
-
-DEPONENT
-
-VERIFICATION:
-Verified at [PLACE] on this {today} that the contents of the above affidavit are true and correct to my knowledge and nothing material has been concealed therefrom.
-
-                                                            DEPONENT
-"""
-
-
-def generate_complaint(case_data: Dict, concepts: List[Dict], tone: str = "standard") -> str:
+def generate_complaint(case_data: Dict, concepts: List[Dict]) -> str:
     today, amount_str = _case_meta(case_data)
-    is_aggressive = tone.lower() == "aggressive"
-
-    complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[COMPLAINANT NAME]"
-    complainant_addr = case_data.get("complainant_address") or case_data.get("complainantAddress") or "[COMPLAINANT ADDRESS]"
-    complainant_phone = case_data.get("complainant_phone") or case_data.get("complainantPhone") or "[CONTACT]"
-    complainant_type = case_data.get("complainant_type", "Individual")
-
-    accused = case_data.get("accused_name") or case_data.get("accusedName") or "[ACCUSED NAME]"
-    accused_addr = case_data.get("accused_address") or case_data.get("accusedAddress") or "[ACCUSED ADDRESS]"
-    accused_type = case_data.get("accused_type", "Individual")
-
-    cheque_no = case_data.get("cheque_number") or case_data.get("chequeNumber") or "______"
-    cheque_date = case_data.get("cheque_date") or case_data.get("chequeDate") or "[DATE]"
-    bank = case_data.get("bank_name") or case_data.get("bankName") or "[BANK NAME]"
-    branch = case_data.get("branch_name") or case_data.get("branchName") or ""
-    bank_full = f"{bank}, {branch}" if branch else bank
-
-    dishonour_date = case_data.get("dishonour_date") or case_data.get("dishonourDate") or "[DATE]"
-    dishonour_reason = case_data.get("dishonour_reason") or case_data.get("dishonourReason") or "Insufficient Funds"
-    notice_date = case_data.get("notice_date") or case_data.get("noticeDate") or "[NOTICE DATE]"
-
-    court_name = case_data.get("court_name") or case_data.get("courtName") or "District Court"
-
-    description = case_data.get("description", "")
-    purpose = case_data.get("purpose", "")
-
-    transaction_nature = "a legally enforceable debt"
-    occupation = "business/profession"
-
-    if "loan" in description.lower() or "loan" in purpose.lower():
-        transaction_nature = "a loan transaction"
-        occupation = "lending/financing business"
-    elif "goods" in description.lower() or "supply" in purpose.lower():
-        transaction_nature = "supply of goods"
-        occupation = "trade and commerce"
-    elif "service" in description.lower():
-        transaction_nature = "provision of services"
-        occupation = "service provider"
-    elif purpose:
-        transaction_nature = purpose[:100]
-
-    # Authorization Clause Logic - ADVOCATE HARDENED
-    auth_clause = ""
-    if complainant_type != "Individual":
-        is_auth = case_data.get("is_authorized", False)
-        if is_auth:
-            auth_clause = f"The Complainant is a {complainant_type} and is represented by its Authorized Signatory, who is duly empowered by way of a Board Resolution and a Letter of Authority dated _________, produced herewith as ANNEXURE-A. The said representative is fully conversant with the facts and circumstances of the present case and is competent to depose on behalf of the Complainant."
-        else:
-            auth_clause = f"The Complainant is a {complainant_type} filing through its representative. [CRITICAL WARNING: Board Resolution/Authorization must be annexed to satisfy procedural mandates of S.141]."
-
-    # Vicarious Liability Clause (Sec 141) - BATTLE READY
-    liability_clause = ""
-    if accused_type != "Individual":
-        has_directors = case_data.get("directors_named", False)
-        director_names = case_data.get("director_names", "")
-        
-        if has_directors and director_names:
-            liability_clause = f"""3. THE VICARIOUS LIABILITY (SEC. 141):
-    That the Accused No. 1 is a {accused_type}, and Accused Nos. 2 onwards, namely {director_names}, are the Directors/Partners/Officers of the said Accused No. 1.
-    That at the time the offence was committed, the said Accused Nos. 2 onwards were in charge of, and were responsible to the Accused No. 1 for the conduct of its business. 
-    They were actively involved in the day-to-day management and decision-making processes of the Accused No. 1, and the dishonoured cheque in question was issued with their full knowledge, consent, and connivance.
-    The Accused Nos. 2 onwards are thus vicariously liable for the acts of the Accused No. 1 as per the mandatory provisions of Section 141 of the Negotiable Instruments Act, 1881 and the law laid down by the Hon'ble Supreme Court in 'Aneeta Hada v. Godfather Travels'."""
-        elif has_directors:
-            liability_clause = f"3. THE VICARIOUS LIABILITY (SEC. 141): That the Accused No. 1 is a {accused_type} and the other Accused persons are its Directors/Officers who were in charge of and responsible for the conduct of the business as per Section 141 of the NI Act."
-        else:
-            liability_clause = f"3. That the Accused is a {accused_type}. [🚨 FATAL DEFECT WARNING: You must name the specific Directors/Officers in charge of the company and describe their roles to satisfy Section 141 and avoid dismissal at the threshold stage per 'Aneeta Hada' ruling]."
-
-    # ── DELAY CONDONATION (Advocate Hardening) ───────────────────────────
-    delay_para = ""
-    within_30_days = case_data.get("within_30_days", "Yes") == "Yes"
-    if not within_30_days:
-        delay_para = f"\n7A. CONDONATION OF DELAY: That there has been a technical delay of ____ days in issuing the statutory demand notice. The Complainant has filed a separate application under Section 142(1)(b) of the NI Act showing sufficient cause for the same, which may be read as part and parcel of this complaint.\n"
-
-    # ── EVIDENCE PLEADINGS (Advocate Hardening) ──────────────────────────
-    if is_aggressive:
-        debt_pleading = f"""The Complainant categorically asserts that the Accused is heavily indebted to the tune of {amount_str}. This sum represents a crystallized, legally enforceable liability arising from {transaction_nature}. 
-    This debt is not merely an entry in a ledger but is fortified by unassailable documentary evidence, including [Bank Statements/Ledger Accounts/Invoices], which unequivocally prove the flow of consideration. 
-    The Accused has deliberately and with mala fide intent exploited the Complainant's professional trust, and the issuance of the dishonoured cheque was a calculated act of deception aimed at causing wrongful loss to the Complainant and wrongful gain to the Accused."""
-    else:
-        debt_pleading = f"The Complainant states that the Accused is indebted to the Complainant for a sum of {amount_str} arising from {transaction_nature}. The said debt is legally enforceable and constitutes a valid liability under law."
+    complainant = case_data.get("complainant_name", "[COMPLAINANT NAME]")
+    accused = case_data.get("accused_name", "[ACCUSED NAME]")
+    accused_company = case_data.get("accused_company_name")
+    accused_director = case_data.get("accused_director_name", "[DIRECTOR NAME]")
     
-    if case_data.get("communication_records"):
-        if is_aggressive:
-            debt_pleading += f" The Accused's culpability is further established by an unassailable digital trail of WhatsApp messages and Emails, where the debt was repeatedly admitted. This evidence is fortified by a mandatory Section 65B Evidence Act Certificate, making it trial-ready and inadmissible to denial."
-        else:
-            debt_pleading += f" The Accused has repeatedly acknowledged the said debt and liability via various communications, including WhatsApp messages and Emails, which are produced herewith along with the mandatory Certificate under Section 65B of the Indian Evidence Act."
-    elif case_data.get("debt_proof_type") == "verbal_agreement" or case_data.get("agreement_type") == "Verbal Agreement":
-        if is_aggressive:
-            debt_pleading += " Despite the trust-based nature of the initial transaction, the Accused's subsequent conduct, the issuance of the cheque, and the resulting statutory presumption under Section 139 constitute an unequivocal admission of the debt, which the Accused is now dishonestly attempting to evade."
-        else:
-            debt_pleading += " The said transaction was entered into based on mutual trust, and the Accused had verbally promised to repay the amount within the stipulated time."
-
-    prayer_compensation = ""
-    if is_aggressive:
-        prayer_compensation = "(c) Direct the Accused to pay MAXIMUM INTERIM COMPENSATION of 20% under Section 143A of the NI Act, as the Accused's defense is prima facie meritless and intended only to delay justice;"
+    if accused_company:
+        accused_block = f"1. {accused_company}\n                2. {accused_director} (Director)"
+        section_title = "COMPLAINT U/S 138 READ WITH SECTION 141 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881"
+        vicarious_liability_clause = f"The Accused No. 1 is a company and Accused No. 2 is the Director/Authorized Signatory who was in charge of, and responsible to the company for the conduct of its business at the time the offence was committed. Hence, Accused No. 2 is vicariously liable under Section 141 of the NI Act."
     else:
-        prayer_compensation = "(c) Direct the Accused to pay INTERIM COMPENSATION under Section 143A of the NI Act (20% of cheque amount);"
+        accused_block = accused
+        section_title = "COMPLAINT U/S 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881"
+        vicarious_liability_clause = ""
 
-    return f"""{_header("CRIMINAL COMPLAINT UNDER SECTION 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881")}
+    accused_addr = case_data.get("accused_address", "[ACCUSED ADDRESS]")
+    cheque_no = case_data.get("cheque_number", "[CHEQUE NUMBER]")
+    cheque_date = case_data.get("cheque_date", "[CHEQUE DATE]")
+    bank = case_data.get("bank_name", "[BANK NAME]")
+    dishonour_date = case_data.get("dishonour_date", "[DISHONOUR DATE]")
+    notice_date = case_data.get("notice_date", "[NOTICE DATE]")
+
+    return f"""{_header(section_title)}
 
 IN THE COURT OF THE LEARNED JUDICIAL MAGISTRATE FIRST CLASS / METROPOLITAN MAGISTRATE
-AT {court_name}
+AT [COURT LOCATION]
 
 COMPLAINT NO.: _____ / {datetime.now().year}
 
 IN THE MATTER OF:
 
 COMPLAINANT:    {complainant}
-                {complainant_addr}
-                {complainant_phone}
-                                                        ... COMPLAINANT
+                [ADDRESS]
+                [CONTACT]
+
 VERSUS
 
-ACCUSED:        {accused}
+ACCUSED:        {accused_block}
                 {accused_addr}
-                                                        ... ACCUSED
 
-
-                THROUGH: __________________, ADVOCATE
-                FOR THE COMPLAINANT
-
-COMPLAINT U/S 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881
+{section_title}
 
 RESPECTFULLY SHOWETH:
 
 1. THE COMPLAINANT:
-   The Complainant, {complainant}, is a law-abiding citizen/entity carrying on {occupation}. {auth_clause}
+   The Complainant, {complainant}, is a law-abiding citizen/entity carrying on [DESCRIBE BUSINESS/OCCUPATION] and is competent to file this complaint.
 
 2. THE ACCUSED:
-   The Accused, {accused}, residing at {accused_addr}, is known to the Complainant and has been engaged in transactions with the Complainant.
+   The Accused, residing at {accused_addr}, is known to the Complainant and has been engaged in various transactions with the Complainant. {vicarious_liability_clause}
 
-{liability_clause}
+3. THE LEGALLY ENFORCEABLE DEBT:
+   The Complainant states that the Accused is indebted to the Complainant for a sum of {amount_str} arising from [NATURE OF TRANSACTION]. The said debt is legally enforceable and constitutes a valid liability under law.
 
-4. THE LEGALLY ENFORCEABLE DEBT:
-   {debt_pleading}
+4. ISSUANCE OF CHEQUE:
+   In discharge of the aforesaid legal liability, the Accused issued a cheque bearing No. {cheque_no}, dated {cheque_date}, drawn on {bank}, for an amount of {amount_str} in favour of the Complainant.
 
-5. ISSUANCE OF CHEQUE:
-   In discharge of the aforesaid legal liability, the Accused issued a cheque bearing No. {cheque_no}, dated {cheque_date}, drawn on {bank_full}, for an amount of {amount_str} in favour of the Complainant.
+5. PRESENTATION AND DISHONOUR:
+   The Complainant duly presented the said cheque for encashment. However, the said cheque was returned/dishonoured on {dishonour_date} with the bank memo citing "[REASON]", thereby constituting an offence under Section 138 of the NI Act, 1881.
 
-6. PRESENTATION AND DISHONOUR:
-   The Complainant duly presented the said cheque for encashment through its banker. However, the said cheque was returned/dishonoured on {dishonour_date} with the bank memo citing "{dishonour_reason}", thereby constituting an offence under Section 138 of the NI Act, 1881.
+6. STATUTORY DEMAND NOTICE:
+   As mandated under Section 138(b) of the NI Act, the Complainant caused a legal notice to be served upon the Accused on {notice_date} through Registered Post (AD), demanding payment of {amount_str} within 15 days of receipt of the notice.
 
-7. STATUTORY DEMAND NOTICE:
-   As mandated under Section 138(b) of the NI Act, the Complainant caused a legal demand notice to be served upon the Accused on {notice_date} through Registered Post (AD)/Speed Post, demanding payment of {amount_str} within 15 days of receipt of the notice. {delay_para}
+7. FAILURE TO PAY:
+   Despite receipt of the aforesaid notice, the Accused has wilfully and deliberately failed, neglected, and refused to make payment of the said amount, thereby committing an offence punishable under Section 138 of the Negotiable Instruments Act, 1881.
 
-8. FAILURE TO PAY:
-   Despite receipt of the aforesaid notice, the Accused has wilfully and deliberately failed, neglected, and refused to make payment of the said amount within the statutory period, thereby committing an offence punishable under Section 138 of the Negotiable Instruments Act, 1881.
+8. CAUSE OF ACTION:
+   The cause of action for this Complaint arose on the date of dishonour ({dishonour_date}) and further on expiry of the 15-day notice period. This Complaint is being filed within the limitation period prescribed under Section 142 of the NI Act, 1881.
 
 9. JURISDICTION:
-   This Hon'ble Court has territorial jurisdiction to entertain and try this Complaint as the cheque in question was presented for encashment at {bank_full}, which is situated within the territorial limits of this Court, as per the law laid down by the Hon'ble Supreme Court in Dashrath Rupsingh Rathod vs. State of Maharashtra.
+   This Hon'ble Court has jurisdiction to try this Complaint as the cheque was drawn/presented/dishonoured and/or the notice was dispatched from within the territorial jurisdiction of this Court.
 
 10. PRAYER:
     It is, therefore, most respectfully prayed that this Hon'ble Court may be pleased to:
     (a) Take cognizance of the offence committed by the Accused under Section 138 of the NI Act, 1881;
-    (b) Issue summons/process to the Accused to face trial;
-    (c) Direct the Accused to pay INTERIM COMPENSATION of 20% of the cheque amount to the Complainant as per Section 143A of the NI Act (as amended in 2018);
-    (d) On conviction, sentence the Accused to imprisonment for the maximum term and/or impose a fine of twice the cheque amount to meet the ends of justice; and
-    (e) Pass such other order(s) as this Hon'ble Court may deem fit in the interest of justice.
-
-LIST OF ANNEXURES:
-ANNEXURE-A: Original Board Resolution / Letter of Authority (If applicable)
-ANNEXURE-B: Original Dishonoured Cheque No. {cheque_no}
-ANNEXURE-C: Original Bank Dishonour Memo dated {dishonour_date}
-ANNEXURE-D: Office Copy of Legal Demand Notice dated {notice_date}
-ANNEXURE-E: Original Postal Receipt and A.D. Card / Tracking Report
-ANNEXURE-F: Section 65B Evidence Act Certificate for WhatsApp/Email records (Mandatory)
+    (b) Issue summons to the Accused and try the Accused for the said offence;
+    (c) Direct the Accused to pay Interim Compensation to the extent of 20% of the cheque amount under Section 143A of the Negotiable Instruments Act, 1881;
+    (d) On conviction, sentence the Accused to imprisonment as prescribed under Section 138 of the NI Act, 1881, and/or impose a fine of twice the cheque amount; and
+    (e) Pass such other order(s) as this Hon'ble Court may deem fit and proper in the interest of justice.
 
 VERIFICATION:
-I, {complainant}, do hereby solemnly verify that the contents of the above Complaint are true and correct to the best of my knowledge, information, and belief. Nothing material has been concealed therefrom, and all supporting documents are annexed herewith.
+I, {complainant}, do hereby solemnly verify that the contents of the above Complaint are true and correct to the best of my knowledge, information, and belief. Nothing material has been concealed.
 
 Place: [PLACE]
 Date: {today}
+
                                                         {complainant}
                                                         (Complainant)
+
+Drafted and filed by:
+[ADVOCATE NAME]
+[BAR REGISTRATION NUMBER]
 """
 
 
@@ -424,11 +282,8 @@ before taking any legal action.
 
 def generate_settlement_draft(case_data: Dict, score: int) -> str:
     today, amount_str = _case_meta(case_data)
-    complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[COMPLAINANT NAME]"
-    accused = case_data.get("accused_name") or case_data.get("accusedName") or "[ACCUSED NAME]"
-    
-    # Calculate realistic settlement interest (capped at 12%)
-    interest_rate = 12 
+    complainant = case_data.get("complainant_name", "[COMPLAINANT NAME]")
+    accused = case_data.get("accused_name", "[ACCUSED NAME]")
 
     return f"""{_header("SETTLEMENT / COMPOUNDING PROPOSAL — SECTION 138 NI ACT")}
 
@@ -446,20 +301,17 @@ Dear Sir/Madam,
 
 We write on behalf of our client {complainant} in the matter of the dishonoured cheque for {amount_str}.
 
-Pursuant to Section 147 of the Negotiable Instruments Act, 1881, the offence under Section 138 is compoundable. Our client, whilst maintaining that the complaint is fully justified and legally tenable, is open to exploring an amicable resolution to avoid protracted litigation and ensure speedy recovery.
+Pursuant to Section 147 of the Negotiable Instruments Act, 1881, the offence under Section 138 is compoundable. Our client, whilst maintaining that the complaint is fully justified and legally tenable, is open to exploring an amicable resolution to avoid protracted litigation.
 
 TERMS PROPOSED FOR SETTLEMENT:
 
-1. PRINCIPAL AMOUNT: Full payment of the cheque amount {amount_str}.
-2. INTEREST: Interest @ {interest_rate}% per annum from the date of dishonour until the date of actual payment.
-3. LEGAL COSTS: Nominal contribution of Rs. 5,000/- towards legal and incidental costs incurred.
-4. TIMELINE: Total settlement amount to be paid within FIFTEEN (15) DAYS of the acceptance of this proposal.
-5. MODE OF PAYMENT: Payment to be made via Demand Draft (DD) or Bank Transfer (NEFT/RTGS) in favour of "{complainant}".
-6. PHASED PAYMENT (OPTIONAL): In the event of genuine hardship, the Complainant is open to considering a maximum of two equal monthly installments, provided the first installment is paid immediately.
-7. DEFAULT CLAUSE: In the event of failure to adhere to the payment timeline or default in any installment, this settlement shall stand cancelled, and the Complainant shall be at liberty to resume/continue criminal prosecution under Section 138 NI Act to the fullest extent of law.
-8. WITHDRAWAL: Upon receipt of the full and final settlement amount, the Complainant shall file a joint application for compounding before the Hon'ble Court and withdraw the complaint.
+1. PRINCIPAL AMOUNT: Full payment of cheque amount {amount_str}.
+2. INTEREST: Interest @ 18% per annum from the date of dishonour to date of settlement.
+3. LEGAL COSTS: Contribution towards legal costs incurred (to be agreed).
+4. TIMELINE: Full payment within ___ days of signing of settlement agreement.
+5. WITHDRAWAL: Upon receipt of agreed settlement amount, the Complainant agrees to file a joint application for compounding before the Hon'ble Court under Section 147 NI Act.
 
-This proposal is made "Without Prejudice" and shall not be produced in court except to prove the factum of settlement efforts.
+This proposal is made without prejudice to the legal rights of our client and shall not be construed as an admission of any weakness in the case.
 
 Kindly revert with your response within 7 working days.
 
@@ -468,29 +320,15 @@ Yours faithfully,
 [ADVOCATE NAME]
 For and on behalf of {complainant}
 
-Note: Case Strength Score {score}/100 — Strategic Settlement Recommended. 
-Basis: Amicable resolution preferred over protracted litigation for moderate strength cases.
+Note: Case Strength Score {score}/100 — Moderate case; early settlement is strategically recommended.
 """
 
 
 def generate_delay_condonation(case_data: Dict) -> str:
     today, amount_str = _case_meta(case_data)
-    complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[COMPLAINANT NAME]"
-    accused = case_data.get("accused_name") or case_data.get("accusedName") or "[ACCUSED NAME]"
-    delay_days = case_data.get("delay_days", "___")
-    
-    # Dynamic Reason Selection
-    delay_reason = case_data.get("delay_reason", "").lower()
-    reason_text = "[DESCRIBE GENUINE REASONS — e.g., Complainant was suffering from severe viral fever (attach medical certificate) / Counsel was unavailable due to personal exigency / Administrative error in calculating limitation date]."
-    
-    if "medical" in delay_reason or "illness" in delay_reason:
-        reason_text = "The Complainant was suffering from severe medical ailments (Details: __________) during the period of limitation, which prevented the timely filing of the complaint. Supporting medical certificates are annexed herewith."
-    elif "travel" in delay_reason:
-        reason_text = "The Complainant was required to travel urgently for unavoidable professional/personal reasons, leading to a slight delay in coordinating with the legal counsel."
-    elif "advocate" in delay_reason:
-        reason_text = "The delay occurred due to the sudden unavailability of the Complainant's counsel and the subsequent time taken to engage new legal representation."
+    complainant = case_data.get("complainant_name", "[COMPLAINANT NAME]")
 
-    return f"""{_header("APPLICATION FOR CONDONATION OF DELAY — SECTION 142(1)(b) NI ACT")}
+    return f"""{_header("APPLICATION FOR CONDONATION OF DELAY — SECTION 142 NI ACT r/w SECTION 5 LIMITATION ACT")}
 
 IN THE COURT OF THE LEARNED JUDICIAL MAGISTRATE / METROPOLITAN MAGISTRATE
 AT [COURT LOCATION]
@@ -500,46 +338,36 @@ COMPLAINT NO.: _____ / {datetime.now().year}
 IN THE MATTER OF:
 {complainant}                                              ... COMPLAINANT
 VERSUS
-{accused}                                                  ... ACCUSED
+[ACCUSED NAME]                                             ... ACCUSED
 
-APPLICATION UNDER SECTION 142(1)(b) OF THE NEGOTIABLE INSTRUMENTS ACT, 1881 READ WITH SECTION 5 OF THE LIMITATION ACT, 1963 FOR CONDONATION OF DELAY.
+APPLICATION FOR CONDONATION OF DELAY IN FILING COMPLAINT U/S 138 NI ACT
 
 RESPECTFULLY SHOWETH:
 
-1. THE COMPLAINT:
-   The Complainant has filed the accompanying Complaint under Section 138 of the NI Act against the Accused. The contents of the said Complaint may be read as part and parcel of this application.
+1. The Complainant has filed a Complaint under Section 138 of the Negotiable Instruments Act, 1881.
 
-2. THE DELAY:
-   That there has been a technical delay of {delay_days} days in filing the present Complaint. The limitation period expired on [DATE], and the Complaint is being filed today.
+2. The cheque was dishonoured on [DISHONOUR DATE] and the statutory demand notice was served on [NOTICE DATE]. The 15-day period expired on [EXPIRY DATE].
 
-3. SUFFICIENT CAUSE:
-   That the said delay occurred due to the following bona fide reasons:
-   {reason_text}
+3. The Complaint ought to have been filed by [LIMITATION DATE]. However, the Complaint has been filed on {today}, resulting in a delay of approximately ___ days.
 
-4. LEGAL POSITION:
-   That the proviso to Section 142(1)(b) of the NI Act specifically empowers this Hon'ble Court to take cognizance of a complaint after the prescribed period if the Complainant satisfies the Court that he had "sufficient cause" for not making a complaint within such period.
+4. REASONS FOR DELAY (SUFFICIENT CAUSE):
+   [Describe genuine reasons — illness, unavailability of advocate, miscommunication, etc.]
 
-5. PRECEDENTS:
-   The Complainant relies on the following landmark rulings:
-   (a) 'MSR Leathers v. S. Palaniappan' (2013): Wherein the Hon'ble Supreme Court held that the power to condone delay should be exercised liberally to ensure that the object of the Act is not defeated by technicalities.
-   (b) 'Saketh India Ltd. v. India Securities Ltd.' (1999): Reaffirming the liberal approach in condoning short delays where no negligence is found.
+5. The Complainant submits that the delay was not intentional or deliberate and occurred due to circumstances beyond the Complainant's control.
 
-6. ABSENCE OF MALA FIDE:
-   The Complainant submits that the delay was neither intentional nor deliberate. No prejudice will be caused to the Accused if the delay is condoned, whereas the Complainant will suffer irreparable loss if the Complaint is dismissed on technical grounds.
+6. The Complainant relies upon the settled principle that courts should adopt a liberal approach in condonation matters where sufficient cause is shown, and that technical delay should not defeat substantive justice. (Saketh India Ltd. v. India Securities Ltd., 1999)
+
+7. No prejudice will be caused to the Accused by condoning the said delay.
 
 PRAYER:
-It is, therefore, most respectfully prayed that this Hon'ble Court may be pleased to:
-(a) Condone the delay of {delay_days} days in filing the accompanying Complaint;
-(b) Admit the Complaint and proceed with the trial in the interest of justice.
+It is prayed that this Hon'ble Court may be pleased to condone the delay of ___ days in filing this Complaint and admit the Complaint for hearing.
 
 Place: [PLACE]
 Date: {today}
 
                                                         {complainant}
                                                         (Complainant)
-Through:
-[ADVOCATE NAME]
-Advocate for Complainant
+Advocate: [ADVOCATE NAME]
 """
 
 
@@ -559,28 +387,20 @@ def generate_legal_opinion(score: int, concepts: List[Dict], case_data: Dict) ->
 
     risk_items = []
     for c in concepts:
-        if c.get("concept") in {"notice_defect", "no_debt_proof", "security_cheque", "signature_dispute", "limitation_issue", "cheque_misuse", "no_agreement"}:
-            risk_items.append(f"   -> {c['concept'].replace('_', ' ').upper()} (confidence: {c['confidence']:.0%})")
+        if c.get("concept") in {"notice_defect", "no_debt_proof", "security_cheque", "signature_dispute", "limitation_issue", "limitation_barred", "cheque_misuse", "no_agreement"}:
+            risk_items.append(f"   → {c['concept'].replace('_',' ').upper()} (confidence: {c['confidence']:.0%})")
 
-    risk_text = "\n".join(risk_items) if risk_items else "   -> No significant risk factors detected."
+    risk_text = "\n".join(risk_items) if risk_items else "   → No significant risk factors detected."
 
     checklist = []
-    if case_data.get("cheque_present"):
-        checklist.append("   [OK] Original cheque secured")
-    else:
-        checklist.append("   [!!] Original cheque MISSING — critical")
-    if case_data.get("dishonour_memo"):
-        checklist.append("   [OK] Bank dishonour memo available")
-    else:
-        checklist.append("   [!!] Bank dishonour memo MISSING")
-    if case_data.get("notice_sent"):
-        checklist.append("   [OK] Statutory demand notice served")
-    else:
-        checklist.append("   [!!] Statutory demand notice NOT SENT — fatal defect")
-    if case_data.get("debt_proven"):
-        checklist.append("   [OK] Debt/liability established")
-    else:
-        checklist.append("   [!!] Underlying debt proof MISSING")
+    if case_data.get("cheque_present"): checklist.append("   [✓] Original cheque secured")
+    else: checklist.append("   [✗] Original cheque MISSING — critical")
+    if case_data.get("dishonour_memo"): checklist.append("   [✓] Bank dishonour memo available")
+    else: checklist.append("   [✗] Bank dishonour memo MISSING")
+    if case_data.get("notice_sent"): checklist.append("   [✓] Statutory demand notice served")
+    else: checklist.append("   [✗] Statutory demand notice NOT SENT — fatal defect")
+    if case_data.get("debt_proven"): checklist.append("   [✓] Debt/liability established")
+    else: checklist.append("   [✗] Underlying debt proof MISSING")
 
     checklist_text = "\n".join(checklist)
 
@@ -613,31 +433,75 @@ DISCLAIMER: AI-generated preliminary assessment. Not a substitute for profession
 """
 
 
+def generate_section_65b_certificate(case_data: Dict) -> str:
+    today, amount_str = _case_meta(case_data)
+    complainant = case_data.get("complainant_name", "[COMPLAINANT NAME]")
+    
+    return f"""{_header("CERTIFICATE UNDER SECTION 65B OF THE INDIAN EVIDENCE ACT, 1872")}
+
+Date: {today}
+
+IN THE COURT OF THE LEARNED JUDICIAL MAGISTRATE / METROPOLITAN MAGISTRATE
+AT [COURT LOCATION]
+
+IN THE MATTER OF:
+{complainant}                                              ... COMPLAINANT
+VERSUS
+[ACCUSED NAME]                                             ... ACCUSED
+
+AFFIDAVIT / CERTIFICATE UNDER SECTION 65B OF THE INDIAN EVIDENCE ACT, 1872
+
+I, {complainant}, aged about [AGE] years, residing at [ADDRESS], do hereby solemnly affirm and state as follows:
+
+1. I am the Complainant in the present case and am fully conversant with the facts and circumstances of the matter.
+
+2. I state that the electronic records, specifically the [Email printouts / WhatsApp chat transcripts / Digital Bank Statements] annexed to the complaint, were generated by a computer/mobile device owned and operated by me.
+
+3. I state that during the period over which the said electronic records were created, the computer/mobile device was functioning properly, and there was no operational failure that could affect the accuracy of the electronic record.
+
+4. I state that the said computer/mobile device was in my lawful control and custody at all material times, and the information contained in the annexed printouts was fed into the device in the ordinary course of my business/activities.
+
+5. I certify that the printouts annexed hereto are a true and accurate reproduction of the electronic records as they exist on the said device, without any tampering or modification.
+
+I make this solemn declaration conscientiously believing the same to be true and in accordance with the provisions of Section 65B of the Indian Evidence Act, 1872.
+
+Place: [PLACE]
+Date: {today}
+
+                                                        DEPONENT
+                                                        ({complainant})
+
+VERIFICATION
+Verified at [PLACE] on this {today}, that the contents of the above affidavit are true and correct to my knowledge, no part of it is false and nothing material has been concealed therefrom.
+
+                                                        DEPONENT
+"""
+
 class DraftEngine:
     @staticmethod
     def generate_opinion(analysis_result: Dict[str, Any]) -> str:
         score = analysis_result.get("score", 0)
         concepts = analysis_result.get("concepts", [])
         case_data = analysis_result.get("case_data", {})
+
         draft_type = decide_draft_type(score, concepts, case_data)
         return DraftEngine.generate_draft(draft_type, score, concepts, case_data)
 
     @staticmethod
     def generate_draft(draft_type: str, score: int, concepts: List[Dict], case_data: Dict) -> str:
-        # Get tone from case_data or default to standard
-        tone = case_data.get("draft_tone", "standard")
-        
         if draft_type == "LEGAL_NOTICE":
             return generate_legal_notice(case_data)
         elif draft_type == "COMPLAINT":
-            return generate_complaint(case_data, concepts, tone=tone)
-        elif draft_type == "CERTIFICATE_65B":
-            return generate_certificate_65b(case_data)
-        elif draft_type in ("DEFENCE_STRATEGY", "DEFENCE_REPLY"):
+            return generate_complaint(case_data, concepts)
+        elif draft_type == "DEFENCE_STRATEGY":
+            return generate_defence_strategy(case_data, concepts, score)
+        elif draft_type == "DEFENCE_REPLY":
             return generate_defence_strategy(case_data, concepts, score)
         elif draft_type == "SETTLEMENT":
             return generate_settlement_draft(case_data, score)
         elif draft_type == "DELAY_CONDONATION":
             return generate_delay_condonation(case_data)
+        elif draft_type == "SECTION_65B_CERTIFICATE":
+            return generate_section_65b_certificate(case_data)
         else:
             return generate_legal_opinion(score, concepts, case_data)
