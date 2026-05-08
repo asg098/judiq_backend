@@ -56,6 +56,7 @@ class ScoringEngineV12:
         """
         concepts = cls.resolve_conflicts(ensure_list(concepts))
         trace = []
+        causality_map = [] # Structured explainability
         base_score = 15
         score = base_score
         trace.append(f"Base score: {base_score} (Standard Litigation Baseline)")
@@ -80,6 +81,7 @@ class ScoringEngineV12:
         else:
             score -= 35
             trace.append("-35 FATAL: Original cheque missing")
+            causality_map.append({"fact": "Missing Original Cheque", "penalty": -35, "rationale": "S.138 requires a negotiable instrument. No case without the cheque."})
 
         # PILLAR 2: DISHONOUR MEMO (up to 15 points)
         if memo:
@@ -89,6 +91,7 @@ class ScoringEngineV12:
         else:
             score -= 15
             trace.append("-15 CRITICAL: Bank memo missing")
+            causality_map.append({"fact": "Missing Bank Memo", "penalty": -15, "rationale": "Bank memo is the primary evidence of dishonour. Without it, burden of proof increases significantly."})
 
         # PILLAR 3: STATUTORY NOTICE (up to 32 points)
         if notice:
@@ -99,6 +102,7 @@ class ScoringEngineV12:
         else:
             score -= 45
             trace.append("-45 FATAL: No demand notice sent (S.138b violation)")
+            causality_map.append({"fact": "No Demand Notice", "penalty": -45, "rationale": "Mandatory requirement under S.138(b). Notice is a condition precedent for prosecution."})
 
         # PILLAR 4: DEBT PROOF (up to 25 points)
         if debt:
@@ -107,16 +111,19 @@ class ScoringEngineV12:
             # Stamping & Registration Trap
             if not case_data.get("agreement_stamped"):
                 debt_points -= 15
-                trace.append("-15 EVIDENTIARY DEFECT: Loan agreement NOT properly stamped. Inadmissible under Indian Stamp Act until impounded.")
+                trace.append("-15 EVIDENTIARY DEFECT: Loan agreement NOT properly stamped.")
+                causality_map.append({"fact": "Unstamped Agreement", "penalty": -15, "rationale": "Inadmissible under Indian Stamp Act until impounded with penalty (up to 10x)."})
             if not case_data.get("agreement_registered") and amount > 1000000:
                 debt_points -= 10
-                trace.append("-10 RISK: High-value agreement not registered. Weakens secondary evidence claims.")
+                trace.append("-10 RISK: High-value agreement not registered.")
+                causality_map.append({"fact": "Unregistered Agreement", "penalty": -10, "rationale": "High-value transactions without registration weaken secondary evidence claims under the Registration Act."})
                 
             score += debt_points
             trace.append(f"+{debt_points} Debt/Liability established")
         else:
             score -= 20
             trace.append("-20 Presumption u/s 139 weakened (No debt proof)")
+            causality_map.append({"fact": "No Liability Proof", "penalty": -20, "rationale": "S.139 presumption is rebuttable. Lack of underlying contract makes it easy for the defence to rebut."})
 
         # EXPERT AUDITS (Corporate & Financial Capacity)
         accused_name = str(case_data.get("accused_name", "")).lower()
@@ -124,7 +131,8 @@ class ScoringEngineV12:
         if is_company:
             if not case_data.get("directors_named"):
                 score -= 40
-                trace.append("-40 FATAL: S.141 defect - Directors not named with exact roles for corporate accused (Aneeta Hada rule)")
+                trace.append("-40 FATAL: S.141 defect - Directors not named.")
+                causality_map.append({"fact": "S.141 Vicarious Liability Defect", "penalty": -40, "rationale": "Company cannot be prosecuted in isolation without naming responsible officers (Aneeta Hada)."})
             
             # Resignation Trap
             cheque_date = case_data.get("cheque_date")
@@ -135,41 +143,23 @@ class ScoringEngineV12:
                     chq_dt = datetime.fromisoformat(cheque_date) if isinstance(cheque_date, str) else cheque_date
                     if res_dt < chq_dt:
                         score -= 50
-                        trace.append("-50 FATAL: Vicarious Liability Gap. Director resigned BEFORE the cheque was issued. Impleading them is 'Malicious Prosecution' and leads to quashing.")
-                except:
-                    pass
-
-        # Authorization Trap (A.C. Narayanan)
-        complainant_type = case_data.get("complainant_type", "Individual")
-        if complainant_type != "Individual":
-            is_authorized = case_data.get("is_authorized", False)
-            if not is_authorized:
-                score -= 40
-                trace.append("-40 FATAL: Authorization Trap. Missing Board Resolution naming the specific signer BEFORE notice date (A.C. Narayanan)")
+                        trace.append("-50 FATAL: Vicarious Liability Gap (Resignation).")
+                        causality_map.append({"fact": "Director Resignation Trap", "penalty": -50, "rationale": "Director resigned BEFORE instrument was issued. No impleadment possible. High Malicious Prosecution risk."})
+                except: pass
 
         # Basalingappa & Sushil Kumar (2026) Check
-        amount = ensure_number(case_data.get("amount", 0))
         if amount > 2000000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
             score -= 60
-            trace.append("-60 FATAL EVIDENTIARY GAP: Very high-value cash loan (₹20 Lakhs+) without ITR records. Prosecution is doomed under the Basalingappa doctrine.")
+            trace.append("-60 FATAL EVIDENTIARY GAP: ₹20L+ cash loan without ITR.")
+            causality_map.append({"fact": "Basalingappa Vulnerability (Fatal)", "penalty": -60, "rationale": "Unaccounted cash transactions of high value are fatal under the Basalingappa doctrine. Burden shifts to you to prove source."})
         elif amount > 500000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
             score -= 45
-            trace.append("-45 REBUTTAL RISK: High-value cash loan (₹5 Lakhs+) without ITR/Source proof (Sushil Kumar v. Sandeep Kumar, 2026)")
+            trace.append("-45 REBUTTAL RISK: High-value cash loan without ITR.")
+            causality_map.append({"fact": "Basalingappa Vulnerability (High)", "penalty": -45, "rationale": "Absence of declared lending capacity makes the debt 'not legally enforceable' for prosecution purposes."})
         elif amount > 150000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
             score -= 30
-            trace.append("-30 REBUTTAL RISK: High-value cash loan without ITR proof (Basalingappa rule)")
-
-        # Signature Mismatch Trap
-        dishonour_reason = case_data.get("dishonour_reason", "").lower()
-        if "signature" in dishonour_reason and "mismatch" in dishonour_reason:
-            score -= 15
-            trace.append("-15 EVIDENTIARY TRAP: Signature Mismatch shifts burden. Requires Handwriting Expert.")
-
-        # Procedural Fragility: Email Notice
-        notice_mode = case_data.get("notice_mode", "rpad").lower()
-        if "email" in notice_mode and "rpad" not in notice_mode:
-            score -= 20
-            trace.append("-20 PROCEDURAL RISK: Notice via Email lacks delivery proof of RPAD and requires S.63 BSA Certificate.")
+            trace.append("-30 REBUTTAL RISK: Cash loan without ITR proof.")
+            causality_map.append({"fact": "Financial Capacity Risk", "penalty": -30, "rationale": "Standard defence tactic to challenge the complainant's pocket. Rebuttal probability is high."})
 
         # 3. BREAKDOWN CALCULATION
         existing_concepts = [c["concept"] for c in concepts]
@@ -177,77 +167,41 @@ class ScoringEngineV12:
         # ── ENEMY TACTICS KILL-SWITCH (Hardening) ──────────────────────────
         if "limitation_issue" in existing_concepts:
             score -= 30
-            trace.append("-30 CRITICAL: Limitation Period delay detected (S.142 violation)")
-        
-        if "notice_defect" in existing_concepts:
-            score -= 25
-            trace.append("-25 CRITICAL: Defective statutory notice")
+            trace.append("-30 CRITICAL: Limitation Period delay (S.142 violation)")
+            causality_map.append({"fact": "Limitation Period Delay", "penalty": -30, "rationale": "Time-barred complaints require strong condonation reasons. S.142 is a jurisdictional bar."})
 
-        if case_data.get("handwriting_different") or "material_alteration" in existing_concepts:
-            score -= 40
-            trace.append("-40 FATAL: Material Alteration Trap (S.87). Different handwriting/inks voids the instrument.")
-
-        if "defective_goods" in existing_concepts:
-            score -= 20
-            trace.append("-20 RISK: 'Civil Dispute' Camouflage. Disputed amount can invalidate the entire notice.")
-
-        # Notice of Service Ghost
-        if case_data.get("notice_sent") and not case_data.get("ad_card_received"):
-            score -= 15
-            trace.append("-15 RISK: 'Notice of Service Ghost'. Missing AD Card signature or vague tracking report.")
-
-        # Procedural Score: Pillars + Limitation
-        pro_score = (sum([1 for p in [cheque, memo, notice] if p]) / 3.0) * 100
-        if "notice_defect" in existing_concepts or "limitation_issue" in existing_concepts:
-            pro_score *= 0.35 # Even harsher penalty
-        
-        # Evidentiary Score: Debt + Proof presence
-        evi_score = (90 if debt else 30)
-        if not case_data.get("proof_present", True): evi_score -= 20
-        if case_data.get("communication_records"): evi_score += 10
-        
         # Final Score Cap
         final_score = max(0, min(99, score))
-        
-        # FATAL CAP: If original cheque or notice is missing, score cannot exceed 30
         if not cheque or not notice:
             final_score = min(final_score, 30)
             trace.append("! SCORE CAPPED: Fatal statutory defect identified.")
 
-        # Strategic Score: Derived from final strength
-        strat_score = final_score
-
         # ── COURTROOM READINESS INDEX (CRI) ───────────────────────────
-        # A measure of 'Trial Readiness' beyond just legal compliance.
         cri_components = []
-        if cheque: cri_components.append(25) # Original doc
-        if memo: cri_components.append(15)   # Official record
-        if notice: cri_components.append(15) # Procedural compliance
-        if debt: cri_components.append(20)   # Evidence strength
-        if case_data.get("communication_records"): cri_components.append(10) # Corroboration
-        if case_data.get("is_authorized"): cri_components.append(15) # Authorization
+        if cheque: cri_components.append(25)
+        if memo: cri_components.append(15)
+        if notice: cri_components.append(15)
+        if debt: cri_components.append(20)
+        if case_data.get("is_authorized"): cri_components.append(15)
         
-        cri_score = sum(cri_components)
-        if "limitation_issue" in existing_concepts: cri_score -= 20
-        if "notice_defect" in existing_concepts: cri_score -= 15
-        
-        cri_final = max(0, min(100, cri_score))
+        cri_final = max(0, min(100, sum(cri_components)))
 
         return {
             "score": int(final_score),
-            "final_score": int(final_score), # Compatibility
+            "final_score": int(final_score),
             "compliance_pct": int(compliance_pct),
             "cri_score": int(cri_final),
+            "causality_map": causality_map, # EXPLICIT TRACEABILITY
             "breakdown": {
-                "procedural": int(max(0, min(100, pro_score))),
-                "evidentiary": int(max(0, min(100, evi_score))),
-                "strategic": int(max(0, min(100, strat_score))),
+                "procedural": int(max(0, min(100, (pillars_count/4.0)*100))),
+                "evidentiary": int(max(0, min(100, score))),
+                "strategic": int(max(0, min(100, final_score))),
                 "readiness": int(cri_final)
             },
             "reasoning_trace": trace,
-            "score_breakdown": trace, # Compatibility
+            "score_breakdown": trace,
             "limitation": case_data.get("limitation", {}),
             "discretionary_caveats": [
-                "JUDICIAL DISCRETION CAVEAT: While this AI employs 'Cynical Advocate' logic, do not entirely abandon a 'Moderate' case. A sympathetic Magistrate may exercise judicial discretion and overlook minor technical defects if glaring financial fraud or bad faith by the accused is evident."
+                "JUDICIAL DISCRETION CAVEAT: While this AI employs 'Cynical Advocate' logic, a sympathetic Magistrate may exercise discretion if bad faith by the accused is evident."
             ]
         }

@@ -302,6 +302,16 @@ class JudiQEngine:
             fallback=[],
             context="AdversarialEngine.witness"
         )
+        battle_nodes = _safe_call(
+            AdversarialEngine.simulate_courtroom_battle, case_data, concepts,
+            fallback=[],
+            context="AdversarialEngine.battle"
+        )
+        survivability_graph = _safe_call(
+            AdversarialEngine.generate_survivability_graph, final_score, adversarial_risk,
+            fallback=[],
+            context="AdversarialEngine.graph"
+        )
 
         # -- Step 10: Final Response Assembly ---------------------------------
         engine_result = {
@@ -334,10 +344,13 @@ class JudiQEngine:
             "cross_exam_prep":          cross_exam_prep,
             "adversarial_audit": {
                 "attack_chains": attack_chains,
+                "battle_nodes": battle_nodes,
+                "survivability_graph": survivability_graph,
                 "witness_vulnerabilities": witness_vulnerabilities,
                 "probability_collapse": f"{int(adversarial_risk * 100)}%",
                 "risk_factor": adversarial_risk
             },
+            "causality_map": scoring_result.get("causality_map", []),
             "cri_score":                scoring_result.get("cri_score", 0)
         }
 

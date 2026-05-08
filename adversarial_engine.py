@@ -21,118 +21,112 @@ class AdversarialEngine:
                 "4. Complainant faces 'Malicious Prosecution' counter-suit."
             ],
             "probability_collapse": 0.85,
-            "rebuttal_strategy": "Verify ROC records BEFORE filing. Only implead directors active on the date of cheque issuance AND date of default."
+            "rebuttal_strategy": "Verify ROC records BEFORE filing. Only implead directors active on the date of cheque issuance AND date of default.",
+            "burden_shift": "Shifts to Complainant to prove the director was 'in charge of and responsible for' the conduct of business DESPITE resignation."
         },
         "basalingappa_rebuttal": {
             "name": "The Financial Capacity Attack",
             "trigger": "amount > 500000 and not complainant_itr_available",
             "chain": [
                 "1. Defence cross-examines on source of funds.",
-                "2. Demands ITR records during cross-examination.",
-                "3. Moves application for production of documents (S.91 CrPC).",
-                "4. Failure to produce documents leads to adverse inference (S.114 Indian Evidence Act).",
-                "5. S.139 Presumption is successfully rebutted."
+                "2. Demands ITR records during cross-examination (S.91 CrPC).",
+                "3. Failure to produce documents leads to adverse inference (S.114 IEA).",
+                "4. S.139 Presumption is successfully rebutted.",
+                "5. Prosecution fails as 'Legally Enforceable Debt' is not proven."
             ],
             "probability_collapse": 0.65,
-            "rebuttal_strategy": "Produce bank passbooks showing historical savings. Argue that S.139 presumption remains until 'probable' doubt is created by evidence, not just questions."
+            "rebuttal_strategy": "Produce bank passbooks showing historical savings. Argue that S.139 presumption remains until 'probable' doubt is created.",
+            "burden_shift": "Once Accused raises a 'probable' doubt regarding capacity, the burden shifts back to Complainant to prove the source of funds."
         },
-        "vague_tracking_ghost": {
-            "name": "The Service Proof Attack",
-            "trigger": "not ad_card_received or not tracking_confirmed",
+        "material_alteration_strike": {
+            "name": "The Material Alteration Strike",
+            "trigger": "handwriting_different",
             "chain": [
-                "1. Defence denies receipt of demand notice.",
-                "2. Challenges 'Deemed Service' under S.27 GCA.",
-                "3. Argues that the address was incorrect or tracking is unverified.",
-                "4. If service is not proven, the entire S.138 cause of action fails."
+                "1. Defence alleges 'Material Alteration' u/s 87 NI Act.",
+                "2. Moves application for Handwriting Expert (S.45 IEA).",
+                "3. Expert confirms different inks/handwriting for signature vs body.",
+                "4. If alteration is without drawer's consent, instrument is VOID.",
+                "5. Immediate Acquittal."
             ],
-            "probability_collapse": 0.45,
-            "rebuttal_strategy": "Secure 'Postal Certificate' or 'Delivery Report' from the Post Office. Use Section 114(f) Evidence Act for presumption of delivery in the regular course of post."
-        },
-        "security_cheque_pivot": {
-            "name": "The Security Cheque Pivot",
-            "trigger": "security_cheque_defense",
-            "chain": [
-                "1. Defence proves the cheque was given for 'security' (e.g. via business contract).",
-                "2. Argues no 'legally enforceable debt' existed on the cheque date.",
-                "3. Pivots to 'Indus Airways' or 'Sampelly' landmark exceptions.",
-                "4. Acquittal if debt didn't crystallize by the presentation date."
-            ],
-            "probability_collapse": 0.40,
-            "rebuttal_strategy": "Establish that as per 'Sampelly Satyanarayana Rao', a security cheque becomes an enforceable instrument once the liability matures."
+            "probability_collapse": 0.90,
+            "rebuttal_strategy": "Invoke S.20 NI Act — 'Inchoate Stamped Instruments'. Argue that the drawer gave implied authority to the holder to fill the details.",
+            "burden_shift": "Heavy burden on Complainant to prove the details were filled with the drawer's consent or at their direction."
         }
     }
 
     @classmethod
     def simulate_attack_chains(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
-        """
-        Processes detected concepts and simulates adversarial branching.
-        """
         chains = []
         concept_names = {c["concept"] for c in concepts}
         amount = float(case_data.get("amount") or 0)
         
-        # 1. Check for Resignation Trap
-        res_date = case_data.get("director_resignation_date")
-        chq_date = case_data.get("cheque_date")
-        if res_date and chq_date and res_date < chq_date:
-            chains.append(cls.ATTACK_TREES["resignation_trap"])
+        if case_data.get("director_resignation_date") and case_data.get("cheque_date"):
+            if case_data.get("director_resignation_date") < case_data.get("cheque_date"):
+                chains.append(cls.ATTACK_TREES["resignation_trap"])
 
-        # 2. Check for Basalingappa Rebuttal
         if amount > 500000 and not case_data.get("complainant_itr_available"):
             chains.append(cls.ATTACK_TREES["basalingappa_rebuttal"])
 
-        # 3. Check for Service Proof Attack
-        if not case_data.get("ad_card_received"):
-            chains.append(cls.ATTACK_TREES["vague_tracking_ghost"])
-
-        # 4. Check for Security Cheque Pivot
-        if "security_cheque" in concept_names:
-            chains.append(cls.ATTACK_TREES["security_cheque_pivot"])
+        if case_data.get("handwriting_different"):
+            chains.append(cls.ATTACK_TREES["material_alteration_strike"])
 
         return chains
 
     @classmethod
     def calculate_adversarial_risk(cls, chains: List[Dict]) -> float:
-        """
-        Calculates a cumulative risk factor based on the severity of attack chains.
-        """
         if not chains: return 0.0
-        
-        # We use a compounding risk formula
         cumulative_risk = 0.0
         for chain in chains:
             risk = chain.get("probability_collapse", 0.0)
             cumulative_risk = cumulative_risk + (risk * (1.0 - cumulative_risk))
-            
         return round(cumulative_risk, 2)
 
     @classmethod
-    def map_witness_vulnerabilities(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
-        """Maps case gaps to specific witness vulnerabilities."""
-        vulnerabilities = []
-        concept_names = {c["concept"] for c in concepts}
+    def simulate_courtroom_battle(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
+        """Simulates sequential courtroom attack/rebuttal nodes."""
+        battle_nodes = []
+        chains = cls.simulate_attack_chains(case_data, concepts)
         
-        if "no_debt_proof" in concept_names:
-            vulnerabilities.append({
-                "witness_trait": "Evidentiary Consistency",
-                "attack": "Defence will suggest the debt is a fabrication or 'black money' due to lack of a written agreement.",
-                "vulnerability_level": "CRITICAL"
+        for chain in chains:
+            battle_nodes.append({
+                "stage": "Cross-Examination",
+                "defence_move": chain["chain"][0],
+                "complainant_rebuttal": chain.get("rebuttal_strategy", "Rely on S.139 presumption."),
+                "witness_risk": chain.get("burden_shift", "Standard procedural risk."),
+                "survivability_impact": f"-{int(chain['probability_collapse'] * 100)}%"
             })
+            if len(chain["chain"]) > 1:
+                battle_nodes.append({
+                    "stage": "Evidentiary Challenge",
+                    "defence_move": chain["chain"][1],
+                    "complainant_rebuttal": "Produce secondary evidence or witness testimony.",
+                    "witness_risk": "Risk of being caught in a contradiction during cross-verification.",
+                    "survivability_impact": "High"
+                })
         
-        if "financial_capacity_risk" in concept_names:
-            vulnerabilities.append({
-                "witness_trait": "Financial Transparency",
-                "attack": "Complainant will be pressured to disclose personal income sources and IT compliance.",
-                "vulnerability_level": "HIGH"
-            })
-            
-        if case_data.get("handwriting_different"):
-            vulnerabilities.append({
-                "witness_trait": "Document Integrity",
-                "attack": "Complainant will be accused of 'Material Alteration' and asked when and where the blank cheque was filled.",
-                "vulnerability_level": "FATAL"
-            })
-            
-        return vulnerabilities
+        return battle_nodes
+
+    @classmethod
+    def generate_survivability_graph(cls, base_score: int, adversarial_risk: float) -> List[Dict]:
+        """Generates data points for a survivability graph over the trial timeline."""
+        # Timeline: [Filing, Notice, Framing of Charge, Evidence, Final Argument]
+        current_strength = base_score
+        graph = [
+            {"stage": "Filing", "strength": current_strength},
+            {"stage": "Notice", "strength": current_strength * 0.95}
+        ]
+        
+        # Framing of Charge (Risk materializes)
+        current_strength *= (1.0 - (adversarial_risk * 0.3))
+        graph.append({"stage": "Framing of Charge", "strength": int(current_strength)})
+        
+        # Evidence (Heaviest hit)
+        current_strength *= (1.0 - (adversarial_risk * 0.6))
+        graph.append({"stage": "Evidence Phase", "strength": int(current_strength)})
+        
+        # Final Argument
+        graph.append({"stage": "Final Argument", "strength": int(current_strength * 1.1)}) # Slight recovery if survived
+        
+        return graph
 
 adversarial_engine = AdversarialEngine()
