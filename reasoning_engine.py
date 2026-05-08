@@ -337,15 +337,21 @@ class ReasoningEngine:
             + (f"Compliance confirmed: {', '.join(pillars)}." if pillars else "FATAL ERROR: No statutory pillars satisfied.")
         )
 
-        # 2. Semantic Intersection
-        pos = [c for c in concepts if c.get("confidence", 0) >= 0.5 and "defect" not in c["concept"] and "no_" not in c["concept"]]
-        neg = [c for c in concepts if c.get("confidence", 0) >= 0.5 and ("defect" in c["concept"] or "no_" in c["concept"] or "security" in c["concept"])]
-        
-        trail.append(
-            f"SEMANTIC INFERENCE: Engine cross-referenced facts against legal DNA. "
-            f"Detected {len(pos)} positive merits vs {len(neg)} procedural/strategic risks. "
-            f"Top concepts: {', '.join([c['concept'].upper() for c in concepts[:3]]) or 'NONE'}."
-        )
+        # 2. Explicit Causality Chains (XAI)
+        risks = [c for c in concepts if "risk" in c["concept"] or "defect" in c["concept"]]
+        if risks:
+            causality_chain = []
+            if float(case_data.get("amount") or 0) > 500000 and not case_data.get("complainant_itr_available"):
+                causality_chain.append("Missing ITR -> Financial Capacity Risk -> Rebuttal u/s 139 (Basalingappa).")
+            if case_data.get("director_resignation_date") and case_data.get("cheque_date") and case_data.get("director_resignation_date") < case_data.get("cheque_date"):
+                causality_chain.append("Early Resignation -> S.141 Violation -> Fatal Quashing Trap.")
+            
+            trail.append(
+                f"CAUSALITY ANALYSIS: Detected {len(risks)} explicit risk vectors. "
+                f"Propagation Chains: { ' | '.join(causality_chain) or 'Implicit logic applied.'}"
+            )
+
+        # 3. Semantic Intersection
 
         # 3. Precedent Binding
         precs = cls.match_precedents(case_data, concepts)

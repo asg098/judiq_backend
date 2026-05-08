@@ -105,27 +105,54 @@ class AdversarialEngine:
         return vulnerabilities
 
     @classmethod
+    def simulate_contradiction_escalation(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
+        """Tracks how a single evidentiary gap cascades into multiple legal failures."""
+        escalations = []
+        concept_names = {c["concept"] for c in concepts}
+        
+        if "financial_capacity_risk" in concept_names:
+            escalations.append({
+                "trigger_gap": "Missing ITR / Source of Funds",
+                "cascade": [
+                    "Step 1: Rebuttal of S.139 Presumption (Basalingappa).",
+                    "Step 2: Admission of 'Unaccounted Cash' transaction.",
+                    "Step 3: Invalidity of 'Legally Enforceable Debt' (S.138 NI Act).",
+                    "Step 4: High probability of acquittal on merits."
+                ]
+            })
+            
+        if "material_alteration" in concept_names or case_data.get("handwriting_different"):
+            escalations.append({
+                "trigger_gap": "Handwriting Mismatch / Different Inks",
+                "cascade": [
+                    "Step 1: Challenge u/s 87 NI Act (Material Alteration).",
+                    "Step 2: Expert testimony (S.45 IEA) creates 'Probable Doubt'.",
+                    "Step 3: Voiding of the instrument entirely.",
+                    "Step 4: Immediate Quashing / Acquittal."
+                ]
+            })
+            
+        return escalations
+
+    @classmethod
     def simulate_courtroom_battle(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
-        """Simulates sequential courtroom attack/rebuttal nodes."""
+        """Simulates deep, branching courtroom attack/rebuttal trees."""
         battle_nodes = []
         chains = cls.simulate_attack_chains(case_data, concepts)
         
         for chain in chains:
-            battle_nodes.append({
-                "stage": "Cross-Examination",
-                "defence_move": chain["chain"][0],
-                "complainant_rebuttal": chain.get("rebuttal_strategy", "Rely on S.139 presumption."),
-                "witness_risk": chain.get("burden_shift", "Standard procedural risk."),
-                "survivability_impact": f"-{int(chain['probability_collapse'] * 100)}%"
-            })
-            if len(chain["chain"]) > 1:
-                battle_nodes.append({
-                    "stage": "Evidentiary Challenge",
-                    "defence_move": chain["chain"][1],
-                    "complainant_rebuttal": "Produce secondary evidence or witness testimony.",
-                    "witness_risk": "Risk of being caught in a contradiction during cross-verification.",
-                    "survivability_impact": "High"
-                })
+            node = {
+                "attack_vector": chain["name"],
+                "defence_sequence": chain["chain"],
+                "rebuttal_tree": {
+                    "primary_rebuttal": chain.get("rebuttal_strategy", "Rely on S.139."),
+                    "secondary_rebuttal": "Produce corroborative oral testimony if documentary proof is missing.",
+                    "failure_outcome": f"Adversary secures acquittal via {chain['name']}."
+                },
+                "witness_collapse_risk": chain.get("burden_shift", "Standard risk."),
+                "escalation_path": cls.simulate_contradiction_escalation(case_data, concepts)
+            }
+            battle_nodes.append(node)
         
         return battle_nodes
 
