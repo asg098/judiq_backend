@@ -114,6 +114,7 @@ class ReasoningEngine:
                 citation = p.get("citation", "")
                 if citation not in seen_citations:
                     seen_citations.add(citation)
+                    safe_citation = citation.replace('/', '_').replace(' ', '_')
                     matched.append({
                         "concept":      concept_name,
                         "case":         p.get("case", ""),
@@ -121,7 +122,8 @@ class ReasoningEngine:
                         "court":        p.get("court", "Supreme Court of India"),
                         "principle":    p.get("principle", ""),
                         "relevance":    round(min(p.get("relevance_score", confidence), 1.0), 2),
-                        "is_live":      False
+                        "is_live":      False,
+                        "document_url": f"/api/precedents/document/{safe_citation}"
                     })
 
             # Pull any inline precedents from knowledge_base.json
@@ -130,6 +132,7 @@ class ReasoningEngine:
                 kb_prec = kb[concept_name].get("precedent")
                 if kb_prec and kb_prec not in seen_citations:
                     seen_citations.add(kb_prec)
+                    safe_citation = kb_prec.replace('/', '_').replace(' ', '_')
                     matched.append({
                         "concept":   concept_name,
                         "case":      kb_prec,
@@ -137,7 +140,8 @@ class ReasoningEngine:
                         "court":     "Supreme Court of India",
                         "principle": kb[concept_name].get("legal_impact", ""),
                         "relevance": round(confidence, 2),
-                        "is_live":   False
+                        "is_live":   False,
+                        "document_url": f"/api/precedents/document/{safe_citation}"
                     })
 
         # Attach latest live precedents conditionally based on matching concepts
@@ -158,6 +162,7 @@ class ReasoningEngine:
                     variance = (hash(key) % 15) / 100.0
                     final_relevance = min(base_relevance + variance, 0.99)
                     
+                    safe_citation = citation.replace('/', '_').replace(' ', '_') if citation else title.replace(' ', '_')
                     matched.append({
                         "concept":   impact_area,
                         "case":      title,
@@ -166,7 +171,8 @@ class ReasoningEngine:
                         "principle": p.get("summary", ""),
                         "relevance": round(final_relevance, 2),
                         "match_percentage": f"{int(final_relevance * 100)}%",
-                        "is_live":   True
+                        "is_live":   True,
+                        "document_url": f"/api/precedents/document/{safe_citation}"
                     })
 
         # Format match_percentage for all matched precedents
