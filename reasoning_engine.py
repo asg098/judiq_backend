@@ -404,7 +404,20 @@ class ReasoningEngine:
         else:
             trail.append("AUTHORITY CHECK: No specific case-law match. Reverting to basic statutory interpretation.")
 
-        # 4. Final Verdict Logic
+        # 4. Strategic Pivot Analysis (Professional Decision Support)
+        if final_score < 60:
+            trail.append(
+                f"STRATEGIC PIVOT: Settlement recommended. Low survivability ({final_score}%) "
+                f"due to {len(risks)} fatal evidentiary gaps. Litigation will likely result in acquittal "
+                f"and potential malicious prosecution costs."
+            )
+        else:
+            trail.append(
+                f"LITIGATION DIRECTIVE: Proceed with prosecution. Survivability is high ({final_score}%). "
+                f"Maintain pressure for S.143A interim compensation early in the trial."
+            )
+
+        # 5. Final Verdict Logic
         trail.append(
             "SYNTHETIC VERDICT: Final weighting based on statutory mandatory requirements + evidentiary strength + precedent alignment. "
             "Verdict generated via strict legal-logic thresholding (No Black Box)."

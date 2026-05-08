@@ -196,11 +196,17 @@ class ScoringEngineV12:
                 "reasoning": item["rationale"]
             })
 
+        # ── EXPLICIT CAUSALITY: Factor-Level Scoring ────────────────────────
+        explicit_penalties = []
+        for item in causality_map:
+            explicit_penalties.append(f"{item['penalty']} because {item['fact']}")
+
         return {
             "score": int(final_score),
             "final_score": int(final_score),
             "potential_score": potential_score,
-            "causality_delta": causality_delta, # EXPLICIT TRACEABILITY
+            "causality_delta": causality_delta,
+            "explicit_penalties": explicit_penalties, # THE REQUESTED FORMAT
             "compliance_pct": int(compliance_pct),
             "cri_score": int(cri_final),
             "causality_map": causality_map,

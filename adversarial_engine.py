@@ -173,6 +173,14 @@ class AdversarialEngine:
                     "likely_fumble": "Witness provides inconsistent dates/amounts under pressure.",
                     "contradiction_escalation": "Defence moves application to summon bank records to disprove the witness."
                 },
+                "hostile_questioning_logic": [
+                    f"I suggest to you that {chain['name']} proves this is a false case.",
+                    "Isn't it true that you have fabricated these documents after the cheque bounced?",
+                    "Can you show a single independent witness to this transaction?"
+                ],
+                "signatory_survivability": "CRITICAL" if chain.get("probability_collapse", 0) > 0.7 else "MODERATE",
+                "burden_shift_impact": chain.get("burden_shift", "Shifts burden to Complainant to prove consideration."),
+                "survival_probability": f"{int((1.0 - chain.get('probability_collapse', 0)) * 100)}%",
                 "destruction_probability": f"{int(chain.get('probability_collapse', 0) * 100)}%",
                 "quashing_probability": f"{int(quashing_prob * 100)}%" if quashing_prob > 0.5 else "Low",
                 "malicious_prosecution_exposure": "EXTREME" if "resignation" in chain["name"].lower() else "Standard",

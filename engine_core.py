@@ -318,6 +318,7 @@ class JudiQEngine:
             "final_score":              final_score,
             "potential_score":          scoring_result.get("potential_score", 99),
             "causality_delta":          scoring_result.get("causality_delta", []),
+            "explicit_penalties":       scoring_result.get("explicit_penalties", []),
             "reasoning_trace":          scoring_result.get("reasoning_trace", []),
             "score_breakdown":          scoring_result.get("score_breakdown", []),
             "discretionary_caveats":    scoring_result.get("discretionary_caveats", []),
