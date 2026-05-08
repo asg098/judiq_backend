@@ -168,15 +168,19 @@ class AdversarialEngine:
             node = {
                 "attack_vector": chain["name"],
                 "fatal_pathway": cls.generate_acquittal_tree(chain),
+                "witness_box_collapse": {
+                    "trigger_question": chain["chain"][0] if chain.get("chain") else "Standard cross-exam question",
+                    "likely_fumble": "Witness provides inconsistent dates/amounts under pressure.",
+                    "contradiction_escalation": "Defence moves application to summon bank records to disprove the witness."
+                },
+                "destruction_probability": f"{int(chain.get('probability_collapse', 0) * 100)}%",
                 "quashing_probability": f"{int(quashing_prob * 100)}%" if quashing_prob > 0.5 else "Low",
-                "malicious_prosecution_exposure": "AGGRESSIVE" if "resignation" in chain["name"].lower() else "Standard",
+                "malicious_prosecution_exposure": "EXTREME" if "resignation" in chain["name"].lower() else "Standard",
                 "rebuttal_tree": {
                     "primary_rebuttal": chain.get("rebuttal_strategy", "Rely on S.139."),
                     "secondary_rebuttal": "Produce corroborative oral testimony.",
-                    "failure_outcome": f"Adversary secures acquittal via {chain['name']}."
-                },
-                "witness_collapse_risk": chain.get("burden_shift", "Standard risk."),
-                "escalation_path": cls.simulate_contradiction_escalation(case_data, concepts)
+                    "failure_outcome": "ACQUITTAL"
+                }
             }
             battle_nodes.append(node)
         

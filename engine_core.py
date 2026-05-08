@@ -316,6 +316,8 @@ class JudiQEngine:
         # -- Step 10: Final Response Assembly ---------------------------------
         engine_result = {
             "final_score":              final_score,
+            "potential_score":          scoring_result.get("potential_score", 99),
+            "causality_delta":          scoring_result.get("causality_delta", []),
             "reasoning_trace":          scoring_result.get("reasoning_trace", []),
             "score_breakdown":          scoring_result.get("score_breakdown", []),
             "discretionary_caveats":    scoring_result.get("discretionary_caveats", []),
@@ -351,6 +353,7 @@ class JudiQEngine:
                 "risk_factor": adversarial_risk
             },
             "causality_map": scoring_result.get("causality_map", []),
+            "top_penalties": scoring_result.get("top_penalties", []),
             "cri_score":                scoring_result.get("cri_score", 0)
         }
 

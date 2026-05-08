@@ -186,12 +186,25 @@ class ScoringEngineV12:
         if case_data.get("is_authorized"): cri_components.append(15)
         cri_final = max(0, min(100, sum(cri_components)))
 
+        # ── EXPLICIT CAUSALITY: Score Delta & Penalty Index ──────────────────
+        potential_score = 99
+        causality_delta = []
+        for item in causality_map:
+            causality_delta.append({
+                "factor": item["fact"],
+                "impact": item["penalty"],
+                "reasoning": item["rationale"]
+            })
+
         return {
             "score": int(final_score),
             "final_score": int(final_score),
+            "potential_score": potential_score,
+            "causality_delta": causality_delta, # EXPLICIT TRACEABILITY
             "compliance_pct": int(compliance_pct),
             "cri_score": int(cri_final),
             "causality_map": causality_map,
+            "top_penalties": sorted(causality_map, key=lambda x: x["penalty"])[:3],
             "breakdown": {
                 "procedural": int(max(0, min(100, (sum([1 for p in [cheque, memo, notice] if p])/3.0)*100))),
                 "evidentiary": int(max(0, min(100, score))),
