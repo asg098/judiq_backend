@@ -22,6 +22,15 @@ except ImportError:
     HAS_PDFPLUMBER = False
     pdfplumber = None
 
+try:
+    from PIL import Image
+    import pytesseract
+    import io
+    HAS_PYTESSERACT = True
+except ImportError:
+    HAS_PYTESSERACT = False
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s"
@@ -317,10 +326,19 @@ async def upload_caseroom_document(
         else:
             extracted_text = "[Error: pdfplumber not installed on server]"
     else:
-        try:
-            extracted_text = content.decode("utf-8", errors="ignore")
-        except:
-            extracted_text = "[Unsupported file format for direct text extraction]"
+        # Fallback for images or raw text
+        is_image = any(file.filename.lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".webp"])
+        if is_image and HAS_PYTESSERACT:
+            try:
+                img = Image.open(io.BytesIO(content))
+                extracted_text = pytesseract.image_to_string(img)
+            except Exception as e:
+                extracted_text = f"[OCR Failed: {str(e)}]"
+        else:
+            try:
+                extracted_text = content.decode("utf-8", errors="ignore")
+            except:
+                extracted_text = "[Unsupported file format for direct text extraction]"
 
     # 2. Verification
     verification_result = OCREngine.analyze_document(extracted_text, doc_type, claimed_reason)
@@ -409,13 +427,21 @@ async def verify_memo(
             extracted_text = "[Error: pdfplumber not installed on server]"
     else:
         # Fallback for images or raw text
-        try:
-            extracted_text = content.decode("utf-8", errors="ignore")
-        except:
-            extracted_text = "[Unsupported file format for direct text extraction]"
+        is_image = any(file.filename.lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".webp"])
+        if is_image and HAS_PYTESSERACT:
+            try:
+                img = Image.open(io.BytesIO(content))
+                extracted_text = pytesseract.image_to_string(img)
+            except Exception as e:
+                extracted_text = f"[OCR Failed: {str(e)}]"
+        else:
+            try:
+                extracted_text = content.decode("utf-8", errors="ignore")
+            except:
+                extracted_text = "[Unsupported file format for direct text extraction]"
 
     # 3. Verification Logic
-    verification_result = OCREngine.verify_evidence_consistency(extracted_text, claimed_reason)
+    verification_result = OCREngine.analyze_document(extracted_text, "MEMO", claimed_reason)
     
     return {
         "success": True,

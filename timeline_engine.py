@@ -110,7 +110,8 @@ class TimelineEngine:
                         "days_remaining": 0,
                         "delay_days": delay_days,
                         "status": "TIME_BARRED",
-                        "message": f"Filed {delay_days} days after limitation period"
+                        "message": f"Filed {delay_days} days after limitation period. Condonation of Delay (Section 142(b)) REQUIRED.",
+                        "condonation_required": True
                     }
             
             if today > limitation_date:
@@ -120,7 +121,8 @@ class TimelineEngine:
                     "days_remaining": 0,
                     "days_overdue": days_over,
                     "status": "EXPIRED",
-                    "message": f"Limitation expired {days_over} days ago"
+                    "message": f"Limitation expired {days_over} days ago. Condonation of Delay REQUIRED.",
+                    "condonation_required": True
                 }
             else:
                 days_left = (limitation_date - today).days
