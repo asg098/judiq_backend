@@ -106,23 +106,46 @@ class ScoringEngineV12:
             score -= 20
             trace.append("-20 Presumption u/s 139 weakened (No debt proof)")
 
-        # 2. EXPERT AUDITS (Corporate & Financial Capacity)
+        # EXPERT AUDITS (Corporate & Financial Capacity)
         accused_name = str(case_data.get("accused_name", "")).lower()
         is_company = any(x in accused_name for x in ["pvt", "ltd", "corp", "inc", "co.", "company"])
         if is_company and not case_data.get("directors_named"):
             score -= 40
-            trace.append("-40 FATAL: S.141 defect - Directors not named for corporate accused")
+            trace.append("-40 FATAL: S.141 defect - Directors not named with exact roles for corporate accused (Aneeta Hada rule)")
 
-        # Basalingappa Check
+        # Authorization Trap (A.C. Narayanan)
+        complainant_type = case_data.get("complainant_type", "Individual")
+        if complainant_type != "Individual":
+            is_authorized = case_data.get("is_authorized", False)
+            if not is_authorized:
+                score -= 40
+                trace.append("-40 FATAL: Authorization Trap. Missing Board Resolution naming the specific signer BEFORE notice date (A.C. Narayanan)")
+
+        # Basalingappa & Sushil Kumar (2026) Check
         amount = ensure_number(case_data.get("amount", 0))
-        if amount > 150000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
+        if amount > 500000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
+            score -= 30
+            trace.append("-30 REBUTTAL RISK: High-value cash loan (₹5 Lakhs+) without ITR/Source proof (Sushil Kumar v. Sandeep Kumar, 2026)")
+        elif amount > 150000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
             score -= 25
             trace.append("-25 REBUTTAL RISK: High-value cash loan without ITR proof (Basalingappa rule)")
+
+        # Signature Mismatch Trap
+        dishonour_reason = case_data.get("dishonour_reason", "").lower()
+        if "signature" in dishonour_reason and "mismatch" in dishonour_reason:
+            score -= 15
+            trace.append("-15 EVIDENTIARY TRAP: Signature Mismatch shifts burden. Requires Handwriting Expert.")
+
+        # Procedural Fragility: Email Notice
+        notice_mode = case_data.get("notice_mode", "rpad").lower()
+        if "email" in notice_mode and "rpad" not in notice_mode:
+            score -= 20
+            trace.append("-20 PROCEDURAL RISK: Notice via Email lacks delivery proof of RPAD and requires S.63 BSA Certificate.")
 
         # 3. BREAKDOWN CALCULATION
         existing_concepts = [c["concept"] for c in concepts]
         
-        # ── PROCEDURAL KILL-SWITCH (Hardening) ──────────────────────────
+        # ── ENEMY TACTICS KILL-SWITCH (Hardening) ──────────────────────────
         if "limitation_issue" in existing_concepts:
             score -= 30
             trace.append("-30 CRITICAL: Limitation Period delay detected (S.142 violation)")
@@ -130,6 +153,19 @@ class ScoringEngineV12:
         if "notice_defect" in existing_concepts:
             score -= 25
             trace.append("-25 CRITICAL: Defective statutory notice")
+
+        if case_data.get("handwriting_different") or "material_alteration" in existing_concepts:
+            score -= 40
+            trace.append("-40 FATAL: Material Alteration Trap (S.87). Different handwriting/inks voids the instrument.")
+
+        if "defective_goods" in existing_concepts:
+            score -= 20
+            trace.append("-20 RISK: 'Civil Dispute' Camouflage. Disputed amount can invalidate the entire notice.")
+
+        # Notice of Service Ghost
+        if case_data.get("notice_sent") and not case_data.get("ad_card_received"):
+            score -= 15
+            trace.append("-15 RISK: 'Notice of Service Ghost'. Missing AD Card signature or vague tracking report.")
 
         # Procedural Score: Pillars + Limitation
         pro_score = (sum([1 for p in [cheque, memo, notice] if p]) / 3.0) * 100
@@ -182,5 +218,7 @@ class ScoringEngineV12:
             "reasoning_trace": trace,
             "score_breakdown": trace, # Compatibility
             "limitation": case_data.get("limitation", {}),
-            "discretionary_caveats": []
+            "discretionary_caveats": [
+                "JUDICIAL DISCRETION CAVEAT: While this AI employs 'Cynical Advocate' logic, do not entirely abandon a 'Moderate' case. A sympathetic Magistrate may exercise judicial discretion and overlook minor technical defects if glaring financial fraud or bad faith by the accused is evident."
+            ]
         }

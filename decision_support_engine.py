@@ -40,28 +40,44 @@ RISK_CATALOGUE = [
     },
     {
         "concept_trigger": "material_alteration",
-        "risk": "Material Alteration Defense",
+        "risk": "The 'Material Alteration' Attack (S.87 Void Cheque)",
+        "severity": "FATAL",
+        "description": "Enemy tactic: Accused claims the date/amount was filled later or handwriting differs. Under Section 87 of the NI Act, a materially altered cheque without consent is void.",
+        "rebuttal": "Ensure the cheque was handed over with consent to fill in details (S.20 Inchoate Instrument). Use S.45 Evidence Act handwriting expert if accused alleges forgery of the signature.",
+        "case_law": "Section 87 NI Act / Loonkaran Sethia v. Ivan E. John"
+    },
+    {
+        "concept_trigger": "defective_goods",
+        "risk": "The 'Civil Dispute' Camouflage",
         "severity": "HIGH",
-        "description": "Accused claims the cheque was altered (date, amount, or name) without consent, rendering it void under S.87 of Negotiable Instruments Act.",
-        "rebuttal": "Cross-examine on whether the 'alteration' was in fact a correction made by the drawer or authorized by them. Use handwriting expert (S.45 Evidence Act).",
-        "case_law": "Loonkaran Sethia v. Ivan E. John (1977)"
+        "description": "Enemy tactic: Accused produces emails complaining about goods/services prior to cheque presentation. Argues debt was for a lesser amount, making the demand notice excessive and invalid.",
+        "rebuttal": "Produce delivery challans and acceptance emails. Show that the cheque was issued unconditionally post-delivery.",
+        "case_law": "Dashrathbhai Trikambhai Patel vs. Hitesh Mahendrabhai Patel (2022)"
     },
     {
         "concept_trigger": "directors_named",
         "pillar_trigger": "directors_named",
         "risk": "Vicarious Liability Defect (S.141)",
         "severity": "CRITICAL",
-        "description": "For corporate accused, failure to specifically name and aver the role of directors is fatal per Aneeta Hada (2012).",
-        "rebuttal": "Ensure the complaint contains specific averments that the named directors were 'in charge of and responsible for the conduct of business'. Company must be co-accused.",
+        "description": "For corporate accused, failure to specifically name and aver the exact role of directors is fatal per Aneeta Hada (2012).",
+        "rebuttal": "Ensure the complaint contains specific averments that the named directors were 'in charge of and responsible for the conduct of business' with their exact roles described.",
         "case_law": "Aneeta Hada v. Godfather Travels (2012)"
     },
     {
+        "concept_trigger": "unauthorized_complainant",
+        "risk": "The 'Authorization' Technical Knockout",
+        "severity": "FATAL",
+        "description": "Enemy tactic: Challenging the complainant's Board Resolution. If the signer isn't exactly named, or resolution wasn't passed before the notice, case dismissed on day one.",
+        "rebuttal": "Ensure a Board Resolution authorizing the exact individual was passed BEFORE the legal notice was sent. Annex original resolution.",
+        "case_law": "A.C. Narayanan vs. State of Maharashtra"
+    },
+    {
         "concept_trigger": "digital_evidence",
-        "risk": "Electronic Evidence Admissibility (S.65B)",
+        "risk": "The Digital Evidence 'Death Trap' (BSA Section 63)",
         "severity": "HIGH",
-        "description": "WhatsApp/Email records are inadmissible without a mandatory certificate under Section 65B(4) of the Indian Evidence Act.",
-        "rebuttal": "Per 'Arjun Panditrao Khotkar v. Kailash Kushanrao Gorantyal (2020)', the certificate is a condition precedent for admissibility. Prepare certificate signed by the person in control of the device.",
-        "case_law": "Arjun Panditrao Khotkar (2020)"
+        "description": "WhatsApp/Email records are inadmissible without a mandatory certificate under Section 63(4) of the Bharatiya Sakshya Adhiniyam (BSA) (replacing old 65B).",
+        "rebuttal": "The certificate is a condition precedent for admissibility. Prepare the Section 63 BSA certificate signed by the person in control of the device at the time of filing, otherwise the court may reject this evidence entirely.",
+        "case_law": "BSA Section 63(4) Compliance"
     },
     {
         "concept_trigger": "interim_compensation",
@@ -73,11 +89,11 @@ RISK_CATALOGUE = [
     },
     {
         "concept_trigger": "financial_capacity_risk",
-        "risk": "Financial Capacity Rebuttal (Basalingappa Rule)",
+        "risk": "The 'Financial Capacity' Challenge",
         "severity": "HIGH",
-        "description": "Accused challenges the complainant's ability/means to lend the alleged high-value cash amount.",
-        "rebuttal": "Counter by showing specific source of funds (bank withdrawal receipts, sale of assets, or high ITR income). Per 'Basalingappa (2019)', if the accused creates a 'probable defense' regarding financial capacity, the burden shifts back to the complainant.",
-        "case_law": "Basalingappa v. Mudibasappa (2019)"
+        "description": "Accused challenges the complainant's ability/means to lend the alleged high-value cash amount (₹5 Lakhs+).",
+        "rebuttal": "Counter by showing specific source of funds (bank withdrawal receipts, or ITR). Per 'Sushil Kumar v. Sandeep Kumar (2026)', failing to show a source of income allows the accused to successfully rebut the legal presumption of debt.",
+        "case_law": "Sushil Kumar v. Sandeep Kumar (2026) / Basalingappa (2019)"
     }
 ]
 
@@ -163,23 +179,39 @@ class DecisionSupportEngine:
         order = {"FATAL": 0, "CRITICAL": 1, "HIGH": 2, "MEDIUM": 3, "LOW": 4}
         risks.sort(key=lambda r: order.get(r["severity"], 99))
 
-        # Hard-coded strategy triggers based on case data
+        # Hard-coded strategy triggers based on case data (Anti-AI-Marker Protections)
+        risks.append({
+            "risk": "The 'Hallucination' Attack (Phantom Precedents)",
+            "severity": "FATAL",
+            "description": "Defense will verify citations. Submitting fake AI-generated case laws leads to Professional Misconduct and heavy fines.",
+            "rebuttal": "Fact-check EVERY citation on verified legal databases (e.g., SCC Online) before filing. Do not trust AI blindly.",
+            "case_law": "Supreme Court Guidelines (March 2026)"
+        })
+        
+        risks.append({
+            "risk": "The 'Cookie-Cutter' Drafting Trap",
+            "severity": "HIGH",
+            "description": "Magistrates are actively scrutinizing e-filings for 'AI-Markers'. Defense will claim lack of 'application of mind'.",
+            "rebuttal": "Humanize the draft. Add specific personal details about the transaction. Never file raw AI boilerplate.",
+            "case_law": "Judicial Skepticism Protocols (April 2026)"
+        })
+
         if case_data.get("communication_records"):
             risks.append({
-                "risk": "Digital Proof & S.65B Compliance",
+                "risk": "Digital Proof & BSA S.63 Compliance",
                 "severity": "HIGH",
-                "description": "Case relies on digital trails (WhatsApp/Email) which are subject to strict admissibility rules.",
-                "rebuttal": "File a mandatory Section 65B Evidence Act Certificate alongside the complaint to ensure these records are read in evidence.",
-                "case_law": "Arjun Panditrao Khotkar (2020)"
+                "description": "Case relies on digital trails (WhatsApp/Email) which are subject to strict admissibility rules under the new criminal laws.",
+                "rebuttal": "File a mandatory Section 63(4) BSA Certificate alongside the complaint to ensure these records are read in evidence. Without it, you lose your best proof.",
+                "case_law": "BSA Section 63 (Replacing S.65B)"
             })
         
         if case_data.get("amount", 0) >= 50000:
             risks.append({
-                "risk": "Strategic Recovery: S.143A Application",
+                "risk": "The 143A 'Discretionary' Barrier",
                 "severity": "MEDIUM",
-                "description": "High-value cheque detected. Opportunity to secure 20% of the amount during trial.",
-                "rebuttal": "Include a prayer for Interim Compensation under Section 143A to secure partial recovery and pressure the accused for settlement.",
-                "case_law": "S.143A NI Act (2018 Amendment)"
+                "description": "High-value cheque detected. Courts are treating Section 143A interim compensation as discretionary. Without arguing 'Financial Hardship', judges might deny it.",
+                "rebuttal": "Include a prayer for Interim Compensation under Section 143A explicitly arguing 'Financial Hardship' to secure partial recovery and pressure the accused.",
+                "case_law": "S.143A NI Act (Discretionary Rulings 2026)"
             })
 
         return risks
@@ -215,7 +247,7 @@ class DecisionSupportEngine:
         suggestions: List[str] = []
         if not case_data.get("debt_proven"):
             suggestions += [
-                "WhatsApp/Email correspondence where accused acknowledges the debt (Requires S.65B Certificate)",
+                "WhatsApp/Email correspondence where accused acknowledges the debt (Requires Section 63(4) BSA Certificate)",
                 "Bank transfer records or UPI transaction receipts for the original loan disbursement",
                 "Ledger account entries / Tally printout showing receivable",
                 "Promissory note or acknowledgement of debt signed by accused",
@@ -224,13 +256,13 @@ class DecisionSupportEngine:
         
         if case_data.get("communication_records"):
             suggestions += [
-                "Mandatory: Prepare Section 65B Evidence Act Certificate for WhatsApp/Email printouts",
+                "Mandatory: Prepare Section 63(4) BSA Certificate for WhatsApp/Email printouts (Replacing old 65B)",
                 "Ensure digital records show a clear admission of liability or acknowledgment of the specific cheque",
             ]
         if not case_data.get("notice_sent"):
             suggestions += [
                 "Draft and dispatch demand notice via Registered Post AD within 30 days of dishonour memo",
-                "Retain original postal receipt and AD card (green card) as proof of dispatch and delivery",
+                "BEWARE 'Notice of Service Ghost': Ensure the A.D. card has the accused's actual signature, and tracking report clearly shows 'Item Delivered' to the correct person.",
             ]
         if case_data.get("accused_type") in ("Pvt Ltd/Ltd Company", "Company", "Partnership Firm") \
                 and not case_data.get("directors_named"):

@@ -125,12 +125,12 @@ On behalf of: {complainant}
 """
 
 
-def generate_certificate_65b(case_data: Dict) -> str:
+def generate_certificate_63_bsa(case_data: Dict) -> str:
     today, _ = _case_meta(case_data)
     complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[YOUR NAME]"
     device_type = case_data.get("device_type", "Smartphone / Personal Computer")
     
-    return f"""{_header("CERTIFICATE UNDER SECTION 65B OF THE INDIAN EVIDENCE ACT, 1872")}
+    return f"""{_header("CERTIFICATE UNDER SECTION 63(4) OF THE BHARATIYA SAKSHYA ADHINIYAM (BSA)")}
 
 IN THE COURT OF THE LEARNED JUDICIAL MAGISTRATE / METROPOLITAN MAGISTRATE
 AT [COURT LOCATION]
@@ -142,7 +142,7 @@ IN THE MATTER OF:
 VERSUS
 [ACCUSED NAME]                                             ... ACCUSED
 
-AFFIDAVIT / CERTIFICATE UNDER SECTION 65B(4) OF THE INDIAN EVIDENCE ACT, 1872 FOR ADMISSIBILITY OF ELECTRONIC RECORDS
+AFFIDAVIT / CERTIFICATE UNDER SECTION 63(4) OF THE BHARATIYA SAKSHYA ADHINIYAM (BSA) FOR ADMISSIBILITY OF ELECTRONIC RECORDS
 
 I, {complainant}, adult, residing at [ADDRESS], do hereby solemnly affirm and state as under:
 
@@ -214,31 +214,33 @@ def generate_complaint(case_data: Dict, concepts: List[Dict], tone: str = "stand
     elif purpose:
         transaction_nature = purpose[:100]
 
-    # Authorization Clause Logic - ADVOCATE HARDENED
+    # Authorization Clause Logic - ADVOCATE HARDENED (A.C. Narayanan)
     auth_clause = ""
     if complainant_type != "Individual":
         is_auth = case_data.get("is_authorized", False)
+        auth_name = case_data.get("authorized_person_name", "[EXACT NAME OF AUTHORIZED PERSON]")
         if is_auth:
-            auth_clause = f"The Complainant is a {complainant_type} and is represented by its Authorized Signatory, who is duly empowered by way of a Board Resolution and a Letter of Authority dated _________, produced herewith as ANNEXURE-A. The said representative is fully conversant with the facts and circumstances of the present case and is competent to depose on behalf of the Complainant."
+            auth_clause = f"The Complainant is a {complainant_type} and is represented by its Authorized Signatory, Mr./Ms. {auth_name}, who is duly empowered by way of a Board Resolution dated [DATE PRIOR TO NOTICE] and a Letter of Authority, produced herewith as ANNEXURE-A. The said representative is fully conversant with the facts and circumstances of the present case and is competent to depose on behalf of the Complainant per the mandate of 'A.C. Narayanan vs. State of Maharashtra'."
         else:
-            auth_clause = f"The Complainant is a {complainant_type} filing through its representative. [CRITICAL WARNING: Board Resolution/Authorization must be annexed to satisfy procedural mandates of S.141]."
+            auth_clause = f"The Complainant is a {complainant_type} filing through its representative. [🚨 FATAL DEFECT WARNING: A.C. Narayanan Trap. You MUST annex a Board Resolution naming the exact person signing this complaint, and it MUST have been passed BEFORE the legal notice was sent]."
 
-    # Vicarious Liability Clause (Sec 141) - BATTLE READY
+    # Vicarious Liability Clause (Sec 141) - BATTLE READY (Specific Role)
     liability_clause = ""
     if accused_type != "Individual":
         has_directors = case_data.get("directors_named", False)
         director_names = case_data.get("director_names", "")
+        director_roles = case_data.get("director_roles", "[SPECIFY EXACT ROLES e.g., Managing Director overseeing finance]")
         
         if has_directors and director_names:
             liability_clause = f"""3. THE VICARIOUS LIABILITY (SEC. 141):
     That the Accused No. 1 is a {accused_type}, and Accused Nos. 2 onwards, namely {director_names}, are the Directors/Partners/Officers of the said Accused No. 1.
     That at the time the offence was committed, the said Accused Nos. 2 onwards were in charge of, and were responsible to the Accused No. 1 for the conduct of its business. 
-    They were actively involved in the day-to-day management and decision-making processes of the Accused No. 1, and the dishonoured cheque in question was issued with their full knowledge, consent, and connivance.
+    Specifically, their exact roles are as follows: {director_roles}. They were actively involved in the day-to-day management and decision-making processes of the Accused No. 1, and the dishonoured cheque in question was issued with their full knowledge, consent, and connivance.
     The Accused Nos. 2 onwards are thus vicariously liable for the acts of the Accused No. 1 as per the mandatory provisions of Section 141 of the Negotiable Instruments Act, 1881 and the law laid down by the Hon'ble Supreme Court in 'Aneeta Hada v. Godfather Travels'."""
         elif has_directors:
-            liability_clause = f"3. THE VICARIOUS LIABILITY (SEC. 141): That the Accused No. 1 is a {accused_type} and the other Accused persons are its Directors/Officers who were in charge of and responsible for the conduct of the business as per Section 141 of the NI Act."
+            liability_clause = f"3. THE VICARIOUS LIABILITY (SEC. 141): That the Accused No. 1 is a {accused_type} and the other Accused persons are its Directors/Officers who were in charge of and responsible for the conduct of the business (Exact roles: [SPECIFY ROLES]) as per Section 141 of the NI Act."
         else:
-            liability_clause = f"3. That the Accused is a {accused_type}. [🚨 FATAL DEFECT WARNING: You must name the specific Directors/Officers in charge of the company and describe their roles to satisfy Section 141 and avoid dismissal at the threshold stage per 'Aneeta Hada' ruling]."
+            liability_clause = f"3. That the Accused is a {accused_type}. [🚨 FATAL DEFECT WARNING: You must name the specific Directors/Officers in charge of the company and describe their EXACT ROLES to satisfy Section 141 and avoid dismissal at the threshold stage per 'Aneeta Hada' ruling]."
 
     # ── DELAY CONDONATION (Advocate Hardening) ───────────────────────────
     delay_para = ""
@@ -256,9 +258,9 @@ def generate_complaint(case_data: Dict, concepts: List[Dict], tone: str = "stand
     
     if case_data.get("communication_records"):
         if is_aggressive:
-            debt_pleading += f" The Accused's culpability is further established by an unassailable digital trail of WhatsApp messages and Emails, where the debt was repeatedly admitted. This evidence is fortified by a mandatory Section 65B Evidence Act Certificate, making it trial-ready and inadmissible to denial."
+            debt_pleading += f" The Accused's culpability is further established by an unassailable digital trail of WhatsApp messages and Emails, where the debt was repeatedly admitted. This evidence is fortified by a mandatory Section 63(4) BSA Certificate, making it trial-ready and inadmissible to denial."
         else:
-            debt_pleading += f" The Accused has repeatedly acknowledged the said debt and liability via various communications, including WhatsApp messages and Emails, which are produced herewith along with the mandatory Certificate under Section 65B of the Indian Evidence Act."
+            debt_pleading += f" The Accused has repeatedly acknowledged the said debt and liability via various communications, including WhatsApp messages and Emails, which are produced herewith along with the mandatory Certificate under Section 63(4) of the Bharatiya Sakshya Adhiniyam (BSA)."
     elif case_data.get("debt_proof_type") == "verbal_agreement" or case_data.get("agreement_type") == "Verbal Agreement":
         if is_aggressive:
             debt_pleading += " Despite the trust-based nature of the initial transaction, the Accused's subsequent conduct, the issuance of the cheque, and the resulting statutory presumption under Section 139 constitute an unequivocal admission of the debt, which the Accused is now dishonestly attempting to evade."
@@ -338,7 +340,7 @@ ANNEXURE-B: Original Dishonoured Cheque No. {cheque_no}
 ANNEXURE-C: Original Bank Dishonour Memo dated {dishonour_date}
 ANNEXURE-D: Office Copy of Legal Demand Notice dated {notice_date}
 ANNEXURE-E: Original Postal Receipt and A.D. Card / Tracking Report
-ANNEXURE-F: Section 65B Evidence Act Certificate for WhatsApp/Email records (Mandatory)
+ANNEXURE-F: Section 63(4) BSA Certificate for WhatsApp/Email records (Mandatory)
 
 VERIFICATION:
 I, {complainant}, do hereby solemnly verify that the contents of the above Complaint are true and correct to the best of my knowledge, information, and belief. Nothing material has been concealed therefrom, and all supporting documents are annexed herewith.
@@ -417,8 +419,8 @@ SETTLEMENT ASSESSMENT:
    Given the case strength score of {score}/100, a negotiated settlement may be advisable to avoid
    prolonged litigation risk. The Accused should evaluate a commercial resolution.
 
-DISCLAIMER: This is an AI-generated preliminary strategy document. Consult a qualified advocate
-before taking any legal action.
+DISCLAIMER: This is an AI-generated preliminary strategy document. Consult a qualified advocate before taking any legal action. 
+WARNING: Do NOT file raw AI output. You MUST 'humanize' the draft to avoid 'Cookie-Cutter' objections from the Magistrate, and verify ALL citations to prevent 'Phantom Precedent' penalties (Professional Misconduct/₹50k fine).
 """
 
 
@@ -543,6 +545,54 @@ Advocate for Complainant
 """
 
 
+def generate_application_143a(case_data: Dict) -> str:
+    today, amount_str = _case_meta(case_data)
+    complainant = case_data.get("complainant_name") or case_data.get("complainantName") or "[COMPLAINANT NAME]"
+    accused = case_data.get("accused_name") or case_data.get("accusedName") or "[ACCUSED NAME]"
+    
+    return f"""{_header("APPLICATION FOR INTERIM COMPENSATION — SECTION 143A NI ACT")}
+
+IN THE COURT OF THE LEARNED JUDICIAL MAGISTRATE / METROPOLITAN MAGISTRATE
+AT [COURT LOCATION]
+
+COMPLAINT NO.: _____ / {datetime.now().year}
+
+IN THE MATTER OF:
+{complainant}                                              ... COMPLAINANT
+VERSUS
+{accused}                                                  ... ACCUSED
+
+APPLICATION UNDER SECTION 143A OF THE NEGOTIABLE INSTRUMENTS ACT, 1881 FOR GRANT OF INTERIM COMPENSATION.
+
+RESPECTFULLY SHOWETH:
+
+1. THE COMPLAINT:
+   The Complainant has filed the accompanying Complaint under Section 138 of the NI Act against the Accused. The contents of the said Complaint may be read as part and parcel of this application.
+
+2. PRIMA FACIE CASE:
+   The Accused has been summoned by this Hon'ble Court. The Complainant has established a strong prima facie case against the Accused supported by unassailable documentary evidence including the dishonoured cheque, bank return memo, and proof of legal demand notice.
+
+3. STATUTORY RIGHT TO INTERIM COMPENSATION:
+   Under Section 143A of the Negotiable Instruments Act, 1881, this Hon'ble Court is empowered to order the drawer of the cheque to pay interim compensation to the Complainant up to 20% of the amount of the cheque, where the Accused pleads not guilty to the accusation made in the complaint.
+
+4. DILATORY TACTICS & FINANCIAL HARDSHIP:
+   The Accused is adopting dilatory tactics and raising frivolous defenses merely to delay the proceedings and defeat the ends of justice. The Complainant is suffering immense and severe financial hardship due to the non-payment of the legally enforceable debt of {amount_str}. It is respectfully submitted that granting interim compensation is essential to prevent the Complainant from enduring further unjust financial ruin during the pendency of this trial.
+
+PRAYER:
+It is, therefore, most respectfully prayed that this Hon'ble Court may be pleased to:
+(a) Direct the Accused to pay 20% of the cheque amount as interim compensation to the Complainant in accordance with Section 143A of the Negotiable Instruments Act, 1881;
+(b) Pass such other order(s) as this Hon'ble Court may deem fit in the interest of justice.
+
+Place: [PLACE]
+Date: {today}
+
+                                                        {complainant}
+                                                        (Complainant)
+Through:
+[ADVOCATE NAME]
+Advocate for Complainant
+"""
+
 def generate_legal_opinion(score: int, concepts: List[Dict], case_data: Dict) -> str:
     today, amount_str = _case_meta(case_data)
     concept_names = {c.get("concept", "") for c in concepts}
@@ -602,14 +652,17 @@ DOCUMENT CHECKLIST:
 RECOMMENDATION:
 {recommendation}
 
-PROCEDURAL CHECKLIST:
+PROCEDURAL CHECKLIST (Anti-Enemy Tactics):
+   [ ] ENEMY TACTIC: 'Material Alteration' -> Ensure handwriting/ink is consistent or S.20 applies.
+   [ ] ENEMY TACTIC: 'Notice Ghost' -> Ensure AD Card has the accused's actual signature, not generic tracking.
+   [ ] ENEMY TACTIC: 'Time/Delay' -> Ensure all original docs are flawless BEFORE filing to avoid discharge applications.
    [ ] Confirm cheque was presented within 3 months of its date
    [ ] Confirm demand notice dispatched within 30 days of dishonour
    [ ] Confirm 15-day notice response period has elapsed
    [ ] Confirm complaint filed within 1 month of cause of action
-   [ ] Certified copies of all documents ready for court submission
 
 DISCLAIMER: AI-generated preliminary assessment. Not a substitute for professional legal advice.
+WARNING: Do NOT file raw AI output. You MUST 'humanize' the draft to avoid 'Cookie-Cutter' objections from the Magistrate, and verify ALL citations to prevent 'Phantom Precedent' penalties (Professional Misconduct/₹50k fine).
 """
 
 
@@ -632,12 +685,14 @@ class DraftEngine:
         elif draft_type == "COMPLAINT":
             return generate_complaint(case_data, concepts, tone=tone)
         elif draft_type == "CERTIFICATE_65B":
-            return generate_certificate_65b(case_data)
+            return generate_certificate_63_bsa(case_data)
         elif draft_type in ("DEFENCE_STRATEGY", "DEFENCE_REPLY"):
             return generate_defence_strategy(case_data, concepts, score)
         elif draft_type == "SETTLEMENT":
             return generate_settlement_draft(case_data, score)
         elif draft_type == "DELAY_CONDONATION":
             return generate_delay_condonation(case_data)
+        elif draft_type == "APPLICATION_143A":
+            return generate_application_143a(case_data)
         else:
             return generate_legal_opinion(score, concepts, case_data)

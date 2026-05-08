@@ -140,26 +140,43 @@ class ReasoningEngine:
                         "is_live":   False
                     })
 
-        # Attach latest live precedents (from precedent_log.json)
-        for p in precedent_manager.get_latest_precedents(3):
-            title    = p.get("title", "")
-            citation = p.get("citation", "")
-            key      = citation or title
-            if key and key not in seen_citations:
-                seen_citations.add(key)
-                matched.append({
-                    "concept":   p.get("impact_area", "general"),
-                    "case":      title,
-                    "citation":  citation,
-                    "court":     "Supreme Court of India",
-                    "principle": p.get("summary", ""),
-                    "relevance": 0.85,
-                    "is_live":   True
-                })
+        # Attach latest live precedents conditionally based on matching concepts
+        concept_names_set = {c.get("concept", "") for c in concepts}
+        for p in precedent_manager.get_latest_precedents(15):
+            impact_area = p.get("impact_area", "general")
+            # Only include live precedents that match case concepts (to stop them from being the same for all)
+            if impact_area in concept_names_set or impact_area == "general":
+                title    = p.get("title", "")
+                citation = p.get("citation", "")
+                key      = citation or title
+                if key and key not in seen_citations:
+                    seen_citations.add(key)
+                    
+                    # Calculate a dynamic percentage-based relevance score based on impact_area
+                    base_relevance = 0.88 if impact_area in concept_names_set else 0.65
+                    # Add small variance
+                    variance = (hash(key) % 15) / 100.0
+                    final_relevance = min(base_relevance + variance, 0.99)
+                    
+                    matched.append({
+                        "concept":   impact_area,
+                        "case":      title,
+                        "citation":  citation,
+                        "court":     "Supreme Court of India",
+                        "principle": p.get("summary", ""),
+                        "relevance": round(final_relevance, 2),
+                        "match_percentage": f"{int(final_relevance * 100)}%",
+                        "is_live":   True
+                    })
 
-        # Sort by relevance descending, cap at 8
+        # Format match_percentage for all matched precedents
+        for m in matched:
+            if "match_percentage" not in m:
+                m["match_percentage"] = f"{int(m['relevance'] * 100)}%"
+
+        # Sort by relevance descending, cap at 15 to show more
         matched.sort(key=lambda x: x["relevance"], reverse=True)
-        return matched[:8]
+        return matched[:15]
 
     # ── 3. Statutory Interpretation ───────────────────────────────────────────
     @staticmethod

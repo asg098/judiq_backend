@@ -192,6 +192,58 @@ async def analyze(request: Request):
     return response_body
 
 
+# ── Phase 1: Verification (MCA & India Post APIs) ──────────────────────────
+@app.get("/verify-mca/{cin}")
+async def verify_mca_data(cin: str):
+    """
+    Mock MCA (Ministry of Corporate Affairs) API integration.
+    Verifies company details to ensure correct Directors are named for Sec 141.
+    """
+    logger.info(f"Verifying MCA data for CIN: {cin}")
+    # In a real scenario, this would call the MCA API
+    if not cin or len(cin) < 21:
+        return JSONResponse(status_code=400, content={"error": "Invalid CIN Format"})
+    
+    return {
+        "success": True,
+        "cin": cin,
+        "company_name": "Verified Entity Pvt. Ltd.",
+        "status": "Active",
+        "directors": [
+            {"din": "01234567", "name": "Rahul Sharma", "designation": "Managing Director"},
+            {"din": "07654321", "name": "Priya Singh", "designation": "Director"}
+        ],
+        "registered_address": "123, Verification Hub, New Delhi, India 110001",
+        "verification_timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/verify-post/{tracking_id}")
+async def verify_post_data(tracking_id: str):
+    """
+    Mock India Post API integration.
+    Verifies tracking details of the statutory demand notice.
+    """
+    logger.info(f"Verifying India Post tracking: {tracking_id}")
+    if not tracking_id or not tracking_id.endswith("IN"):
+        return JSONResponse(status_code=400, content={"error": "Invalid Tracking ID Format"})
+    
+    return {
+        "success": True,
+        "tracking_id": tracking_id,
+        "status": "Item Delivery Confirmed",
+        "delivery_date": "2024-03-15T14:30:00",
+        "delivery_location": "New Delhi, 110001",
+        "verification_timestamp": datetime.now().isoformat()
+    }
+
+
+# ── Encryption setup ───────────────────────────────────────────────────────────
+from cryptography.fernet import Fernet
+# In production, this key should be loaded from environment variables
+ENCRYPTION_KEY = b'G-o6dGqzB2H7r7C4Uv6hM3_bT4-Y3PZ9N4e4Wv4Y-xY=' 
+fernet = Fernet(ENCRYPTION_KEY)
+
+
 # ── Caseroom Management ────────────────────────────────────────────────────────
 @app.post("/caseroom/create")
 async def create_caseroom(request: Request):
@@ -248,9 +300,12 @@ async def upload_caseroom_document(
     
     content = await file.read()
     
-    # Save file to disk
+    # Encrypt file content (Phase 3: Security)
+    encrypted_content = fernet.encrypt(content)
+    
+    # Save encrypted file to disk
     with open(file_path, "wb") as f:
-        f.write(content)
+        f.write(encrypted_content)
 
     # 1. Extract Text
     extracted_text = ""
@@ -307,6 +362,27 @@ async def generate_pdf(request: Request):
         logger.error(f"PDF error: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+
+# ── File Download with Decryption ──────────────────────────────────────────────
+@app.get("/caseroom/{room_id}/download/{filename}")
+async def download_caseroom_document(room_id: str, filename: str):
+    file_path = os.path.join(os.getcwd(), "uploads", room_id, filename)
+    if not os.path.exists(file_path):
+        return JSONResponse(status_code=404, content={"error": "File not found"})
+        
+    with open(file_path, "rb") as f:
+        encrypted_content = f.read()
+        
+    try:
+        decrypted_content = fernet.decrypt(encrypted_content)
+    except Exception as e:
+        logger.error(f"Decryption failed: {e}")
+        return JSONResponse(status_code=500, content={"error": "Decryption failed"})
+        
+    return Response(
+        content=decrypted_content,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 # ── Evidence Verification (OCR) ────────────────────────────────────────────────
 @app.post("/verify-memo")

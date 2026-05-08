@@ -23,7 +23,7 @@ class StrategyEngine:
 
         if score >= 70:
             prosecution["tactical_moves"].append("Aggressive Trial: Push for daily hearings and early framing of charge.")
-            prosecution["statutory_leverage"].append("Section 143A: File interim compensation application on the first date of framing notice.")
+            prosecution["statutory_leverage"].append("Section 143A: File interim compensation application on the first date of framing notice, strictly pleading 'Financial Hardship' to avoid discretionary rejection.")
         else:
             prosecution["tactical_moves"].append("Settlement Focus: Use the threat of trial to push for a structured repayment plan.")
             prosecution["evidentiary_tasks"].append("Corroboration: Secure bank statements and income tax records to bolster 'Financial Capacity'.")
@@ -45,7 +45,7 @@ class StrategyEngine:
             defence["tactical_moves"].append("Rebuttal Mode: Challenge the 'legally enforceable debt' by exposing gaps in consideration.")
             
         if "financial_capacity_risk" in concept_names:
-            defence["landmark_defence"].append("Basalingappa Rule: Cross-examine Complainant on their source of funds and ITR non-disclosure.")
+            defence["landmark_defence"].append("Sushil Kumar/Basalingappa Rule: Cross-examine Complainant on their source of funds and ITR non-disclosure for large amounts.")
 
         if "security_cheque" in concept_names:
             defence["landmark_defence"].append("Security Defense: Establish that no debt was due on the date of cheque issuance (Indus Airways).")
