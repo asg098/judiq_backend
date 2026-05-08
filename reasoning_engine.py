@@ -133,7 +133,7 @@ class ReasoningEngine:
                 if kb_prec and kb_prec not in seen_citations:
                     seen_citations.add(kb_prec)
                     safe_citation = kb_prec.replace('/', '_').replace(' ', '_')
-                    matched.append({
+                    prec = {
                         "concept":   concept_name,
                         "case":      kb_prec,
                         "citation":  kb_prec,
@@ -142,12 +142,16 @@ class ReasoningEngine:
                         "relevance": round(confidence, 2),
                         "is_live":   False,
                         "document_url": f"/api/precedents/document/{safe_citation}"
-                    })
+                    }
+                    v = precedent_manager.verify_citation_authenticity(prec["citation"])
+                    prec["verification_status"] = v["status"]
+                    prec["is_verified_landmark"] = v["verified"]
+                    matched.append(prec)
 
         # Explicit Basalingappa Hardening (Adversarial Articulation)
         amount = float(case_data.get("amount") or 0)
         if amount > 500000 and not case_data.get("complainant_itr_available"):
-            matched.append({
+            prec = {
                 "concept":   "financial_capacity_risk",
                 "case":      "Basalingappa vs. Mudibasappa",
                 "citation":  "Basalingappa vs. Mudibasappa (2019) 5 SCC 418",
@@ -157,7 +161,12 @@ class ReasoningEngine:
                 "is_live":   False,
                 "document_url": "/api/precedents/document/Basalingappa_vs_Mudibasappa",
                 "adversarial_note": "CRITICAL VULNERABILITY: Your lack of ITR for a ₹50L loan is a 'Basalingappa' trigger. Defence will destroy your case in cross-examination on this point alone."
-            })
+            }
+            # Verify authenticity
+            v = precedent_manager.verify_citation_authenticity(prec["citation"])
+            prec["verification_status"] = v["status"]
+            prec["is_verified_landmark"] = v["verified"]
+            matched.append(prec)
 
         # Attach latest live precedents conditionally based on matching concepts
         concept_names_set = {c.get("concept", "") for c in concepts}
@@ -178,7 +187,7 @@ class ReasoningEngine:
                     final_relevance = min(base_relevance + variance, 0.99)
                     
                     safe_citation = citation.replace('/', '_').replace(' ', '_') if citation else title.replace(' ', '_')
-                    matched.append({
+                    prec = {
                         "concept":   impact_area,
                         "case":      title,
                         "citation":  citation,
@@ -188,15 +197,47 @@ class ReasoningEngine:
                         "match_percentage": f"{int(final_relevance * 100)}%",
                         "is_live":   True,
                         "document_url": f"/api/precedents/document/{safe_citation}"
-                    })
+                    }
+                    v = precedent_manager.verify_citation_authenticity(prec["citation"])
+                    prec["verification_status"] = v["status"]
+                    prec["is_verified_landmark"] = v["verified"]
+                    matched.append(prec)
+
+        # ── 3. Live AI Research Layer (Actual Real AI) ────────────────────────
+        for concept_entry in concepts:
+            concept_name = concept_entry.get("concept", "")
+            if concept_name in ["financial_capacity_risk", "limitation_issue", "notice_defect", "company_liability"]:
+                # Trigger real-time search for the specific risk
+                live_research = precedent_manager.search_real_precedents(f"S.138 NI Act {concept_name} landmark judgment")
+                for p in live_research:
+                    if p["citation"] not in seen_citations:
+                        seen_citations.add(p["citation"])
+                        prec = {
+                            "concept":   p["impact_area"],
+                            "case":      p["title"],
+                            "citation":  p["citation"],
+                            "court":     "Supreme Court of India",
+                            "principle": p["summary"],
+                            "relevance": 0.95,
+                            "match_percentage": "95%",
+                            "is_live":   True,
+                            "is_ai_researched": True,
+                            "document_url": f"/api/precedents/document/{p['citation'].replace(' ', '_')}"
+                        }
+                        v = precedent_manager.verify_citation_authenticity(prec["citation"])
+                        prec["verification_status"] = v["status"]
+                        prec["is_verified_landmark"] = v["verified"]
+                        matched.append(prec)
 
         # Format match_percentage for all matched precedents
         for m in matched:
             if "match_percentage" not in m:
-                m["match_percentage"] = f"{int(m['relevance'] * 100)}%"
+                m["match_percentage"] = f"{int(m.get('relevance', 0) * 100)}%"
+            if "is_ai_researched" not in m:
+                m["is_ai_researched"] = False
 
-        # Sort by relevance descending, cap at 15 to show more
-        matched.sort(key=lambda x: x["relevance"], reverse=True)
+        # Sort by relevance descending
+        matched.sort(key=lambda x: x.get("relevance", 0), reverse=True)
         return matched[:15]
 
     # ── 3. Statutory Interpretation ───────────────────────────────────────────
