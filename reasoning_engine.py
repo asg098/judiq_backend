@@ -144,6 +144,21 @@ class ReasoningEngine:
                         "document_url": f"/api/precedents/document/{safe_citation}"
                     })
 
+        # Explicit Basalingappa Hardening (Adversarial Articulation)
+        amount = float(case_data.get("amount") or 0)
+        if amount > 500000 and not case_data.get("complainant_itr_available"):
+            matched.append({
+                "concept":   "financial_capacity_risk",
+                "case":      "Basalingappa vs. Mudibasappa",
+                "citation":  "Basalingappa vs. Mudibasappa (2019) 5 SCC 418",
+                "court":     "Supreme Court of India",
+                "principle": "Rebuttal of S.139 presumption via financial capacity challenge.",
+                "relevance": 0.98,
+                "is_live":   False,
+                "document_url": "/api/precedents/document/Basalingappa_vs_Mudibasappa",
+                "adversarial_note": "CRITICAL VULNERABILITY: Your lack of ITR for a ₹50L loan is a 'Basalingappa' trigger. Defence will destroy your case in cross-examination on this point alone."
+            })
+
         # Attach latest live precedents conditionally based on matching concepts
         concept_names_set = {c.get("concept", "") for c in concepts}
         for p in precedent_manager.get_latest_precedents(15):
@@ -266,7 +281,7 @@ class ReasoningEngine:
             if not has_directors:
                 finding = "CRITICAL: Company accused impleaded without naming responsible officers. Prosecution will fail per Aneeta Hada."
             elif resigned_risk:
-                finding = f"FATAL DEFECT: One or more named directors resigned on {resignation_date}, which is BEFORE the cheque date ({cheque_date}). This is a 'Resignation Trap'. Impleading them is legally untenable and constitutes malicious prosecution."
+                finding = f"FATAL ADVERSARIAL TRAP: Director impleaded who resigned on {resignation_date} (BEFORE cheque date). This triggers automatic quashing u/s 482 and exposes you to a 'Malicious Prosecution' counter-suit. PRUNING RECOMMENDED."
             else:
                 finding = "Responsible officers/directors have been named. S.141 vicarious liability is properly pleaded."
 
