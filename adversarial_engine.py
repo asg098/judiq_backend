@@ -135,18 +135,44 @@ class AdversarialEngine:
         return escalations
 
     @classmethod
+    def estimate_quashing_probability(cls, case_data: Dict) -> float:
+        """Estimates probability of case being quashed u/s 482 CrPC."""
+        prob = 0.0
+        if case_data.get("director_resignation_date") and case_data.get("cheque_date"):
+            if case_data.get("director_resignation_date") < case_data.get("cheque_date"):
+                prob = max(prob, 0.95) # Near certainty for resigned directors
+        if case_data.get("notice_sent") is False:
+            prob = max(prob, 0.98) # Fatal procedural bar
+        return prob
+
+    @classmethod
+    def generate_acquittal_tree(cls, chain: Dict) -> Dict:
+        """Generates a decision tree leading to acquittal."""
+        return {
+            "root_vulnerability": chain["name"],
+            "acquittal_nodes": [
+                {"event": "Defence raises 'probable doubt'", "impact": "Burden shifts to Complainant"},
+                {"event": "Complainant fails to produce documentary evidence", "impact": "Adverse Inference drawn"},
+                {"event": "Court concludes 'Legally Enforceable Debt' not proven", "impact": "ACQUITTAL"}
+            ]
+        }
+
+    @classmethod
     def simulate_courtroom_battle(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
-        """Simulates deep, branching courtroom attack/rebuttal trees."""
+        """Simulates deep, fatal courtroom attack/rebuttal trees with Quashing Probability."""
         battle_nodes = []
         chains = cls.simulate_attack_chains(case_data, concepts)
+        quashing_prob = cls.estimate_quashing_probability(case_data)
         
         for chain in chains:
             node = {
                 "attack_vector": chain["name"],
-                "defence_sequence": chain["chain"],
+                "fatal_pathway": cls.generate_acquittal_tree(chain),
+                "quashing_probability": f"{int(quashing_prob * 100)}%" if quashing_prob > 0.5 else "Low",
+                "malicious_prosecution_exposure": "AGGRESSIVE" if "resignation" in chain["name"].lower() else "Standard",
                 "rebuttal_tree": {
                     "primary_rebuttal": chain.get("rebuttal_strategy", "Rely on S.139."),
-                    "secondary_rebuttal": "Produce corroborative oral testimony if documentary proof is missing.",
+                    "secondary_rebuttal": "Produce corroborative oral testimony.",
                     "failure_outcome": f"Adversary secures acquittal via {chain['name']}."
                 },
                 "witness_collapse_risk": chain.get("burden_shift", "Standard risk."),
