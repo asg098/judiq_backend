@@ -247,16 +247,34 @@ class ReasoningEngine:
         if accused_type in ("Pvt Ltd/Ltd Company", "Company", "Partnership Firm"):
             sec141 = kb_manager.get_ni_act_section("141")
             has_directors = case_data.get("directors_named", False)
+            
+            # Resignation Check Logic
+            resigned_risk = False
+            cheque_date = case_data.get("cheque_date")
+            resignation_date = case_data.get("director_resignation_date")
+            from datetime import datetime
+            if resignation_date and cheque_date:
+                try:
+                    res_dt = datetime.fromisoformat(resignation_date) if isinstance(resignation_date, str) else resignation_date
+                    chq_dt = datetime.fromisoformat(cheque_date) if isinstance(cheque_date, str) else cheque_date
+                    if res_dt < chq_dt:
+                        resigned_risk = True
+                except: pass
+
+            status = "CRITICAL_DEFECT" if not has_directors or resigned_risk else "SATISFIED"
+            finding = ""
+            if not has_directors:
+                finding = "CRITICAL: Company accused impleaded without naming responsible officers. Prosecution will fail per Aneeta Hada."
+            elif resigned_risk:
+                finding = f"FATAL DEFECT: One or more named directors resigned on {resignation_date}, which is BEFORE the cheque date ({cheque_date}). This is a 'Resignation Trap'. Impleading them is legally untenable and constitutes malicious prosecution."
+            else:
+                finding = "Responsible officers/directors have been named. S.141 vicarious liability is properly pleaded."
+
             interpretations.append({
                 "section": "141",
                 "title":   sec141.get("title", "Offences by companies"),
-                "status":  "SATISFIED" if has_directors else "CRITICAL_DEFECT",
-                "finding": (
-                    "Responsible officers/directors have been named. S.141 vicarious liability is properly pleaded."
-                    if has_directors else
-                    "CRITICAL: The accused is a company but NO officers/directors are named in the complaint. "
-                    "Per Aneeta Hada v. Godfather Travels (2012) 5 SCC 661, prosecution will FAIL without specific averments."
-                ),
+                "status":  status,
+                "finding": finding,
                 "requirement": sec141.get("requirement", ""),
             })
 

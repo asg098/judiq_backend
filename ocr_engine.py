@@ -84,6 +84,24 @@ class OCREngine:
         return list(set(re.findall(tracking_pattern, text.upper())))
 
     @classmethod
+    def verify_delivery_status(cls, text: str) -> Dict[str, Any]:
+        """Extracts delivery status from India Post tracking reports/AD cards."""
+        text_lower = text.lower()
+        is_delivered = "item delivery confirmed" in text_lower or "item delivered" in text_lower or "delivered" in text_lower
+        is_returned = "unclaimed" in text_lower or "refused" in text_lower or "door locked" in text_lower or "addressee left" in text_lower
+        
+        status = "UNKNOWN"
+        if is_delivered: status = "DELIVERED"
+        elif is_returned: status = "RETURNED_UNSERVED"
+        
+        return {
+            "is_delivered": is_delivered,
+            "is_returned": is_returned,
+            "status": status,
+            "has_signature": "signature" in text_lower or "received by" in text_lower
+        }
+
+    @classmethod
     def classify_debt_proof(cls, text: str) -> str:
         """Classifies the strength of a debt proof document."""
         text_lower = text.lower()
@@ -137,6 +155,7 @@ class OCREngine:
             "has_stamp_duty": cls.verify_stamp_duty(extracted_text) if doc_type.upper() == "DEBT_PROOF" else False,
             "debt_proof_class": cls.classify_debt_proof(extracted_text) if doc_type.upper() == "DEBT_PROOF" else None,
             "notice_compliance": cls.verify_notice_statutory_compliance(extracted_text) if doc_type.upper() == "NOTICE" else None,
+            "delivery_report": cls.verify_delivery_status(extracted_text) if doc_type.upper() == "TRACKING_REPORT" else None,
             "warning": None,
             "verification_confidence": 0.0,
             "extracted_snippet": extracted_text[:200] + "..." if len(extracted_text) > 200 else extracted_text
@@ -206,6 +225,21 @@ class OCREngine:
                 result["is_verified"] = True
                 result["verification_confidence"] = 0.60
                 result["warning"] = "WEAK EVIDENCE: Debt proof appears informal. High risk of rebuttal."
+
+        elif doc_type.upper() == "TRACKING_REPORT":
+            report = result["delivery_report"]
+            if report["is_delivered"]:
+                result["is_verified"] = True
+                result["verification_confidence"] = 0.98
+                if not report["has_signature"]:
+                    result["warning"] = "WARNING: Delivery confirmed, but document lacks a visible recipient signature. May be challenged as 'Vague Tracking'."
+            elif report["is_returned"]:
+                result["is_verified"] = True
+                result["verification_confidence"] = 0.90
+                result["warning"] = "NOTE: Notice returned unserved. Deemed service u/s 27 General Clauses Act can be invoked if address is correct."
+            else:
+                result["warning"] = "EVIDENCE GAP: Could not verify delivery status from the uploaded tracking report."
+                result["verification_confidence"] = 0.30
 
         else:
             result["is_verified"] = len(extracted_text.strip()) > 10

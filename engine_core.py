@@ -261,7 +261,7 @@ class JudiQEngine:
         # -- Step 8.5: Litigation Strategy Map (Expert Hardening) -------------
         from strategy_engine import StrategyEngine
         litigation_strategy = _safe_call(
-            StrategyEngine.generate_litigation_map, case_data, final_score, concepts,
+            StrategyEngine.generate_litigation_map, case_data, final_score, concepts, defences,
             fallback={"prosecution_map": {}, "defence_map": {}, "overall_strategy": "Standard"},
             context="StrategyEngine"
         )
@@ -283,6 +283,24 @@ class JudiQEngine:
             SimulatorEngine.generate_simulation, concepts, float(case_data.get("amount") or 0),
             fallback=[],
             context="SimulatorEngine"
+        )
+
+        # -- Step 9.8: Dynamic Adversarial Audit (NEW) -------------------------
+        from adversarial_engine import AdversarialEngine
+        attack_chains = _safe_call(
+            AdversarialEngine.simulate_attack_chains, case_data, concepts,
+            fallback=[],
+            context="AdversarialEngine.chains"
+        )
+        adversarial_risk = _safe_call(
+            AdversarialEngine.calculate_adversarial_risk, attack_chains,
+            fallback=0.0,
+            context="AdversarialEngine.risk"
+        )
+        witness_vulnerabilities = _safe_call(
+            AdversarialEngine.map_witness_vulnerabilities, case_data, concepts,
+            fallback=[],
+            context="AdversarialEngine.witness"
         )
 
         # -- Step 10: Final Response Assembly ---------------------------------
@@ -314,6 +332,12 @@ class JudiQEngine:
             "analysis_mode":            case_data.get("analysis_mode", "detailed"),
             "proof_present":            case_data.get("proof_present", True),
             "cross_exam_prep":          cross_exam_prep,
+            "adversarial_audit": {
+                "attack_chains": attack_chains,
+                "witness_vulnerabilities": witness_vulnerabilities,
+                "probability_collapse": f"{int(adversarial_risk * 100)}%",
+                "risk_factor": adversarial_risk
+            },
             "cri_score":                scoring_result.get("cri_score", 0)
         }
 

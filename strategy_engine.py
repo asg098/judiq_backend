@@ -10,7 +10,7 @@ class StrategyEngine:
     """
 
     @staticmethod
-    def generate_litigation_map(case_data: Dict, score: float, concepts: List[Dict]) -> Dict[str, Any]:
+    def generate_litigation_map(case_data: Dict, score: float, concepts: List[Dict], detected_defences: List[Dict] = None) -> Dict[str, Any]:
         concept_names = {c["concept"] for c in concepts}
         
         # 1. Prosecution Strategy (The Offensive)
@@ -50,8 +50,26 @@ class StrategyEngine:
         if "security_cheque" in concept_names:
             defence["landmark_defence"].append("Security Defense: Establish that no debt was due on the date of cheque issuance (Indus Airways).")
 
+        # 3. Dynamic Defense Simulation (New Hardening)
+        simulated_defences = []
+        if detected_defences:
+            for d in detected_defences:
+                simulated_defences.append({
+                    "defence_name": d.get("name", "Unknown Defense"),
+                    "simulation_impact": f"Lowers conviction probability by {int(d.get('confidence', 0.5) * 40)}%. Rebuts S.139 presumption.",
+                    "counter_move": d.get("rebuttal", "Provide documentary evidence of the underlying debt.")
+                })
+        
+        if not simulated_defences and "security_cheque" in concept_names:
+            simulated_defences.append({
+                "defence_name": "Security Cheque Defense",
+                "simulation_impact": "HIGH IMPACT. If the accused proves the cheque was given for security and not for an existing debt, the case is liable to be dismissed.",
+                "counter_move": "Show that on the date of cheque presentation, a legally enforceable debt equal to the cheque amount had accrued."
+            })
+
         return {
             "prosecution_map": prosecution,
             "defence_map": defence,
+            "defense_simulation": simulated_defences or "No active defenses detected for simulation.",
             "overall_strategy": "Aggressive Prosecution" if score > 70 else "Strategic Settlement"
         }

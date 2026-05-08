@@ -100,6 +100,15 @@ class ScoringEngineV12:
         # PILLAR 4: DEBT PROOF (up to 25 points)
         if debt:
             debt_points = 22
+            
+            # Stamping & Registration Trap
+            if not case_data.get("agreement_stamped"):
+                debt_points -= 15
+                trace.append("-15 EVIDENTIARY DEFECT: Loan agreement NOT properly stamped. Inadmissible under Indian Stamp Act until impounded.")
+            if not case_data.get("agreement_registered") and amount > 1000000:
+                debt_points -= 10
+                trace.append("-10 RISK: High-value agreement not registered. Weakens secondary evidence claims.")
+                
             score += debt_points
             trace.append(f"+{debt_points} Debt/Liability established")
         else:
@@ -109,9 +118,23 @@ class ScoringEngineV12:
         # EXPERT AUDITS (Corporate & Financial Capacity)
         accused_name = str(case_data.get("accused_name", "")).lower()
         is_company = any(x in accused_name for x in ["pvt", "ltd", "corp", "inc", "co.", "company"])
-        if is_company and not case_data.get("directors_named"):
-            score -= 40
-            trace.append("-40 FATAL: S.141 defect - Directors not named with exact roles for corporate accused (Aneeta Hada rule)")
+        if is_company:
+            if not case_data.get("directors_named"):
+                score -= 40
+                trace.append("-40 FATAL: S.141 defect - Directors not named with exact roles for corporate accused (Aneeta Hada rule)")
+            
+            # Resignation Trap
+            cheque_date = case_data.get("cheque_date")
+            resignation_date = case_data.get("director_resignation_date")
+            if resignation_date and cheque_date:
+                try:
+                    res_dt = datetime.fromisoformat(resignation_date) if isinstance(resignation_date, str) else resignation_date
+                    chq_dt = datetime.fromisoformat(cheque_date) if isinstance(cheque_date, str) else cheque_date
+                    if res_dt < chq_dt:
+                        score -= 50
+                        trace.append("-50 FATAL: Vicarious Liability Gap. Director resigned BEFORE the cheque was issued. Impleading them is 'Malicious Prosecution' and leads to quashing.")
+                except:
+                    pass
 
         # Authorization Trap (A.C. Narayanan)
         complainant_type = case_data.get("complainant_type", "Individual")
@@ -123,12 +146,15 @@ class ScoringEngineV12:
 
         # Basalingappa & Sushil Kumar (2026) Check
         amount = ensure_number(case_data.get("amount", 0))
-        if amount > 500000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
-            score -= 30
-            trace.append("-30 REBUTTAL RISK: High-value cash loan (₹5 Lakhs+) without ITR/Source proof (Sushil Kumar v. Sandeep Kumar, 2026)")
+        if amount > 2000000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
+            score -= 60
+            trace.append("-60 FATAL EVIDENTIARY GAP: Very high-value cash loan (₹20 Lakhs+) without ITR records. Prosecution is doomed under the Basalingappa doctrine.")
+        elif amount > 500000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
+            score -= 45
+            trace.append("-45 REBUTTAL RISK: High-value cash loan (₹5 Lakhs+) without ITR/Source proof (Sushil Kumar v. Sandeep Kumar, 2026)")
         elif amount > 150000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
-            score -= 25
-            trace.append("-25 REBUTTAL RISK: High-value cash loan without ITR proof (Basalingappa rule)")
+            score -= 30
+            trace.append("-30 REBUTTAL RISK: High-value cash loan without ITR proof (Basalingappa rule)")
 
         # Signature Mismatch Trap
         dishonour_reason = case_data.get("dishonour_reason", "").lower()
