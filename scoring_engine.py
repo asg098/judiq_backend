@@ -60,6 +60,8 @@ class ScoringEngineV12:
         score = base_score
         trace.append(f"Base score: {base_score} (Standard Litigation Baseline)")
         
+        amount = ensure_number(case_data.get("amount", 0))
+        
         # 1. PILLARS & COMPLIANCE SCORECARD
         cheque = bool(case_data.get('cheque_present'))
         memo = bool(case_data.get('dishonour_memo'))
