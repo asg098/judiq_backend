@@ -160,7 +160,7 @@ class JudiQEngine:
         )
         
         precedents = _safe_call(
-            ReasoningEngine.match_precedents, concepts,
+            ReasoningEngine.match_precedents, case_data, concepts,
             fallback=[],
             context="ReasoningEngine.precedents"
         )

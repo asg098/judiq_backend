@@ -100,7 +100,7 @@ class ReasoningEngine:
 
     # ── 2. Precedent Matching ─────────────────────────────────────────────────
     @staticmethod
-    def match_precedents(concepts: List[Dict]) -> List[Dict]:
+    def match_precedents(case_data: Dict, concepts: List[Dict]) -> List[Dict]:
         matched: List[Dict] = []
         seen_citations: set = set()
 
@@ -348,7 +348,7 @@ class ReasoningEngine:
         )
 
         # 3. Precedent Binding
-        precs = cls.match_precedents(concepts)
+        precs = cls.match_precedents(case_data, concepts)
         if precs:
             trail.append(
                 f"PRECEDENT BINDING: Case facts anchored to {len(precs)} landmark judgments. "

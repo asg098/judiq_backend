@@ -82,6 +82,29 @@ class AdversarialEngine:
         return round(cumulative_risk, 2)
 
     @classmethod
+    def map_witness_vulnerabilities(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
+        vulnerabilities = []
+        concept_names = {c["concept"] for c in concepts}
+        
+        if "no_debt_proof" in concept_names:
+            vulnerabilities.append({
+                "witness_trait": "Evidentiary Consistency",
+                "attack": "Defence will suggest the debt is a fabrication due to lack of a written agreement.",
+                "collapse_scenario": "Witness fumbles during cross-examination when asked about the exact time/place of handing over cash.",
+                "vulnerability_level": "CRITICAL"
+            })
+        
+        if "financial_capacity_risk" in concept_names:
+            vulnerabilities.append({
+                "witness_trait": "Financial Transparency",
+                "attack": "Complainant pressured on ITR compliance.",
+                "collapse_scenario": "Inability to explain the 'source of funds' leads to judicial skepticism of the entire transaction.",
+                "vulnerability_level": "HIGH"
+            })
+            
+        return vulnerabilities
+
+    @classmethod
     def simulate_courtroom_battle(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
         """Simulates sequential courtroom attack/rebuttal nodes."""
         battle_nodes = []
@@ -128,5 +151,18 @@ class AdversarialEngine:
         graph.append({"stage": "Final Argument", "strength": int(current_strength * 1.1)}) # Slight recovery if survived
         
         return graph
+
+    @classmethod
+    def prune_accused(cls, case_data: Dict) -> List[Dict]:
+        """Identifies impleaded parties who should be 'pruned' to avoid malicious prosecution risk."""
+        pruning = []
+        if case_data.get("director_resignation_date") and case_data.get("cheque_date"):
+            if case_data.get("director_resignation_date") < case_data.get("cheque_date"):
+                pruning.append({
+                    "party": "Resigned Director",
+                    "reason": "Liability ceased upon resignation before instrument issuance.",
+                    "risk": "High - Malicious Prosecution suit risk."
+                })
+        return pruning
 
 adversarial_engine = AdversarialEngine()
