@@ -4,6 +4,7 @@ from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
+
 def decide_draft_type(score: int, concepts: List[Dict], case_data: Dict) -> str:
     concept_names = {c.get("concept", "") for c in concepts}
     
