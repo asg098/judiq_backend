@@ -60,6 +60,45 @@ class EngineDiagnostics:
             },
             "max_score": 40,
             "required_risks": ["s141_defect"]
+        },
+        {
+            "name": "LIMITATION_PERIOD_EXPIRED",
+            "data": {
+                "cheque_present": True,
+                "dishonour_memo": True,
+                "notice_sent": True,
+                "notice_received_date": "2024-01-01",
+                "filing_date": "2024-03-01", # > 30 days after notice period
+                "amount": 50000
+            },
+            "max_score": 35,
+            "required_risks": ["limitation_issue"]
+        },
+        {
+            "name": "SIGNATURE_DISPUTE_FATAL",
+            "data": {
+                "cheque_present": True,
+                "dishonour_memo": True,
+                "notice_sent": True,
+                "signature_dispute": True,
+                "handwriting_different": True,
+                "amount": 200000
+            },
+            "max_score": 45,
+            "required_risks": ["signature_dispute", "material_alteration"]
+        },
+        {
+            "name": "PREMATURE_FILING_TRAP",
+            "data": {
+                "cheque_present": True,
+                "dishonour_memo": True,
+                "notice_sent": True,
+                "notice_received_date": "2024-05-01",
+                "filing_date": "2024-05-10", # < 15 days
+                "amount": 150000
+            },
+            "max_score": 30,
+            "required_risks": ["premature_complaint"]
         }
     ]
 
