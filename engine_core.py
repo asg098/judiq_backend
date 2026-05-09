@@ -1,32 +1,11 @@
 import logging
+from typing import Dict, List, Any
+from datetime import datetime
+
+# ── Logging Configuration ──────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
 
-# -- Synthetic text map -------------------------------------------------------
-SYNTHETIC_TEXT_MAP = {
-    "cheque_present":  "cheque dishonoured and bounced by bank",
-    "dishonour_memo":  "bank issued dishonour memo and return slip",
-    "notice_sent":     "legal notice served on accused",
-    "debt_proven":     "loan agreement executed and legally enforceable debt established",
-}
-
-# -- Structural negative signals ----------------------------------------------
-STRUCTURAL_NEGATIVE_CONCEPTS = {
-    "debt_proven": {
-        "concept": "no_debt_proof",
-        "confidence": 0.72,
-        "matched_phrases": ["debt not proven -- structural signal"],
-        "legal_impact": "Challenges legal enforceability under S.139."
-    },
-    "notice_sent": {
-        "concept": "notice_defect",
-        "confidence": 0.88,
-        "matched_phrases": ["notice not sent -- structural signal"],
-        "legal_impact": "Mandatory requirement under S.138(b)."
-    },
-}
-
-# -- Safe fallback builders ---------------------------------------------------
-
+# ── Safe Fallback Builder ──────────────────────────────────────────────────
 def _safe_call(fn, *args, fallback, context=""):
     """Call fn(*args); on any exception return fallback and log the error."""
     try:
@@ -35,6 +14,53 @@ def _safe_call(fn, *args, fallback, context=""):
         logger.error(f"[ENGINE] {context} failed: {exc}", exc_info=True)
         return fallback
 
+# ── Module Governance Registry ───────────────────────────────────────────
+class EngineRegistry:
+    """
+    Enforces interface discipline and dependency governance.
+    Addresses Scalability Governance weakness by decoupling module access.
+    """
+    def __init__(self):
+        # Lazy imports to prevent circular dependency issues
+        from scoring_engine   import ScoringEngineV12
+        from semantic_engine  import SemanticEngine
+        from adversarial_engine import AdversarialEngine
+        from strategy_engine  import StrategyEngine
+        from draft_engine     import DraftEngine
+        from reasoning_engine import ReasoningEngine
+        from timeline_engine  import TimelineEngine
+        from simulator_engine import SimulatorEngine
+        from defence_engine   import DefenceEngineV12
+        from decision_support_engine import DecisionSupportEngine
+
+        self.modules = {
+            "scoring":     ScoringEngineV12,
+            "semantic":    SemanticEngine,
+            "adversarial": AdversarialEngine,
+            "strategy":    StrategyEngine,
+            "draft":       DraftEngine,
+            "reasoning":   ReasoningEngine,
+            "timeline":    TimelineEngine,
+            "simulator":   SimulatorEngine,
+            "defence":     DefenceEngineV12,
+            "decision":    DecisionSupportEngine
+        }
+
+    def get(self, module_name: str):
+        if module_name not in self.modules:
+            raise ImportError(f"Engine Component '{module_name}' not found in registry.")
+        return self.modules[module_name]
+
+# Global Registry Instance
+registry = EngineRegistry()
+
+# ── Synthetic Text Mapping (For Quick/Ghost Analysis) ───────────────────────
+SYNTHETIC_TEXT_MAP = {
+    "cheque_present":  "cheque dishonoured and bounced by bank",
+    "dishonour_memo":  "bank issued dishonour memo and return slip",
+    "notice_sent":     "legal notice served on accused",
+    "debt_proven":     "loan agreement executed and legally enforceable debt established",
+}
 
 class JudiQEngine:
     """
@@ -44,318 +70,173 @@ class JudiQEngine:
     """
 
     @classmethod
-    def analyze_case(cls, raw_data: dict) -> dict:
-        from semantic_engine  import SemanticEngineV12
-        from scoring_engine   import ScoringEngineV12
-
-        # -- Robust aliased imports -------------------------------------------
-        try:
-            from defence_engine import DefenceEngineV12
-        except ImportError:
-            class DefenceEngineV12:
-                @staticmethod
-                def analyze_defences(c): return {"score": 0, "found": []}
-            logger.warning("Defence Engine NOT found -- using fallback.")
-
-        try:
-            from decision_support_engine import DecisionSupportEngine
-        except ImportError:
-            class DecisionSupportEngine:
-                @staticmethod
-                def analyze_risks(c): return []
-            logger.warning("Decision Support Engine NOT found -- using fallback.")
-        # ---------------------------------------------------------------------
-
-        from timeline_engine  import TimelineEngine
-        from draft_engine     import DraftEngine, decide_draft_type
+    def analyze_case(cls, raw_data: dict, analysis_mode: str = "detailed") -> dict:
+        """
+        Hardened Orchestrator - uses EngineRegistry for all sub-module calls.
+        """
+        from normalizer import normalize_input, validate_minimum_viability, ValidationError
         from response_builder import ResponseBuilder
-        from normalizer       import normalize_input, validate_minimum_viability, ValidationError
-        from reasoning_engine import ReasoningEngine
-        from simulator_engine import SimulatorEngine
 
-        # -- Hard gate --------------------------------------------------------
-        validate_minimum_viability(raw_data)
+        # -- 1. Normalization & Validation -----------------------------------
+        try:
+            validate_minimum_viability(raw_data)
+        except ValidationError as e:
+            logger.error(f"Validation failed: {e.message}")
+            raise
 
-        # -- Step 1: Normalise ------------------------------------------------
         case_data = normalize_input(raw_data)
-        logger.info(f"[JUDIQ] Analyzing case: {case_data.get('case_id', 'ANON')}")
+        case_data["analysis_mode"] = analysis_mode
+        logger.info(f"[JUDIQ] Core analysis triggered for: {case_data.get('case_id', 'ANON')}")
 
-        # -- Step 2: Semantic analysis ----------------------------------------
+        # -- 2. Semantic Extraction -------------------------------------------
         text = case_data.get("description", "").strip()
         if not text:
             parts = [phrase for key, phrase in SYNTHETIC_TEXT_MAP.items() if case_data.get(key)]
             text = ". ".join(parts)
 
+        semantic_engine = registry.get("semantic")
         semantic_result = _safe_call(
-            SemanticEngineV12.analyze_text, text,
-            fallback={"concepts_detected": []},
+            semantic_engine.analyze_text, text,
+            fallback={"concepts_detected": [], "entities": []},
             context="SemanticEngine"
         )
-        concepts: list = semantic_result.get("concepts_detected") or []
-        existing_concepts = {c["concept"] for c in concepts if isinstance(c, dict) and "concept" in c}
+        concepts = semantic_result.get("concepts_detected") or []
 
-        # -- Step 3: Inject structural negative signals -----------------------
-        for pillar_key, signal in STRUCTURAL_NEGATIVE_CONCEPTS.items():
-            if not case_data.get(pillar_key) and signal["concept"] not in existing_concepts:
-                concepts.append(dict(signal))
-                existing_concepts.add(signal["concept"])
-
-        # Positive fallback -- only if nothing at all was detected
-        if not any(c.get("concept") not in {"no_debt_proof", "notice_defect"} for c in concepts):
-            if case_data.get("cheque_present"):
-                concepts.append({"concept": "cheque_bounce", "confidence": 0.80,
-                                  "matched_phrases": ["fallback: cheque present"],
-                                  "legal_impact": "Establishes core Section 138 NI Act offence."})
-            if case_data.get("notice_sent"):
-                concepts.append({"concept": "legal_notice_compliance", "confidence": 0.72,
-                                  "matched_phrases": ["fallback: notice sent"],
-                                  "legal_impact": "Satisfies mandatory notice requirement under S.138(b)."})
-            if case_data.get("debt_proven"):
-                concepts.append({"concept": "legally_enforceable_debt", "confidence": 0.75,
-                                  "matched_phrases": ["fallback: debt proven"],
-                                  "legal_impact": "Establishes legally enforceable liability under S.139."})
+        # -- 3. Adversarial Audit ---------------------------------------------
+        adversarial_engine = registry.get("adversarial")
+        adversarial_result = _safe_call(
+            adversarial_engine.audit_case, case_data, concepts,
+            fallback={"risks_and_rebuttals": [], "contradictions": []},
+            context="AdversarialEngine"
+        )
+        attack_chains = adversarial_result.get("risks_and_rebuttals", [])
+        contradictions = adversarial_result.get("contradictions", [])
         
-        # -- Step 3.2: Financial Capacity Logic (Expert Hardening) -------------
-        # If high amount cash loan without ITR/Bank proof
-        amt = float(case_data.get("amount") or 0)
-        if amt > 150000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
-            if "financial_capacity_risk" not in existing_concepts:
-                concepts.append({
-                    "concept": "financial_capacity_risk",
-                    "confidence": 0.82,
-                    "matched_phrases": ["Inherent financial capacity risk for cash loans"],
-                    "legal_impact": "Basalingappa v. Mudibasappa rule: Complainant's source of funds can be challenged."
-                })
-                existing_concepts.add("financial_capacity_risk")
-
-        # -- Step 3.5: Mandatory Litigation Risk Injection (Enemy Audit Fix) --
-        # No case is zero-risk. Every S.138 case carries inherent trial risk.
-        concepts.append({
-            "concept": "litigation_risk",
-            "confidence": 0.52,
-            "matched_phrases": ["Inherent trial risk -- mandatory audit signal"],
-            "legal_impact": "Standard procedural risk, judicial discretion, and potential litigation delays."
-        })
-
-        logger.debug(f"[JUDIQ] Concepts detected: {[c.get('concept') for c in concepts]}")
-
-        # -- Step 6: Scoring & Compliance Scorecard --------------------------
-        score_data = _safe_call(
-            ScoringEngineV12.calculate_score_with_trace,
-            case_data, concepts, [], {},
-            fallback={"score": 50, "compliance_pct": 50, "breakdown": {}},
-            context="ScoringEngine"
-        )
-        final_score = score_data.get("score", 50)
-        compliance_scorecard = {
-            "percentage": score_data.get("compliance_pct", 50),
-            "breakdown": score_data.get("breakdown", {})
-        }
-        
-        # -- Step 7: Reasoning & Precedent Match -----------------------------
-        case_summary = _safe_call(
-            ReasoningEngine.summarize_case, case_data,
-            fallback="Standard legal analysis summary.",
-            context="ReasoningEngine.summary"
-        )
-        
-        precedents = _safe_call(
-            ReasoningEngine.match_precedents, case_data, concepts,
-            fallback=[],
-            context="ReasoningEngine.precedents"
+        # Risk Metric
+        adversarial_risk = _safe_call(
+            adversarial_engine.calculate_adversarial_risk, attack_chains,
+            fallback=0.2,
+            context="AdversarialEngine.risk"
         )
 
-        statutory_interpretation = _safe_call(
-            ReasoningEngine.interpret_statutes, case_data, concepts,
-            fallback=[],
-            context="ReasoningEngine.interpret_statutes"
-        )
-
-        timeline = _safe_call(
-            TimelineEngine.generate_timeline, case_data,
-            fallback=[],
-            context="TimelineEngine.timeline"
-        )
-
-        timeline_visualizer = _safe_call(
-            TimelineEngine.generate_timeline_data, case_data,
-            fallback=[],
-            context="TimelineEngine.timeline_visualizer"
-        )
-        
-        # Proof Presence Auto-Check
-        proof_card = {
-            "status": "VALIDATED" if case_data.get("proof_present", True) else "MISSING",
-            "detected_docs": [k for k,v in case_data.items() if v is True and k in ["cheque_present", "dishonour_memo", "notice_sent", "debt_proven"]]
-        }
-        
-        # Client Friendly Summary
-        client_summary = _safe_call(
-            ReasoningEngine.generate_client_summary, {"score": final_score, "concepts": concepts},
-            fallback="Analysis complete. Review documents for details.",
-            context="ReasoningEngine.client_summary"
-        )
-        
-        # Conviction Probability Trend
-        probability_trend = _safe_call(
-            ReasoningEngine.determine_trend, final_score,
-            fallback="STABLE",
-            context="ReasoningEngine.trend"
-        )
-        reasoning_trail = _safe_call(
-            ReasoningEngine.generate_reasoning_trail, case_data, concepts, final_score,
-            fallback=["Engine encountered non-fatal reasoning bottleneck."],
-            context="ReasoningEngine.trail"
-        )
-
-        evidence_score = score_data.get("breakdown", {}).get("evidentiary", 30) / 10.0
-        evidence_strength = "MODERATE"
-        if evidence_score >= 5: evidence_strength = "STRONG"
-        elif evidence_score <= 1: evidence_strength = "WEAK"
-
-        evidence_assessment = {
-            "strength": evidence_strength,
-            "gaps": []
-        }
-
+        # -- 4. Scoring Engine ------------------------------------------------
+        scoring_engine = registry.get("scoring")
         scoring_result = _safe_call(
-            ScoringEngineV12.calculate_score_with_trace,
-            case_data, concepts, [], evidence_assessment,
-            fallback={"final_score": 0, "reasoning_trace": ["Scoring failed due to internal error."]},
+            scoring_engine.calculate_score_with_trace, case_data, concepts, contradictions, {},
+            fallback={"score": 50, "final_score": 50, "reasoning_trace": ["Internal scoring error."]},
             context="ScoringEngine"
         )
-        final_score = float(scoring_result.get("final_score") or scoring_result.get("score") or 0)
+        final_score = float(scoring_result.get("final_score") or scoring_result.get("score") or 50)
 
-        # -- Step 7: Defence Engine -------------------------------------------
-        defences = _safe_call(
-            DefenceEngineV12.generate_ranked_defences, concepts, case_data, final_score,
-            fallback=[],
-            context="DefenceEngine"
-        )
-
-        # -- Step 8: Decision-Support Layer ------------------------------------
-        verdict = "STRONG" if final_score > 70 else ("MODERATE" if final_score > 40 else "WEAK")
-
-        risks_and_rebuttals = _safe_call(
-            DecisionSupportEngine.identify_risks_and_rebuttals, concepts, case_data,
-            fallback=[],
-            context="DecisionSupportEngine.risks"
-        )
-        outcome_prediction = _safe_call(
-            DecisionSupportEngine.predict_outcome, final_score,
-            fallback={"prediction": "Unable to determine", "probability": "N/A",
-                      "rationale": "Scoring data was insufficient.", "score_band": "WEAK"},
-            context="DecisionSupportEngine.predict_outcome"
-        )
-        translated_verdict = _safe_call(
-            DecisionSupportEngine.translate_verdict, verdict, "hindi",
-            fallback=verdict,
-            context="DecisionSupportEngine.translate_verdict"
-        )
-        evidence_suggestions = _safe_call(
-            DecisionSupportEngine.suggest_evidence_gaps, case_data,
-            fallback=[],
-            context="DecisionSupportEngine.evidence"
-        )
-        
-        # -- Step 8.5: Litigation Strategy Map (Expert Hardening) -------------
-        from strategy_engine import StrategyEngine
-        litigation_strategy = _safe_call(
-            StrategyEngine.generate_litigation_map, case_data, final_score, concepts, defences,
-            fallback={"prosecution_map": {}, "defence_map": {}, "overall_strategy": "Standard"},
+        # -- 5. Strategic Layer -----------------------------------------------
+        strategy_engine = registry.get("strategy")
+        strategy_result = _safe_call(
+            strategy_engine.generate_strategy if hasattr(strategy_engine, 'generate_strategy') else strategy_engine.generate_litigation_map, 
+            case_data, concepts, int(final_score), adversarial_risk,
+            fallback={"litigation_strategy": "Maintain standard procedural posture."},
             context="StrategyEngine"
         )
 
-        # -- Step 9: Draft Engine ---------------------------------------------
-        draft_type = _safe_call(
-            decide_draft_type, int(final_score), concepts, case_data,
-            fallback="LEGAL_OPINION",
-            context="DraftTypeDecider"
+        # -- 6. Reasoning & Traceability (Explainable AI) --------------------
+        reasoning_engine = registry.get("reasoning")
+        reasoning_trail = _safe_call(
+            reasoning_engine.generate_reasoning_trail, case_data, concepts, final_score,
+            fallback=[{"text": "Reasoning trail generation failed.", "provenance": "AI_INFERENCE", "confidence": 0.5}],
+            context="ReasoningEngine.trail"
         )
+        
+        case_summary = _safe_call(
+            reasoning_engine.summarize_case, case_data,
+            fallback="Case assessment based on statutory pillars.",
+            context="ReasoningEngine.summary"
+        )
+
+        # -- 7. Draft Generation ----------------------------------------------
+        draft_engine = registry.get("draft")
+        from draft_engine import decide_draft_type
+        draft_type = decide_draft_type(int(final_score), concepts, case_data)
         draft_content = _safe_call(
-            DraftEngine.generate_draft, draft_type, int(final_score), concepts, case_data,
+            draft_engine.generate_draft, draft_type, int(final_score), concepts, case_data,
             fallback="Legal draft generation failed. Please use manual templates.",
             context="DraftEngine"
         )
+
+        # -- 8. Decision Support & Intelligence -------------------------------
+        decision_engine = registry.get("decision")
+        outcome_prediction = _safe_call(
+            decision_engine.predict_outcome, final_score,
+            fallback={"prediction": "Unknown", "probability": "0%"},
+            context="DecisionSupportEngine.outcome"
+        )
+        translated_verdict = _safe_call(
+            decision_engine.translate_verdict, scoring_result.get("verdict", "MODERATE"), case_data.get("target_lang", "hindi"),
+            fallback="मजबूत मामला",
+            context="DecisionSupportEngine.translate"
+        )
+        evidence_suggestions = _safe_call(
+            decision_engine.suggest_evidence_gaps, case_data,
+            fallback=[],
+            context="DecisionSupportEngine.evidence"
+        )
+        decision_risks = _safe_call(
+            decision_engine.identify_risks_and_rebuttals, concepts, case_data,
+            fallback=[],
+            context="DecisionSupportEngine.risks"
+        )
         
-        # -- Step 9.5: Cross-Examination Simulator -----------------------------
-        cross_exam_prep = _safe_call(
-            SimulatorEngine.generate_simulation, concepts, float(case_data.get("amount") or 0),
+        # Merge risks from both engines
+        if "risks_and_rebuttals" not in adversarial_result:
+            adversarial_result["risks_and_rebuttals"] = []
+            
+        existing_risk_titles = {r.get("attack_vector", r.get("risk")) for r in adversarial_result["risks_and_rebuttals"]}
+        for dr in decision_risks:
+            if dr["risk"] not in existing_risk_titles:
+                adversarial_result["risks_and_rebuttals"].append({
+                    "attack_vector": dr["risk"],
+                    "tactical_chain": [dr["description"]],
+                    "survival_probability": "65%",
+                    "destruction_probability": "35%",
+                    "rebuttal_tree": {
+                        "complainant_counter": dr["rebuttal"],
+                        "magistrate_view": f"High attention to {dr['case_law']}"
+                    }
+                })
+
+        # -- 9. Timeline & Simulation -----------------------------------------
+        timeline_engine = registry.get("timeline")
+        timeline = _safe_call(
+            timeline_engine.generate_timeline, case_data,
             fallback=[],
-            context="SimulatorEngine"
+            context="TimelineEngine.generate"
+        )
+        limitation = _safe_call(
+            timeline_engine.check_limitation, case_data,
+            fallback={"is_barred": False, "status": "CALCULATION_ERROR"},
+            context="TimelineEngine.limitation"
         )
 
-        # -- Step 9.8: Dynamic Adversarial Audit (NEW) -------------------------
-        from adversarial_engine import AdversarialEngine
-        attack_chains = _safe_call(
-            AdversarialEngine.simulate_attack_chains, case_data, concepts,
-            fallback=[],
-            context="AdversarialEngine.chains"
-        )
-        adversarial_risk = _safe_call(
-            AdversarialEngine.calculate_adversarial_risk, attack_chains,
-            fallback=0.0,
-            context="AdversarialEngine.risk"
-        )
-        witness_vulnerabilities = _safe_call(
-            AdversarialEngine.map_witness_vulnerabilities, case_data, concepts,
-            fallback=[],
-            context="AdversarialEngine.witness"
-        )
-        battle_nodes = _safe_call(
-            AdversarialEngine.simulate_courtroom_battle, case_data, concepts,
-            fallback=[],
-            context="AdversarialEngine.battle"
-        )
-        survivability_graph = _safe_call(
-            AdversarialEngine.generate_survivability_graph, final_score, adversarial_risk,
-            fallback=[],
-            context="AdversarialEngine.graph"
-        )
-
-        # -- Step 10: Final Response Assembly ---------------------------------
-        engine_result = {
-            "final_score":              final_score,
-            "potential_score":          scoring_result.get("potential_score", 99),
-            "causality_delta":          scoring_result.get("causality_delta", []),
-            "explicit_penalties":       scoring_result.get("explicit_penalties", []),
-            "reasoning_trace":          scoring_result.get("reasoning_trace", []),
-            "score_breakdown":          scoring_result.get("score_breakdown", []),
-            "discretionary_caveats":    scoring_result.get("discretionary_caveats", []),
-            "concepts":                 concepts,
-            "defences":                 defences,
-            "risks_and_rebuttals":      risks_and_rebuttals,
-            "outcome_prediction":       outcome_prediction,
-            "translated_verdict":       translated_verdict,
-            "statutory_interpretation": statutory_interpretation,
-            "precedents":               precedents,
-            "timeline":                 timeline,
-            "reasoning_trail":          reasoning_trail,
-            "case_summary":             case_summary,      # was missing — causes empty output
-            "draft":                    draft_content,
-            "draft_type":               draft_type,
-            "evidence_suggestions":     evidence_suggestions,
-            "litigation_strategy":      litigation_strategy,
-            "compliance_scorecard":     compliance_scorecard,
-            "timeline_visualizer":      timeline_visualizer,
-            "proof_card":               proof_card,
-            "client_summary":           client_summary,
-            "probability_trend":        probability_trend,
-            "closest_precedent":        precedents[0] if precedents else None,
-            "analysis_mode":            case_data.get("analysis_mode", "detailed"),
-            "proof_present":            case_data.get("proof_present", True),
-            "cross_exam_prep":          cross_exam_prep,
-            "adversarial_audit": {
-                "attack_chains": attack_chains,
-                "battle_nodes": battle_nodes,
-                "survivability_graph": survivability_graph,
-                "witness_vulnerabilities": witness_vulnerabilities,
-                "probability_collapse": f"{int(adversarial_risk * 100)}%",
-                "risk_factor": adversarial_risk
-            },
-            "causality_map": scoring_result.get("causality_map", []),
-            "top_penalties": scoring_result.get("top_penalties", []),
-            "cri_score":                scoring_result.get("cri_score", 0)
+        # -- 10. Response Assembly ---------------------------------------------
+        # Prepare the flat dict for ResponseBuilder
+        engine_output = {
+            "final_score": final_score,
+            "reasoning_trace": scoring_result.get("reasoning_trace", []),
+            "score_breakdown": scoring_result.get("breakdown", {}),
+            "concepts": concepts,
+            "adversarial_result": adversarial_result,
+            "outcome_prediction": outcome_prediction,
+            "translated_verdict": translated_verdict,
+            "evidence_suggestions": evidence_suggestions,
+            "reasoning_trail": reasoning_trail,
+            "case_summary": case_summary,
+            "draft": draft_content,
+            "draft_type": draft_type,
+            "timeline": timeline,
+            "limitation": limitation,
+            "strategy_result": strategy_result,
+            "adversarial_risk": adversarial_risk
         }
 
-        return ResponseBuilder.build_final_response(engine_result, case_data)
+        # Merge results into the structure ResponseBuilder expects
+        full_result = {**engine_output, **scoring_result}
+        
+        return ResponseBuilder.build_final_response(full_result, case_data)

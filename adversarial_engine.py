@@ -1,243 +1,182 @@
-import logging
-from typing import List, Dict, Any
-
-logger = logging.getLogger(__name__)
-
 class AdversarialEngine:
     """
-    Dynamic Adversarial Engine — Simulates courtroom attack chains, 
-    calculates probability collapse, and maps litigation outcome branching.
+    Elite Adversarial Engine — Simulates courtroom dynamics, tactical rebuttal chains,
+    and stage-wise procedural survivability mapping.
     """
 
-    # Attack Trees based on procedural and evidentiary vulnerabilities
+    # Stage-wise Survivability Baseline (Procedural roadmap)
+    PROCEDURAL_STAGES = [
+        {"id": "summoning", "name": "Summoning Stage", "baseline_prob": 0.95},
+        {"id": "framing", "name": "Notice/Framing of Charge", "baseline_prob": 0.85},
+        {"id": "evidence", "name": "Complainant Evidence", "baseline_prob": 0.70},
+        {"id": "cross_exam", "name": "Cross-Examination", "baseline_prob": 0.60},
+        {"id": "final", "name": "Final Arguments", "baseline_prob": 0.55},
+        {"id": "appeal", "name": "Appeal Sustainability", "baseline_prob": 0.45}
+    ]
+
     ATTACK_TREES = {
-        "resignation_trap": {
-            "name": "The Resignation Attack",
-            "trigger": "director_resignation_date < cheque_date",
+        "security_cheque": {
+            "name": "The Security Cheque Rebuttal",
+            "trigger": "agreement_type == 'verbal' or not debt_proven",
             "chain": [
-                "1. Accused Director files for Quashing (S.482 CrPC).",
-                "2. Demonstrates resignation via Form DIR-11/DIR-12 filed with ROC.",
-                "3. Complaint is quashed against that specific director.",
-                "4. Complainant faces 'Malicious Prosecution' counter-suit."
+                "1. Defence admits signature but denies 'existing liability'.",
+                "2. Argues cheque was given as 'blank security' for a future transaction.",
+                "3. Cites 'Sampelly Satyanarayana Rao' to rebut S.139.",
+                "4. Shifting burden: Complainant must now prove crystallization of debt."
             ],
-            "probability_collapse": 0.85,
-            "rebuttal_strategy": "Verify ROC records BEFORE filing. Only implead directors active on the date of cheque issuance AND date of default.",
-            "burden_shift": "Shifts to Complainant to prove the director was 'in charge of and responsible for' the conduct of business DESPITE resignation."
+            "probability_collapse": 0.55,
+            "rebuttal_tree": {
+                "defence_evidence": "Lack of invoices / Post-dated nature of instrument.",
+                "complainant_counter": "Produce ledger entries showing 'crystallized debt' on cheque date.",
+                "burden_shift_effect": "Immediate shift if no documentary proof of debt exists.",
+                "magistrate_view": "Likely to stay proceedings for further evidence.",
+                "conviction_impact": -25
+            }
         },
-        "basalingappa_rebuttal": {
-            "name": "The Financial Capacity Attack",
-            "trigger": "amount > 500000 and not complainant_itr_available",
+        "financial_capacity": {
+            "name": "Basalingappa Capacity Challenge",
+            "trigger": "amount > 200000 and not complainant_itr_available",
             "chain": [
-                "1. Defence cross-examines on source of funds.",
-                "2. Demands ITR records during cross-examination (S.91 CrPC).",
-                "3. Failure to produce documents leads to adverse inference (S.114 IEA).",
-                "4. S.139 Presumption is successfully rebutted.",
-                "5. Prosecution fails as 'Legally Enforceable Debt' is not proven."
+                "1. Defence challenges Complainant's 'source of funds'.",
+                "2. Questions how such a large amount was available in cash.",
+                "3. Argues violation of Income Tax laws (S.269SS/ST).",
+                "4. Adverse inference drawn due to non-production of ITR."
             ],
-            "probability_collapse": 0.65,
-            "rebuttal_strategy": "Produce bank passbooks showing historical savings. Argue that S.139 presumption remains until 'probable' doubt is created.",
-            "burden_shift": "Once Accused raises a 'probable' doubt regarding capacity, the burden shifts back to Complainant to prove the source of funds."
+            "probability_collapse": 0.68,
+            "rebuttal_tree": {
+                "defence_evidence": "ITR history / Bank balance of Complainant.",
+                "complainant_counter": "Argue 'friendly loan' from savings; cite 'Rangappa v. Mohan'.",
+                "burden_shift_effect": "Shifts to Complainant to prove financial standing.",
+                "magistrate_view": "Highly skeptical of high-value cash transactions without ITR.",
+                "conviction_impact": -35
+            }
         },
-        "material_alteration_strike": {
-            "name": "The Material Alteration Strike",
-            "trigger": "handwriting_different",
+        "material_alteration": {
+            "name": "S.87 Material Alteration Trap",
+            "trigger": "handwriting_different or ink_different",
             "chain": [
-                "1. Defence alleges 'Material Alteration' u/s 87 NI Act.",
-                "2. Moves application for Handwriting Expert (S.45 IEA).",
-                "3. Expert confirms different inks/handwriting for signature vs body.",
-                "4. If alteration is without drawer's consent, instrument is VOID.",
-                "5. Immediate Acquittal."
+                "1. Defence alleges cheque was 'completed' by Complainant without consent.",
+                "2. Points to different ink/handwriting in date/amount fields.",
+                "3. Argues 'material alteration' voids the instrument under Section 87.",
+                "4. Requests Forensic (FSL) examination of handwriting."
+            ],
+            "probability_collapse": 0.82,
+            "rebuttal_tree": {
+                "defence_evidence": "Visual inspection of ink/handwriting variation.",
+                "complainant_counter": "Cite 'Bir Singh v. Mukesh Kumar' - authority to fill blank cheque.",
+                "burden_shift_effect": "High risk of trial stay for FSL report.",
+                "magistrate_view": "Extreme caution if alteration is visible to naked eye.",
+                "conviction_impact": -45
+            }
+        },
+        "vicarious_liability": {
+            "name": "Section 141 Misjoinder",
+            "trigger": "is_company and not directors_named",
+            "chain": [
+                "1. Defence argues Company was not impleaded or directors had no role.",
+                "2. Cites 'Aneeta Hada v. Godfather Travels'.",
+                "3. Argues 'Director' is not 'in charge of and responsible to' the company.",
+                "4. Seeks quashing under S.482 CrPC."
             ],
             "probability_collapse": 0.90,
-            "rebuttal_strategy": "Invoke S.20 NI Act — 'Inchoate Stamped Instruments'. Argue that the drawer gave implied authority to the holder to fill the details.",
-            "burden_shift": "Heavy burden on Complainant to prove the details were filled with the drawer's consent or at their direction."
+            "rebuttal_tree": {
+                "defence_evidence": "Resignation letters / MCA records.",
+                "complainant_counter": "Show 'Director' signature on the cheque or active role in debt.",
+                "burden_shift_effect": "Fatal defect if Company is not a party.",
+                "magistrate_view": "Strict adherence to statutory mandatory impleadment.",
+                "conviction_impact": -50
+            }
         }
     }
 
     @classmethod
-    def simulate_attack_chains(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
-        chains = []
-        concept_names = {c["concept"] for c in concepts}
-        amount = float(case_data.get("amount") or 0)
+    def calculate_stage_survivability(cls, score: int, adversarial_risk: float) -> List[Dict]:
+        """Calculates quantified probability of surviving each stage of litigation."""
+        roadmap = []
+        current_risk_multiplier = 1.0 - (adversarial_risk * 0.7) # Aggressive risk weighting
         
-        if case_data.get("director_resignation_date") and case_data.get("cheque_date"):
-            if case_data.get("director_resignation_date") < case_data.get("cheque_date"):
-                chains.append(cls.ATTACK_TREES["resignation_trap"])
-
-        if amount > 500000 and not case_data.get("complainant_itr_available"):
-            chains.append(cls.ATTACK_TREES["basalingappa_rebuttal"])
-
-        if case_data.get("handwriting_different"):
-            chains.append(cls.ATTACK_TREES["material_alteration_strike"])
-
-        return chains
-
-    @classmethod
-    def calculate_adversarial_risk(cls, chains: List[Dict]) -> float:
-        if not chains: return 0.0
-        cumulative_risk = 0.0
-        for chain in chains:
-            risk = chain.get("probability_collapse", 0.0)
-            cumulative_risk = cumulative_risk + (risk * (1.0 - cumulative_risk))
-        return round(cumulative_risk, 2)
-
-    @classmethod
-    def map_witness_vulnerabilities(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
-        vulnerabilities = []
-        concept_names = {c["concept"] for c in concepts}
-        
-        if "no_debt_proof" in concept_names:
-            vulnerabilities.append({
-                "witness_trait": "Evidentiary Consistency",
-                "attack": "Defence will suggest the debt is a fabrication due to lack of a written agreement.",
-                "collapse_scenario": "Witness fumbles during cross-examination when asked about the exact time/place of handing over cash.",
-                "vulnerability_level": "CRITICAL"
-            })
-        
-        if "financial_capacity_risk" in concept_names:
-            vulnerabilities.append({
-                "witness_trait": "Financial Transparency",
-                "attack": "Complainant pressured on ITR compliance.",
-                "collapse_scenario": "Inability to explain the 'source of funds' leads to judicial skepticism of the entire transaction.",
-                "vulnerability_level": "HIGH"
-            })
+        for stage in cls.PROCEDURAL_STAGES:
+            prob = stage["baseline_prob"] * (score / 100.0) * current_risk_multiplier
             
-        return vulnerabilities
-
-    @classmethod
-    def simulate_contradiction_escalation(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
-        """Tracks how a single evidentiary gap cascades into multiple legal failures."""
-        escalations = []
-        concept_names = {c["concept"] for c in concepts}
-        
-        if "financial_capacity_risk" in concept_names:
-            escalations.append({
-                "trigger_gap": "Missing ITR / Source of Funds",
-                "cascade": [
-                    "Step 1: Rebuttal of S.139 Presumption (Basalingappa).",
-                    "Step 2: Admission of 'Unaccounted Cash' transaction.",
-                    "Step 3: Invalidity of 'Legally Enforceable Debt' (S.138 NI Act).",
-                    "Step 4: High probability of acquittal on merits."
-                ]
+            if stage["id"] == "cross_exam":
+                prob *= 0.75 # Heaviest collapse point
+                
+            roadmap.append({
+                "stage": stage["name"],
+                "probability": f"{int(max(2, min(98, prob * 100)))}%",
+                "status": "Vulnerable" if prob < 0.45 else ("Stable" if prob > 0.7 else "Caution"),
+                "risk_factor": "Cross-exam fumble" if stage["id"] == "cross_exam" else "Procedural bar"
             })
+            current_risk_multiplier *= 0.92
             
-        if "material_alteration" in concept_names or case_data.get("handwriting_different"):
-            escalations.append({
-                "trigger_gap": "Handwriting Mismatch / Different Inks",
-                "cascade": [
-                    "Step 1: Challenge u/s 87 NI Act (Material Alteration).",
-                    "Step 2: Expert testimony (S.45 IEA) creates 'Probable Doubt'.",
-                    "Step 3: Voiding of the instrument entirely.",
-                    "Step 4: Immediate Quashing / Acquittal."
-                ]
-            })
-            
-        return escalations
-
-    @classmethod
-    def estimate_quashing_probability(cls, case_data: Dict) -> float:
-        """Estimates probability of case being quashed u/s 482 CrPC."""
-        prob = 0.0
-        if case_data.get("director_resignation_date") and case_data.get("cheque_date"):
-            if case_data.get("director_resignation_date") < case_data.get("cheque_date"):
-                prob = max(prob, 0.95) # Near certainty for resigned directors
-        if case_data.get("notice_sent") is False:
-            prob = max(prob, 0.98) # Fatal procedural bar
-        return prob
-
-    @classmethod
-    def generate_acquittal_tree(cls, chain: Dict) -> Dict:
-        """Generates a decision tree leading to acquittal."""
-        return {
-            "root_vulnerability": chain["name"],
-            "acquittal_nodes": [
-                {"event": "Defence raises 'probable doubt'", "impact": "Burden shifts to Complainant"},
-                {"event": "Complainant fails to produce documentary evidence", "impact": "Adverse Inference drawn"},
-                {"event": "Court concludes 'Legally Enforceable Debt' not proven", "impact": "ACQUITTAL"}
-            ]
-        }
+        return roadmap
 
     @classmethod
     def simulate_courtroom_battle(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
-        """Simulates deep, fatal courtroom attack/rebuttal trees with Quashing Probability."""
+        """Deep modeling of tactical exchanges and rebuttal trees."""
         battle_nodes = []
-        chains = cls.simulate_attack_chains(case_data, concepts)
-        quashing_prob = cls.estimate_quashing_probability(case_data)
-        
-        for chain in chains:
-            node = {
-                "attack_vector": chain["name"],
-                "fatal_pathway": cls.generate_acquittal_tree(chain),
-                "witness_box_collapse": {
-                    "trigger_question": chain["chain"][0] if chain.get("chain") else "Standard cross-exam question",
-                    "likely_fumble": "Witness provides inconsistent dates/amounts under pressure.",
-                    "contradiction_escalation": "Defence moves application to summon bank records to disprove the witness."
-                },
-                "hostile_questioning_logic": [
-                    f"I suggest to you that {chain['name']} proves this is a false case.",
-                    "Isn't it true that you have fabricated these documents after the cheque bounced?",
-                    "Can you show a single independent witness to this transaction?"
-                ],
-                "burden_shift_branching": {
-                    "trigger": "Defence raises 'probable doubt' via cross-examination.",
-                    "primary_branch": "Complainant fails to rebut -> Acquittal.",
-                    "secondary_branch": "Complainant produces corroborative bank statements -> Trial survives."
-                },
-                "rebuttal_tree_nodes": [
-                    {"step": "Step 1: Cite S.139 Presumption", "status": "ACTIVE"},
-                    {"step": "Step 2: Produce Bank Certificate u/s 146", "status": "RECOMMENDED"},
-                    {"step": "Step 3: Summon independent ledger witness", "status": "STRATEGIC"}
-                ],
-                "signatory_survivability": "CRITICAL" if chain.get("probability_collapse", 0) > 0.7 else "MODERATE",
-                "burden_shift_impact": chain.get("burden_shift", "Shifts burden to Complainant to prove consideration."),
-                "survival_probability": f"{int((1.0 - chain.get('probability_collapse', 0)) * 100)}%",
-                "destruction_probability": f"{int(chain.get('probability_collapse', 0) * 100)}%",
-                "quashing_probability": f"{int(quashing_prob * 100)}%" if quashing_prob > 0.5 else "Low",
-                "malicious_prosecution_exposure": "EXTREME" if "resignation" in chain["name"].lower() else "Standard",
-                "rebuttal_tree": {
-                    "primary_rebuttal": chain.get("rebuttal_strategy", "Rely on S.139."),
-                    "secondary_rebuttal": "Produce corroborative oral testimony.",
-                    "failure_outcome": "ACQUITTAL"
-                }
-            }
-            battle_nodes.append(node)
-        
+        concept_names = {c["concept"] for c in concepts}
+        amount = float(case_data.get("amount") or 0)
+        accused_name = str(case_data.get("accused_name", "")).lower()
+        is_company = any(x in accused_name for x in ["pvt", "ltd", "corp", "inc", "co.", "company"])
+
+        # 1. Security Cheque Logic
+        if not case_data.get("debt_proven") or "security_cheque" in concept_names:
+            battle_nodes.append(cls._build_node(cls.ATTACK_TREES["security_cheque"], "Security Cheque Defense"))
+
+        # 2. Financial Capacity Logic
+        if amount > 150000 and not case_data.get("complainant_itr_available"):
+            battle_nodes.append(cls._build_node(cls.ATTACK_TREES["financial_capacity"], "Capacity Challenge"))
+
+        # 3. Material Alteration Logic
+        if case_data.get("handwriting_different") or "material_alteration" in concept_names:
+            battle_nodes.append(cls._build_node(cls.ATTACK_TREES["material_alteration"], "S.87 Material Alteration"))
+
+        # 4. Vicarious Liability Logic
+        if is_company and not case_data.get("directors_named"):
+            battle_nodes.append(cls._build_node(cls.ATTACK_TREES["vicarious_liability"], "S.141 Company Defect"))
+
         return battle_nodes
 
     @classmethod
-    def generate_survivability_graph(cls, base_score: int, adversarial_risk: float) -> List[Dict]:
-        """Generates data points for a survivability graph over the trial timeline."""
-        # Timeline: [Filing, Notice, Framing of Charge, Evidence, Final Argument]
-        current_strength = base_score
-        graph = [
-            {"stage": "Filing", "strength": current_strength},
-            {"stage": "Notice", "strength": current_strength * 0.95}
-        ]
-        
-        # Framing of Charge (Risk materializes)
-        current_strength *= (1.0 - (adversarial_risk * 0.3))
-        graph.append({"stage": "Framing of Charge", "strength": int(current_strength)})
-        
-        # Evidence (Heaviest hit)
-        current_strength *= (1.0 - (adversarial_risk * 0.6))
-        graph.append({"stage": "Evidence Phase", "strength": int(current_strength)})
-        
-        # Final Argument
-        graph.append({"stage": "Final Argument", "strength": int(current_strength * 1.1)}) # Slight recovery if survived
-        
-        return graph
+    def _build_node(cls, tree: Dict, vector_name: str) -> Dict:
+        return {
+            "attack_vector": vector_name,
+            "tactical_chain": tree["chain"],
+            "rebuttal_tree": tree["rebuttal_tree"],
+            "survival_probability": f"{int((1.0 - tree['probability_collapse']) * 100)}%",
+            "destruction_probability": f"{int(tree['probability_collapse'] * 100)}%",
+            "courtroom_dynamics": {
+                "hostile_question": f"Is it not true that the {vector_name.lower()} logic invalidates your claim?",
+                "witness_fatigue_risk": "HIGH" if tree["probability_collapse"] > 0.6 else "MEDIUM",
+                "contradiction_escalation": "Defence will contrast the notice demand with cross-exam admissions."
+            }
+        }
 
     @classmethod
-    def prune_accused(cls, case_data: Dict) -> List[Dict]:
-        """Identifies impleaded parties who should be 'pruned' to avoid malicious prosecution risk."""
-        pruning = []
-        if case_data.get("director_resignation_date") and case_data.get("cheque_date"):
-            if case_data.get("director_resignation_date") < case_data.get("cheque_date"):
-                pruning.append({
-                    "party": "Resigned Director",
-                    "reason": "Liability ceased upon resignation before instrument issuance.",
-                    "risk": "High - Malicious Prosecution suit risk."
-                })
-        return pruning
+    def audit_case(cls, case_data: Dict, concepts: List[Dict]) -> Dict:
+        """Central audit method for the orchestrator."""
+        battle_nodes = cls.simulate_courtroom_battle(case_data, concepts)
+        
+        # Dynamic risk calculation based on active nodes
+        base_risk = 0.15
+        for node in battle_nodes:
+            # Extract probability from string "82%"
+            try:
+                dest_prob = float(node["destruction_probability"].strip('%')) / 100.0
+                base_risk += (dest_prob * 0.3)
+            except: base_risk += 0.1
+            
+        return {
+            "risks_and_rebuttals": battle_nodes,
+            "contradictions": [], 
+            "adversarial_risk": min(0.95, base_risk)
+        }
 
-adversarial_engine = AdversarialEngine()
+    @classmethod
+    def calculate_adversarial_risk(cls, battle_nodes: List[Dict]) -> float:
+        if not battle_nodes: return 0.1
+        risk = 0.2
+        for node in battle_nodes:
+            risk += 0.15
+        return min(0.9, risk)

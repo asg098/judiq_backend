@@ -7,19 +7,30 @@ logger = logging.getLogger(__name__)
 
 def decide_draft_type(score: int, concepts: List[Dict], case_data: Dict) -> str:
     concept_names = {c.get("concept", "") for c in concepts}
+    
+    # 1. Statutory Notice missing? -> MUST send notice first
     if not case_data.get("notice_sent"):
         return "LEGAL_NOTICE"
+    
+    # 2. Strong Case? -> COMPLAINT (Even if not perfect, aim for filing)
+    if score >= 65:
+        return "COMPLAINT"
+        
+    # 3. Limitation Issue? -> DELAY CONDONATION
     if "limitation_issue" in concept_names:
         return "DELAY_CONDONATION"
-    if score > 75:
-        return "COMPLAINT"
-    if score < 40:
+        
+    # 4. Weak Case? -> DEFENCE
+    if score < 45:
         if concept_names & {"security_cheque", "cheque_misuse", "signature_dispute", "no_agreement"}:
             return "DEFENCE_STRATEGY"
         return "DEFENCE_REPLY"
-    if 40 <= score <= 70:
+        
+    # 5. Middling Case? -> SETTLEMENT
+    if 45 <= score < 65:
         return "SETTLEMENT"
-    return "LEGAL_OPINION"
+        
+    return "COMPLAINT" # Default to Complaint to avoid 'Checklist' confusion
 
 
 def _header(title: str) -> str:
@@ -595,74 +606,33 @@ Advocate for Complainant
 
 def generate_legal_opinion(score: int, concepts: List[Dict], case_data: Dict) -> str:
     today, amount_str = _case_meta(case_data)
-    concept_names = {c.get("concept", "") for c in concepts}
-
-    if score >= 75:
-        strength_narrative = "The case presents a strong evidentiary foundation. All primary conditions under Section 138 NI Act appear satisfied. The Complainant is well-positioned to proceed with prosecution."
-        recommendation = "PROCEED: File complaint before the jurisdictional Magistrate. Ensure all original documents are secured."
-    elif score >= 50:
-        strength_narrative = "The case has moderate legal strength but exhibits identifiable risk factors. Pre-litigation preparation is essential before filing."
-        recommendation = "PREPARE: Address identified weaknesses. Obtain additional corroborating evidence before filing."
-    else:
-        strength_narrative = "The case carries significant legal risk. One or more fatal defects have been identified that may result in acquittal or dismissal."
-        recommendation = "CAUTION: Do NOT file until critical defects are resolved. Evaluate civil recovery as an alternative."
-
-    risk_items = []
-    for c in concepts:
-        if c.get("concept") in {"notice_defect", "no_debt_proof", "security_cheque", "signature_dispute", "limitation_issue", "cheque_misuse", "no_agreement"}:
-            risk_items.append(f"   -> {c['concept'].replace('_', ' ').upper()} (confidence: {c['confidence']:.0%})")
-
-    risk_text = "\n".join(risk_items) if risk_items else "   -> No significant risk factors detected."
-
-    checklist = []
-    if case_data.get("cheque_present"):
-        checklist.append("   [OK] Original cheque secured")
-    else:
-        checklist.append("   [!!] Original cheque MISSING — critical")
-    if case_data.get("dishonour_memo"):
-        checklist.append("   [OK] Bank dishonour memo available")
-    else:
-        checklist.append("   [!!] Bank dishonour memo MISSING")
-    if case_data.get("notice_sent"):
-        checklist.append("   [OK] Statutory demand notice served")
-    else:
-        checklist.append("   [!!] Statutory demand notice NOT SENT — fatal defect")
-    if case_data.get("debt_proven"):
-        checklist.append("   [OK] Debt/liability established")
-    else:
-        checklist.append("   [!!] Underlying debt proof MISSING")
-
-    checklist_text = "\n".join(checklist)
-
-    return f"""{_header("LEGAL OPINION — SECTION 138 NI ACT CASE ANALYSIS")}
+    
+    return f"""{_header("PROFESSIONAL LEGAL OPINION — ADVERSARIAL ASSESSMENT")}
 
 Date: {today}
-Case Strength Score: {score}/100
-Amount in Dispute: {amount_str}
+Case Viability Score: {score}/100
+Subject: Strategic Assessment of Cheque Dishonour Case involving {amount_str}
 
-EXECUTIVE ASSESSMENT:
-{strength_narrative}
+1. EXECUTIVE SUMMARY:
+   Based on the current evidentiary configuration, this case has a viability score of {score}%. 
+   { "The case is structurally sound but requires procedural precision." if score > 70 else "The case exhibits significant structural vulnerabilities that may impede successful prosecution." }
 
-RISK FACTORS IDENTIFIED:
-{risk_text}
+2. KEY RISK VECTORS:
+   The following legal concepts were detected which directly impact the litigation posture:
+   { "\n".join([f"   - {c['concept'].replace('_', ' ').upper()} (Impact: High)" for c in concepts if c.get('confidence', 0) > 0.7]) or "   - No high-confidence risks detected." }
 
-DOCUMENT CHECKLIST:
-{checklist_text}
+3. STRATEGIC RECOMMENDATION:
+   { "Proceed with the filing of a Criminal Complaint under Section 138 NI Act whilst ensuring all statutory timelines are strictly met." if score > 60 else "Immediate litigation is not recommended. Focus on evidentiary remediation or explore a mediated settlement (Section 147 NI Act) to mitigate costs." }
 
-RECOMMENDATION:
-{recommendation}
+4. LITIGATION DIRECTIVE:
+   - Verify the original cheque and dishonour memo against the physical evidence.
+   - Ensure the statutory demand was served at the correct address (AD Card verification).
+   - If proceeding, prepare for the 'Basalingappa' rebuttal regarding financial capacity.
 
-PROCEDURAL CHECKLIST (Anti-Enemy Tactics):
-   [ ] ENEMY TACTIC: 'Material Alteration' -> Ensure handwriting/ink is consistent or S.20 applies.
-   [ ] ENEMY TACTIC: 'Notice Ghost' -> Ensure AD Card has the accused's actual signature, not generic tracking.
-   [ ] ENEMY TACTIC: 'Time/Delay' -> Ensure all original docs are flawless BEFORE filing to avoid discharge applications.
-   [ ] Confirm cheque was presented within 3 months of its date
-   [ ] Confirm demand notice dispatched within 30 days of dishonour
-   [ ] Confirm 15-day notice response period has elapsed
-   [ ] Confirm complaint filed within 1 month of cause of action
+5. CONCLUSION:
+   This opinion is generated for strategic planning. The Complainant should coordinate with an advocate to finalize the court-ready pleadings.
 
-DISCLAIMER: AI-generated preliminary assessment. Not a substitute for professional legal advice.
-WARNING: Do NOT file raw AI output. You MUST 'humanize' the draft to avoid 'Cookie-Cutter' objections from the Magistrate, and verify ALL citations to prevent 'Phantom Precedent' penalties (Professional Misconduct/₹50k fine).
+DISCLAIMER: AI-generated strategic assessment. Not a substitute for professional legal advice.
 """
 
 

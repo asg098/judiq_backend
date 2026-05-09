@@ -196,9 +196,11 @@ async def analyze(request: Request):
     response_body = {"success": True, "request_id": request_id}
     response_body.update(result)          # spread: score, verdict, draft, etc. at top level
     
-    # Include Caseroom ID if it exists
+    # Include Caseroom ID if it exists (safely)
+    case_data = result.get("case_data", {})
+    cid = case_data.get("case_id", "")
     from database_manager import DatabaseManager
-    response_body["caseroom_id"] = DatabaseManager.get_caseroom_by_case_id(cid)
+    response_body["caseroom_id"] = DatabaseManager.get_caseroom_by_case_id(cid) if cid else None
     
     response_body["data"] = result        # keep nested copy for any legacy consumers
     return response_body

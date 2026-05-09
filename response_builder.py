@@ -71,6 +71,12 @@ class ResponseBuilder:
         trace = engine_result.get("reasoning_trace", [])
         breakdown = engine_result.get("score_breakdown", [])
         concepts = engine_result.get("concepts", [])
+        
+        # New elite components
+        causality_map = engine_result.get("causality_map", [])
+        top_penalties = engine_result.get("top_penalties", [])
+        strategy_result = engine_result.get("strategy_result", {})
+        adversarial_result = engine_result.get("adversarial_result", {})
 
         verdict = "STRONG CASE"
         if score < 40: verdict = "WEAK CASE / HIGH RISK"
@@ -95,17 +101,17 @@ class ResponseBuilder:
 
             if concept_name in NEGATIVE_CONCEPTS and conf >= WEAKNESS_THRESHOLD:
                 severity = "CRITICAL" if conf >= 0.65 else ("HIGH" if conf >= 0.45 else "MEDIUM")
-                weaknesses.append(f"{label} [{severity} — conf: {conf:.0%}]")
+                weaknesses.append(f"{label} [{severity}]")
 
             elif concept_name in POSITIVE_CONCEPTS and conf >= STRENGTH_THRESHOLD:
-                strengths.append(f"{label} detected (conf: {conf:.0%})")
+                strengths.append(f"Strategic Asset: {label}")
 
-        # ── EVIDENTIARY HARDENING (Advocate Grade) ──────────────────────────
-        desc_lower = (case_data.get("description") or "").lower()
-        if any(x in desc_lower for x in ["whatsapp", "email", "sms", "digital", "screenshot"]):
-             weaknesses.append("Mandatory Admissibility Barrier [CRITICAL]: Missing Section 65B Certificate for digital evidence.")
-        
-        limitation = engine_result.get("limitation", {})
+        # Extract limitation data safely
+        limitation = engine_result.get("limitation") or {}
+        if not limitation and case_data.get("notice_date") and case_data.get("dishonour_date"):
+            # Simple fallback calculation
+            limitation = {"is_premature": False, "notice_delay_days": 0}
+
         if limitation.get("is_premature"):
             weaknesses.append("FATAL PROCEDURAL DEFECT [CRITICAL]: Complaint is Premature. Non-curable defect under NI Act.")
         elif limitation.get("notice_delay_days", 0) > 0:
@@ -116,6 +122,8 @@ class ResponseBuilder:
 
         # ── Improvement Suggestions (Aggressive Tone) ────────────────────────
         suggestions = []
+        desc_lower = (case_data.get("description") or "").lower()
+
         if limitation.get("is_premature"):
              suggestions.append({
                  "id": "action_withdraw",

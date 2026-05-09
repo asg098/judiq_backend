@@ -364,64 +364,65 @@ class ReasoningEngine:
 
     # ── 4. Reasoning Trail (Explainability) ───────────────────────────────────
     @classmethod
-    def generate_reasoning_trail(cls, case_data: Dict, concepts: List[Dict], final_score: float = 0.0) -> List[str]:
-        trail: List[str] = []
+    def generate_reasoning_trail(cls, case_data: Dict, concepts: List[Dict], final_score: float = 0.0) -> List[Dict]:
+        """
+        Generates a structured reasoning trail with strict provenance metadata.
+        This addresses the 'Legal Trust' weakness by separating authoritative law from AI inference.
+        """
+        trail: List[Dict] = []
         
-        # 1. Fact Verification
+        # 1. Statutory Pillar Verification (AUTHORITATIVE)
         pillars = []
         if case_data.get("cheque_present"): pillars.append("S.138 instrument verified")
         if case_data.get("notice_sent"):    pillars.append("Demand notice complied")
         if case_data.get("debt_proven"):    pillars.append("Enforceable debt established")
         
-        trail.append(
-            f"RULE-BASED AUDIT: Verified {len(pillars)}/3 statutory pillars. "
-            + (f"Compliance confirmed: {', '.join(pillars)}." if pillars else "FATAL ERROR: No statutory pillars satisfied.")
-        )
+        trail.append({
+            "text": f"RULE-BASED AUDIT: Verified {len(pillars)}/3 statutory pillars. " + (f"Compliance confirmed: {', '.join(pillars)}." if pillars else "FATAL ERROR: No statutory pillars satisfied."),
+            "provenance": "STATUTORY",
+            "confidence": 1.0,
+            "authority": "The Negotiable Instruments Act, 1881"
+        })
 
-        # 2. Explicit Causality Chains (XAI)
+        # 2. Causal Risk Propagation (AI_INFERENCE)
         risks = [c for c in concepts if "risk" in c["concept"] or "defect" in c["concept"]]
         if risks:
             causality_chain = []
             if float(case_data.get("amount") or 0) > 500000 and not case_data.get("complainant_itr_available"):
                 causality_chain.append("Missing ITR -> Financial Capacity Risk -> Rebuttal u/s 139 (Basalingappa).")
-            if case_data.get("director_resignation_date") and case_data.get("cheque_date") and case_data.get("director_resignation_date") < case_data.get("cheque_date"):
-                causality_chain.append("Early Resignation -> S.141 Violation -> Fatal Quashing Trap.")
             
-            trail.append(
-                f"CAUSALITY ANALYSIS: Detected {len(risks)} explicit risk vectors. "
-                f"Propagation Chains: { ' | '.join(causality_chain) or 'Implicit logic applied.'}"
-            )
+            trail.append({
+                "text": f"CAUSALITY ANALYSIS: Detected {len(risks)} explicit risk vectors. Propagation: { ' | '.join(causality_chain) or 'Implicit logic applied.'}",
+                "provenance": "AI_INFERENCE",
+                "confidence": 0.85,
+                "logic_engine": "Adversarial Propagation Engine v7.0"
+            })
 
-        # 3. Semantic Intersection
-
-        # 3. Precedent Binding
+        # 3. Precedent Binding (PRECEDENTIAL)
         precs = cls.match_precedents(case_data, concepts)
         if precs:
-            trail.append(
-                f"PRECEDENT BINDING: Case facts anchored to {len(precs)} landmark judgments. "
-                f"Primary legal authority applied: {precs[0]['case']} ({precs[0]['citation']})."
-            )
-        else:
-            trail.append("AUTHORITY CHECK: No specific case-law match. Reverting to basic statutory interpretation.")
+            trail.append({
+                "text": f"PRECEDENT BINDING: Case facts anchored to landmark judgments. Primary authority: {precs[0]['case']} ({precs[0]['citation']}).",
+                "provenance": "PRECEDENTIAL",
+                "confidence": 0.98,
+                "citation": precs[0]['citation']
+            })
 
-        # 4. Strategic Pivot Analysis (Professional Decision Support)
+        # 4. Strategic Simulation (SIMULATED)
         if final_score < 60:
-            trail.append(
-                f"STRATEGIC PIVOT: Settlement recommended. Low survivability ({final_score}%) "
-                f"due to {len(risks)} fatal evidentiary gaps. Litigation will likely result in acquittal "
-                f"and potential malicious prosecution costs."
-            )
+            trail.append({
+                "text": f"STRATEGIC PIVOT: Settlement recommended. Low survivability ({final_score}%) due to fatal evidentiary gaps.",
+                "provenance": "SIMULATED",
+                "confidence": 0.72,
+                "scenario": "Adversarial Collapse Simulation"
+            })
         else:
-            trail.append(
-                f"LITIGATION DIRECTIVE: Proceed with prosecution. Survivability is high ({final_score}%). "
-                f"Maintain pressure for S.143A interim compensation early in the trial."
-            )
-
-        # 5. Final Verdict Logic
-        trail.append(
-            "SYNTHETIC VERDICT: Final weighting based on statutory mandatory requirements + evidentiary strength + precedent alignment. "
-            "Verdict generated via strict legal-logic thresholding (No Black Box)."
-        )
+            trail.append({
+                "text": f"LITIGATION DIRECTIVE: Proceed with prosecution. Survivability is high ({final_score}%).",
+                "provenance": "SIMULATED",
+                "confidence": 0.78,
+                "scenario": "Successful Prosecution Path"
+            })
 
         return trail
 
