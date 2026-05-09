@@ -98,6 +98,18 @@ class DatabaseManager:
                 )
             """)
 
+            # --- AUDIT LOGS ---
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS audit_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    case_id TEXT,
+                    action TEXT NOT NULL,
+                    metadata TEXT,
+                    timestamp TEXT
+                )
+            """)
+
             conn.commit()
             conn.close()
             logger.info("Database and Caseroom tables initialized successfully.")
@@ -305,3 +317,25 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to fetch documents for {caseroom_id}: {e}")
             return []
+
+    @staticmethod
+    def save_interaction(log_entry):
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO audit_logs (user_id, case_id, action, metadata, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                log_entry.get("user_id"),
+                log_entry.get("case_id"),
+                log_entry.get("action"),
+                json.dumps(log_entry.get("metadata", {})),
+                log_entry.get("timestamp")
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save audit log: {e}")
+            return False
