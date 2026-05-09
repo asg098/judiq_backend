@@ -364,7 +364,7 @@ class ReasoningEngine:
 
     # ── 4. Reasoning Trail (Explainability) ───────────────────────────────────
     @classmethod
-    def generate_reasoning_trail(cls, case_data: Dict, concepts: List[Dict], final_score: float = 0.0) -> List[Dict]:
+    def generate_reasoning_trail(cls, case_data: Dict, concepts: List[Dict], final_score: float = 0.0, engine_result: Dict = None) -> List[Dict]:
         """
         Generates a structured reasoning trail with strict provenance metadata.
         This addresses the 'Legal Trust' weakness by separating authoritative law from AI inference.
@@ -398,31 +398,45 @@ class ReasoningEngine:
                 "logic_engine": "Adversarial Propagation Engine v7.0"
             })
 
-        # 3. Precedent Binding (PRECEDENTIAL)
+        # 3. Statistical Calibration (EMPIRICAL)
+        if engine_result and "calibration_metadata" in engine_result:
+            cal = engine_result["calibration_metadata"]
+            if cal.get("calibration_notes"):
+                trail.append({
+                    "text": f"STATISTICAL CALIBRATION: {cal['calibration_notes'][0]} Resulting Confidence Interval: {cal['confidence_interval']}.",
+                    "provenance": "EMPIRICAL",
+                    "confidence": 0.95,
+                    "logic_engine": "Calibration Engine v1.0"
+                })
+
+        # 4. Semantic Concept Validation (AI_INFERENCE)
+        for c in concepts:
+            concept_name = c.get("concept", "").replace("_", " ").title()
+            trail.append({
+                "text": f"SEMANTIC DETECTION: Identified '{concept_name}' pattern in case facts.",
+                "provenance": "AI_INFERENCE",
+                "confidence": c.get("confidence", 0.7),
+                "rationale": f"This matters because {concept_name.lower()} affects the overall survivability and burden of proof u/s 138."
+            })
+
+        # 5. Precedent Binding (PRECEDENTIAL)
         precs = cls.match_precedents(case_data, concepts)
         if precs:
             trail.append({
                 "text": f"PRECEDENT BINDING: Case facts anchored to landmark judgments. Primary authority: {precs[0]['case']} ({precs[0]['citation']}).",
                 "provenance": "PRECEDENTIAL",
                 "confidence": 0.98,
-                "citation": precs[0]['citation']
+                "citation": precs[0]['citation'],
+                "rationale": "This matters because judicial precedents provide the binding interpretation of statutory laws."
             })
-
-        # 4. Strategic Simulation (SIMULATED)
+        # 6. Strategic Simulation (SIMULATED)
         if final_score < 60:
             trail.append({
                 "text": f"STRATEGIC PIVOT: Settlement recommended. Low survivability ({final_score}%) due to fatal evidentiary gaps.",
                 "provenance": "SIMULATED",
                 "confidence": 0.72,
-                "scenario": "Adversarial Collapse Simulation"
-            })
-        else:
-            trail.append({
-                "text": f"LITIGATION DIRECTIVE: Proceed with prosecution. Survivability is high ({final_score}%).",
-                "provenance": "SIMULATED",
-                "confidence": 0.78,
-                "scenario": "Successful Prosecution Path"
+                "scenario": "Adversarial Collapse Simulation",
+                "rationale": "This matters because proceeding with a weak case increases risk of cost penalties and malicious prosecution claims."
             })
 
         return trail
-
