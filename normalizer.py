@@ -31,12 +31,15 @@ class ValidationError(ValueError):
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _safe_str(value: Any, max_len: int = 500, field_name: str = "") -> str:
-    """Coerce to string, strip dangerous chars, truncate."""
+    """Coerce to string, strip HTML/scripts, truncate."""
     if value is None:
         return ""
     s = str(value).strip()
-    # Remove non-printable control characters (keep newlines)
+    # 1. Aggressive HTML/Script Stripping
+    s = re.sub(r'<[^>]*?>', '', s)
+    # 2. Remove control characters
     s = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', s)
+    # 3. Truncate
     if len(s) > max_len:
         logger.warning(f"Field '{field_name}' truncated from {len(s)} to {max_len} chars.")
         s = s[:max_len]
