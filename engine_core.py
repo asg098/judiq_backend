@@ -110,13 +110,46 @@ class JudiQEngine:
             context="AdversarialEngine"
         )
         attack_chains = adversarial_result.get("risks_and_rebuttals", [])
-        contradictions = adversarial_result.get("contradictions", [])
+        
+        # NEW: Contradiction Engine
+        contradictions = _safe_call(
+            adversarial_engine.detect_contradictions, case_data, concepts,
+            fallback=[],
+            context="ContradictionEngine"
+        )
+        
+        # NEW: Timeline Anomaly Detector
+        timeline_anomalies = _safe_call(
+            adversarial_engine.detect_timeline_anomalies, case_data,
+            fallback=[],
+            context="TimelineAnomalyDetector"
+        )
         
         # Risk Metric
         adversarial_risk = _safe_call(
             adversarial_engine.calculate_adversarial_risk, attack_chains,
             fallback=0.2,
             context="AdversarialEngine.risk"
+        )
+
+        evidence_dependencies = _safe_call(
+            adversarial_engine.map_evidence_dependencies, case_data,
+            fallback=[],
+            context="EvidenceDependencyMapping"
+        )
+
+        # NEW: Red-Team Mode
+        red_team_attacks = _safe_call(
+            adversarial_engine.run_red_team_attack, case_data, concepts,
+            fallback=[],
+            context="RedTeamAttack"
+        )
+        
+        # NEW: Witness Pressure Simulation
+        witness_pressure = _safe_call(
+            adversarial_engine.simulate_witness_pressure, case_data, adversarial_risk,
+            fallback={},
+            context="WitnessPressure"
         )
 
         # -- 4. Scoring Engine ------------------------------------------------
@@ -139,10 +172,23 @@ class JudiQEngine:
 
         # -- 6. Reasoning & Traceability (Explainable AI) --------------------
         reasoning_engine = registry.get("reasoning")
+        
+        # NEW: Causal Story Flow
+        causal_story = _safe_call(
+            reasoning_engine.generate_causal_story, case_data, concepts,
+            fallback=[],
+            context="CausalStoryBuilder"
+        )
+
+        # -- 10. Reasoning Trail (Provenance & Explainability) ----------------
         reasoning_trail = _safe_call(
-            reasoning_engine.generate_reasoning_trail, case_data, concepts, final_score,
-            fallback=[{"text": "Reasoning trail generation failed.", "provenance": "AI_INFERENCE", "confidence": 0.5}],
-            context="ReasoningEngine.trail"
+            reasoning_engine.generate_reasoning_trail, 
+            case_data, 
+            semantic_result.get("concepts_detected", []), 
+            scoring_result.get("score", 0),
+            scoring_result, # Pass calibrated result
+            fallback=[],
+            context="Reasoning Trail"
         )
         
         case_summary = _safe_call(
@@ -161,6 +207,8 @@ class JudiQEngine:
             context="DraftEngine"
         )
 
+        logger.info(f"DRAFT_ENGINE: Type={draft_type}, Size={len(draft_content) if draft_content else 0}")
+        
         # -- 8. Decision Support & Intelligence -------------------------------
         decision_engine = registry.get("decision")
         outcome_prediction = _safe_call(
@@ -220,13 +268,24 @@ class JudiQEngine:
         engine_output = {
             "final_score": final_score,
             "reasoning_trace": scoring_result.get("reasoning_trace", []),
+            "reasoning_trail": reasoning_trail,
+            "causal_story": causal_story,
+            "contradictions": contradictions,
+            "timeline_anomalies": timeline_anomalies,
+            "evidence_dependencies": evidence_dependencies,
+            "red_team_attacks": red_team_attacks,
+            "witness_pressure": witness_pressure,
+            "uncertainty_intelligence": scoring_result.get("uncertainty_intelligence", []),
+            "judicial_mode": scoring_result.get("judicial_mode", "Balanced"),
+            "self_challenge": scoring_result.get("self_challenge", {}),
+            "reliability_matrix": scoring_result.get("reliability_matrix", {}),
+            "case_similarity": scoring_result.get("case_similarity", {}),
             "score_breakdown": scoring_result.get("breakdown", {}),
             "concepts": concepts,
             "adversarial_result": adversarial_result,
             "outcome_prediction": outcome_prediction,
             "translated_verdict": translated_verdict,
             "evidence_suggestions": evidence_suggestions,
-            "reasoning_trail": reasoning_trail,
             "case_summary": case_summary,
             "draft": draft_content,
             "draft_type": draft_type,
@@ -237,6 +296,6 @@ class JudiQEngine:
         }
 
         # Merge results into the structure ResponseBuilder expects
-        full_result = {**engine_output, **scoring_result}
+        full_result = {**engine_output, **scoring_result, **adversarial_result}
         
         return ResponseBuilder.build_final_response(full_result, case_data)
