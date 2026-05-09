@@ -1,3 +1,7 @@
+
+
+
+
 JudiQ is an AI‑powered litigation assistant designed to transform how lawyers, firms, and even ordinary citizens interact with the justice system. It is not just a tool—it is a digital courtroom companion that ensures no case collapses on technicalities, while empowering teams to collaborate, strategize, and preserve knowledge for the future.
 
  Core Capabilities
