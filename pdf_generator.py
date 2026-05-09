@@ -328,7 +328,6 @@ class PDFGenerator:
             
             logger.info(f"PDF generated successfully: {len(pdf_bytes)} bytes")
             return pdf_bytes
-            
         except ImportError as e:
             logger.error(f"ReportLab not installed: {e}")
             # Fallback: Return minimal PDF-like structure
