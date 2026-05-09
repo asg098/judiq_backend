@@ -113,7 +113,6 @@ class PrecedentManager:
                     "source": "Judicial Gold Standard",
                     "details": GOLD_STANDARD[key]
                 }
-        
         return {
             "verified": False,
             "status": "PENDING_VERIFICATION",
