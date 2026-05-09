@@ -23,7 +23,7 @@ class EngineRegistry:
     def __init__(self):
         # Lazy imports to prevent circular dependency issues
         from scoring_engine   import ScoringEngineV12
-        from semantic_engine  import SemanticEngine
+        from semantic_engine  import SemanticEngineV12
         from adversarial_engine import AdversarialEngine
         from strategy_engine  import StrategyEngine
         from draft_engine     import DraftEngine
@@ -35,7 +35,7 @@ class EngineRegistry:
 
         self.modules = {
             "scoring":     ScoringEngineV12,
-            "semantic":    SemanticEngine,
+            "semantic":    SemanticEngineV12,
             "adversarial": AdversarialEngine,
             "strategy":    StrategyEngine,
             "draft":       DraftEngine,
