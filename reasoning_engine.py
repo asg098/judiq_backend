@@ -364,7 +364,7 @@ class ReasoningEngine:
 
     # ── 4. Reasoning Trail (Explainability) ───────────────────────────────────
     @classmethod
-    def generate_reasoning_trail(cls, case_data: Dict, concepts: List[Dict]) -> List[str]:
+    def generate_reasoning_trail(cls, case_data: Dict, concepts: List[Dict], final_score: float = 0.0) -> List[str]:
         trail: List[str] = []
         
         # 1. Fact Verification

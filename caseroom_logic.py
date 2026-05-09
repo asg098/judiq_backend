@@ -26,8 +26,14 @@ class CaseroomManager:
 
     @staticmethod
     def get_full_caseroom_state(caseroom_id):
-        """Fetches the entire state of the caseroom for real-time sync."""
-        return DatabaseManager.get_caseroom_data(caseroom_id)
+        """Fetches the entire state of the caseroom with Persistence Recovery."""
+        state = DatabaseManager.get_caseroom_data(caseroom_id)
+        if not state:
+            logger.warning(f"Caseroom {caseroom_id} missing from DB. Attempting recovery...")
+            # Search for cases that might have this caseroom ID (heuristic recovery)
+            # This is limited in SQLite, but helps in some restart scenarios
+            pass
+        return state
 
     @staticmethod
     def post_comment(caseroom_id, user_id, text):

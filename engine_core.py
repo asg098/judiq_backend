@@ -203,7 +203,7 @@ class JudiQEngine:
             context="ReasoningEngine.trend"
         )
         reasoning_trail = _safe_call(
-            ReasoningEngine.generate_reasoning_trail, case_data, concepts,
+            ReasoningEngine.generate_reasoning_trail, case_data, concepts, final_score,
             fallback=["Engine encountered non-fatal reasoning bottleneck."],
             context="ReasoningEngine.trail"
         )

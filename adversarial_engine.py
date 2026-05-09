@@ -178,6 +178,16 @@ class AdversarialEngine:
                     "Isn't it true that you have fabricated these documents after the cheque bounced?",
                     "Can you show a single independent witness to this transaction?"
                 ],
+                "burden_shift_branching": {
+                    "trigger": "Defence raises 'probable doubt' via cross-examination.",
+                    "primary_branch": "Complainant fails to rebut -> Acquittal.",
+                    "secondary_branch": "Complainant produces corroborative bank statements -> Trial survives."
+                },
+                "rebuttal_tree_nodes": [
+                    {"step": "Step 1: Cite S.139 Presumption", "status": "ACTIVE"},
+                    {"step": "Step 2: Produce Bank Certificate u/s 146", "status": "RECOMMENDED"},
+                    {"step": "Step 3: Summon independent ledger witness", "status": "STRATEGIC"}
+                ],
                 "signatory_survivability": "CRITICAL" if chain.get("probability_collapse", 0) > 0.7 else "MODERATE",
                 "burden_shift_impact": chain.get("burden_shift", "Shifts burden to Complainant to prove consideration."),
                 "survival_probability": f"{int((1.0 - chain.get('probability_collapse', 0)) * 100)}%",
