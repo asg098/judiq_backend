@@ -1,3 +1,4 @@
+from typing import Dict, List, Any
 class AdversarialEngine:
     """
     Elite Adversarial Engine — Simulates courtroom dynamics, tactical rebuttal chains,
