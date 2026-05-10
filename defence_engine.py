@@ -17,7 +17,6 @@ POSITIVE_CONCEPTS_NO_DEFENCE = {
     "cheque_bounce", "legal_notice_compliance", "legally_enforceable_debt",
     "strong_documentary_evidence"
 }
-
 class DefenceEngineV12:
     @classmethod
     def generate_ranked_defences(cls,
