@@ -10,8 +10,7 @@ class PDFGenerator:
         """
         Generate comprehensive PDF report with all analysis details
         Ensures proper PDF format with correct MIME type
-        """
-        try:
+        """ try:
             from reportlab.lib.pagesizes import letter
             from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
             from reportlab.lib.units import inch
