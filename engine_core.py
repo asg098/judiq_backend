@@ -138,11 +138,11 @@ class JudiQEngine:
             context="EvidenceDependencyMapping"
         )
 
-        # NEW: Red-Team Mode
+        # NEW: Strategic Audit
         red_team_attacks = _safe_call(
-            adversarial_engine.run_red_team_attack, case_data, concepts,
+            adversarial_engine.run_strategic_audit, case_data, concepts,
             fallback=[],
-            context="RedTeamAttack"
+            context="StrategicAudit"
         )
         
         # NEW: Witness Pressure Simulation
@@ -232,18 +232,22 @@ class JudiQEngine:
             context="DecisionSupportEngine.risks"
         )
         
-        # Merge risks from both engines
+        # -- 8. Integrated Adversarial Analysis -------------------------------
+        # Merge risks from both engines with Deduplication (Contextual Severity Engine)
         if "risks_and_rebuttals" not in adversarial_result:
             adversarial_result["risks_and_rebuttals"] = []
             
-        existing_risk_titles = {r.get("attack_vector", r.get("risk")) for r in adversarial_result["risks_and_rebuttals"]}
+        existing_risk_titles = {str(r.get("adversarial_vector", r.get("risk", ""))).lower() for r in adversarial_result["risks_and_rebuttals"]}
+        
         for dr in decision_risks:
-            if dr["risk"] not in existing_risk_titles:
+            dr_title = str(dr["risk"]).lower()
+            if dr_title not in existing_risk_titles:
+                existing_risk_titles.add(dr_title)
                 adversarial_result["risks_and_rebuttals"].append({
-                    "attack_vector": dr["risk"],
-                    "tactical_chain": [dr["description"]],
+                    "adversarial_vector": dr["risk"],
+                    "strategic_chain": [dr["description"]],
                     "survival_probability": "65%",
-                    "destruction_probability": "35%",
+                    "collapse_risk": "35%",
                     "rebuttal_tree": {
                         "complainant_counter": dr["rebuttal"],
                         "magistrate_view": f"High attention to {dr['case_law']}"
@@ -263,17 +267,28 @@ class JudiQEngine:
             context="TimelineEngine.limitation"
         )
 
-        # -- 10. Response Assembly ---------------------------------------------
+        # -- 10. Executive TL;DR Layer (New) ----------------------------------
+        # Fulfills User Request: Executive-first UX for busy lawyers
+        tldr = {
+            "core_risk": "Procedural Technicality" if final_score < 40 else ("Evidentiary Gap" if final_score < 70 else "Minimal"),
+            "top_threat": adversarial_result["risks_and_rebuttals"][0]["adversarial_vector"] if adversarial_result["risks_and_rebuttals"] else "None identified",
+            "best_move": scoring_result.get("remediation_roadmap", [{"action": "Maintain posture"}])[0]["action"],
+            "confidence": f"{int(final_score)}%",
+            "one_liner": f"Case is {outcome_prediction.get('prediction', 'stable')} with {len(contradictions)} logical inconsistencies detected."
+        }
+
+        # -- 11. Response Assembly ---------------------------------------------
         # Prepare the flat dict for ResponseBuilder
         engine_output = {
             "final_score": final_score,
+            "tldr": tldr,
             "reasoning_trace": scoring_result.get("reasoning_trace", []),
             "reasoning_trail": reasoning_trail,
             "causal_story": causal_story,
             "contradictions": contradictions,
             "timeline_anomalies": timeline_anomalies,
             "evidence_dependencies": evidence_dependencies,
-            "red_team_attacks": red_team_attacks,
+            "strategic_audit": red_team_attacks,
             "witness_pressure": witness_pressure,
             "uncertainty_intelligence": scoring_result.get("uncertainty_intelligence", []),
             "judicial_mode": scoring_result.get("judicial_mode", "Balanced"),
