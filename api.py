@@ -61,6 +61,16 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {
+        "status": "online",
+        "service": "JudiQ Professional Intelligence",
+        "version": "12.0.0",
+        "engine": "Reasoning-Aware Litigation System",
+        "timestamp": datetime.now().isoformat()
+    }
+
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return Response(content=b"", media_type="image/x-icon")
@@ -683,6 +693,8 @@ async def lawyer_feedback(data: Dict[str, Any]):
     logger.info(f"[FEEDBACK] Case {case_id} by {user_id}: {feedback}")
     
     return {"success": True, "message": "Feedback received. Thank you, Counselor."}
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("api:app", host="0.0.0.0", port=port, reload=True)
