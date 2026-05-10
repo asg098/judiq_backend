@@ -2,7 +2,6 @@ import logging
 import re
 from typing import Dict, List, Any
 logger = logging.getLogger(__name__)
-
 class OCREngine:
     """
     Evidence Sanity Check — OCR Verification for Bank Memos and Cheques.
