@@ -25,7 +25,6 @@ class DefenceEngineV12:
                                  case_strength: float) -> List[Dict]:
         """
         Generate realistic defence strategies with accurate success probabilities
-        
         Logic:
         - High case strength (75+): Defences have low probability (10-30%)
         - Medium strength (40-74): Defences moderate probability (25-55%)
