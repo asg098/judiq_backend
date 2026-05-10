@@ -362,6 +362,84 @@ class ReasoningEngine:
 
         return interpretations
 
+    @staticmethod
+    def generate_causal_story(case_data: Dict, concepts: List[Dict]) -> List[Dict]:
+        """
+        Causal Story Builder: Constructs a step-by-step narrative of the case
+        to visualize the logical flow and potential breaks.
+        """
+        story = []
+        
+        # 1. Transactional Origin
+        complainant = case_data.get("complainant_name") or "Complainant"
+        accused = case_data.get("accused_name") or "Accused"
+        amount = case_data.get("amount") or case_data.get("cheque_amount") or "X"
+        
+        if case_data.get("debt_proven"):
+            story.append({
+                "stage": "Liability Origin",
+                "text": f"A legally enforceable debt of ₹{amount} was established between {complainant} and {accused}.",
+                "status": "STRONG"
+            })
+        else:
+            story.append({
+                "stage": "Alleged Liability",
+                "text": f"An alleged friendly loan/transaction of ₹{amount} took place without formal documentation.",
+                "status": "VULNERABLE"
+            })
+            
+        # 2. Instrument Issuance
+        if case_data.get("cheque_present"):
+            story.append({
+                "stage": "Instrument Issuance",
+                "text": f"Cheque No. {case_data.get('cheque_number', 'N/A')} was issued by the accused towards discharge of liability.",
+                "status": "VERIFIED"
+            })
+        else:
+            story.append({
+                "stage": "Missing Instrument",
+                "text": "The physical cheque instrument is not documented in the current assessment.",
+                "status": "CRITICAL"
+            })
+            
+        # 3. Presentment & Dishonour
+        if case_data.get("dishonour_memo"):
+            story.append({
+                "stage": "Bank Dishonour",
+                "text": f"Cheque was presented and returned unpaid for '{case_data.get('dishonour_reason', 'Insufficient Funds')}'.",
+                "status": "VERIFIED"
+            })
+        else:
+            story.append({
+                "stage": "Dishonour Verification",
+                "text": "Formal bank return memo is missing; dishonour state is not legally proven.",
+                "status": "CRITICAL"
+            })
+            
+        # 4. Legal Demand
+        if case_data.get("notice_sent"):
+            story.append({
+                "stage": "Demand Compliance",
+                "text": f"Statutory notice served on {case_data.get('notice_date', 'N/A')}. Demand for payment made.",
+                "status": "VERIFIED"
+            })
+        else:
+            story.append({
+                "stage": "Notice Failure",
+                "text": "Mandatory demand notice was not served within the 30-day statutory window.",
+                "status": "CRITICAL"
+            })
+            
+        # 5. Cause of Action
+        if case_data.get("notice_sent") and not case_data.get("reply_received"):
+            story.append({
+                "stage": "Cause of Action",
+                "text": "Accused failed to pay within 15 days of notice receipt. Criminal liability crystallized.",
+                "status": "CRYSTALLIZED"
+            })
+            
+        return story
+
     # ── 4. Reasoning Trail (Explainability) ───────────────────────────────────
     @classmethod
     def generate_reasoning_trail(cls, case_data: Dict, concepts: List[Dict], final_score: float = 0.0, engine_result: Dict = None) -> List[Dict]:
@@ -429,6 +507,7 @@ class ReasoningEngine:
                 "citation": precs[0]['citation'],
                 "rationale": "This matters because judicial precedents provide the binding interpretation of statutory laws."
             })
+
         # 6. Strategic Simulation (SIMULATED)
         if final_score < 60:
             trail.append({
