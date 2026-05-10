@@ -4,7 +4,6 @@ def ensure_list(x):
     if x is None: return []
     if isinstance(x, list): return x
     return [x]
-
 def ensure_number(x, default=0):
     try: return float(x)
     except: return default
