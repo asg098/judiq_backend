@@ -2,7 +2,10 @@ import logging
 import json
 import os
 import re
+
 logger = logging.getLogger(__name__)
+
+
 class KnowledgeBaseManager:
     """
     Singleton manager for the Data Layer.
