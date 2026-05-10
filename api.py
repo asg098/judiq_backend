@@ -49,12 +49,21 @@ app = FastAPI(
 # ── CORS ───────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_origins=[
+        "https://judiq.netlify.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "*"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(content=b"", media_type="image/x-icon")
 
 # pyrefly: ignore [missing-import]
 from pydantic import BaseModel, Field
@@ -674,8 +683,6 @@ async def lawyer_feedback(data: Dict[str, Any]):
     logger.info(f"[FEEDBACK] Case {case_id} by {user_id}: {feedback}")
     
     return {"success": True, "message": "Feedback received. Thank you, Counselor."}
-
-
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("api:app", host="0.0.0.0", port=port, reload=True)
