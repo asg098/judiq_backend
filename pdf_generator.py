@@ -10,7 +10,8 @@ class PDFGenerator:
         """
         Generate comprehensive PDF report with all analysis details
         Ensures proper PDF format with correct MIME type
-        """ try:
+        """
+        try:
             from reportlab.lib.pagesizes import letter
             from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
             from reportlab.lib.units import inch
@@ -327,6 +328,7 @@ class PDFGenerator:
             
             logger.info(f"PDF generated successfully: {len(pdf_bytes)} bytes")
             return pdf_bytes
+            
         except ImportError as e:
             logger.error(f"ReportLab not installed: {e}")
             # Fallback: Return minimal PDF-like structure
