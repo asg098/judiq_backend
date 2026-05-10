@@ -1,7 +1,7 @@
 from typing import Dict, List, Any
 class AdversarialEngine:
     """
-    Elite Adversarial Engine — Simulates courtroom dynamics, tactical rebuttal chains,
+    Institutional-Grade Adversarial Engine — Simulates courtroom dynamics, tactical rebuttal chains,
     and stage-wise procedural survivability mapping.
     """
 
@@ -15,15 +15,19 @@ class AdversarialEngine:
         {"id": "appeal", "name": "Appeal Sustainability", "baseline_prob": 0.45}
     ]
 
-    ATTACK_TREES = {
+    # Vulnerability Models (Formerly Attack Trees) - Structured for Explainability
+    VULNERABILITY_MODELS = {
         "security_cheque": {
-            "name": "The Security Cheque Rebuttal",
-            "trigger": "agreement_type == 'verbal' or not debt_proven",
+            "name": "Security Cheque Rebuttal",
+            "severity": "CRITICAL",
+            "why_applied": "Debt is either denied or documentation is missing/verbal.",
+            "risk": "Accused may rebut the S.139 presumption by showing the instrument was not for a 'crystallized' debt.",
+            "evidence_needed": "Invoices, ledger entries, or delivery challans dated PRIOR to the cheque date.",
+            "precedent": "Sampelly Satyanarayana Rao vs. Indian Renewable Energy Development Agency Ltd.",
             "chain": [
                 "1. Defence admits signature but denies 'existing liability'.",
                 "2. Argues cheque was given as 'blank security' for a future transaction.",
-                "3. Cites 'Sampelly Satyanarayana Rao' to rebut S.139.",
-                "4. Shifting burden: Complainant must now prove crystallization of debt."
+                "3. Shifting burden: Complainant must now prove crystallization of debt."
             ],
             "probability_collapse": 0.55,
             "rebuttal_tree": {
@@ -35,13 +39,16 @@ class AdversarialEngine:
             }
         },
         "financial_capacity": {
-            "name": "Basalingappa Capacity Challenge",
-            "trigger": "amount > 200000 and not complainant_itr_available",
+            "name": "Financial Capacity Challenge",
+            "severity": "HIGH",
+            "why_applied": "High-value transaction (>₹2L) detected without ITR or source proof.",
+            "risk": "Accused may challenge the Complainant's 'source of funds', leading to adverse inference under Basalingappa.",
+            "evidence_needed": "Income Tax Returns, Bank Statements, or proof of liquid savings.",
+            "precedent": "Basalingappa vs. Mudibasappa (2019) 5 SCC 418",
             "chain": [
                 "1. Defence challenges Complainant's 'source of funds'.",
                 "2. Questions how such a large amount was available in cash.",
-                "3. Argues violation of Income Tax laws (S.269SS/ST).",
-                "4. Adverse inference drawn due to non-production of ITR."
+                "3. Adverse inference drawn due to non-production of ITR."
             ],
             "probability_collapse": 0.68,
             "rebuttal_tree": {
@@ -53,13 +60,16 @@ class AdversarialEngine:
             }
         },
         "material_alteration": {
-            "name": "S.87 Material Alteration Trap",
-            "trigger": "handwriting_different or ink_different",
+            "name": "Material Alteration (S.87)",
+            "severity": "FATAL",
+            "why_applied": "Different ink or handwriting patterns detected in cheque metadata.",
+            "risk": "Instrument may be rendered void under Section 87 of NI Act if 'consent' for completion is not proven.",
+            "evidence_needed": "Authorized signatory declaration or witness to cheque completion.",
+            "precedent": "Bir Singh vs. Mukesh Kumar (2019) 4 SCC 197",
             "chain": [
                 "1. Defence alleges cheque was 'completed' by Complainant without consent.",
                 "2. Points to different ink/handwriting in date/amount fields.",
-                "3. Argues 'material alteration' voids the instrument under Section 87.",
-                "4. Requests Forensic (FSL) examination of handwriting."
+                "3. Requests Forensic (FSL) examination of handwriting."
             ],
             "probability_collapse": 0.82,
             "rebuttal_tree": {
@@ -71,13 +81,16 @@ class AdversarialEngine:
             }
         },
         "vicarious_liability": {
-            "name": "Section 141 Misjoinder",
-            "trigger": "is_company and not directors_named",
+            "name": "Vicarious Liability Defect (S.141)",
+            "severity": "FATAL",
+            "why_applied": "Corporate entity involved but mandatory S.141 averments are missing.",
+            "risk": "Complaint may be quashed against individual directors if the Company is not impleaded or roles aren't specified.",
+            "evidence_needed": "MCA Master Data, Board Resolution, or Signatory Proof.",
+            "precedent": "Aneeta Hada vs. Godfather Travels & Tours (P) Ltd.",
             "chain": [
                 "1. Defence argues Company was not impleaded or directors had no role.",
-                "2. Cites 'Aneeta Hada v. Godfather Travels'.",
-                "3. Argues 'Director' is not 'in charge of and responsible to' the company.",
-                "4. Seeks quashing under S.482 CrPC."
+                "2. Seeks quashing under S.482 CrPC for lack of specific averments.",
+                "3. Argues 'Director' is not 'in charge of and responsible to' the company."
             ],
             "probability_collapse": 0.90,
             "rebuttal_tree": {
@@ -123,19 +136,19 @@ class AdversarialEngine:
 
         # 1. Security Cheque Logic
         if not case_data.get("debt_proven") or "security_cheque" in concept_names:
-            analysis_nodes.append(cls._build_node(cls.ATTACK_TREES["security_cheque"], "Security Cheque Defence Theory"))
+            analysis_nodes.append(cls._build_node(cls.VULNERABILITY_MODELS["security_cheque"], "Security Cheque Defence Theory"))
 
         # 2. Financial Capacity Logic
         if amount > 150000 and not case_data.get("complainant_itr_available"):
-            analysis_nodes.append(cls._build_node(cls.ATTACK_TREES["financial_capacity"], "Financial Capacity Challenge"))
+            analysis_nodes.append(cls._build_node(cls.VULNERABILITY_MODELS["financial_capacity"], "Financial Capacity Challenge"))
 
         # 3. Material Alteration Logic
         if case_data.get("handwriting_different") or "material_alteration" in concept_names:
-            analysis_nodes.append(cls._build_node(cls.ATTACK_TREES["material_alteration"], "S.87 Material Alteration Risk"))
+            analysis_nodes.append(cls._build_node(cls.VULNERABILITY_MODELS["material_alteration"], "S.87 Material Alteration Risk"))
 
         # 4. Vicarious Liability Logic
         if is_company and not case_data.get("directors_named"):
-            analysis_nodes.append(cls._build_node(cls.ATTACK_TREES["vicarious_liability"], "S.141 Procedural Defect"))
+            analysis_nodes.append(cls._build_node(cls.VULNERABILITY_MODELS["vicarious_liability"], "S.141 Procedural Defect"))
 
         return analysis_nodes
 
@@ -143,8 +156,15 @@ class AdversarialEngine:
     def _build_node(cls, tree: Dict, vector_name: str) -> Dict:
         return {
             "adversarial_vector": vector_name,
+            "risk": vector_name, # Fallback for script.js
+            "severity": tree.get("severity", "HIGH"),
+            "description": tree.get("risk", ""), # map 'risk' field from model to 'description'
             "strategic_chain": tree["chain"],
             "rebuttal_tree": tree["rebuttal_tree"],
+            "why_applied": tree.get("why_applied", ""),
+            "risk_explained": tree.get("risk", ""),
+            "evidence_needed": tree.get("evidence_needed", ""),
+            "precedent_anchor": tree.get("precedent", ""),
             "survival_probability": f"{int((1.0 - tree['probability_collapse']) * 100)}%",
             "collapse_risk": f"{int(tree['probability_collapse'] * 100)}%",
             "courtroom_implications": {
@@ -422,3 +442,14 @@ class AdversarialEngine:
         for node in battle_nodes:
             risk += 0.15
         return min(0.9, risk)
+
+
+
+
+
+
+
+
+
+
+
