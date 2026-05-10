@@ -1,7 +1,4 @@
-from asyncio import timeouts
-from asyncio import timeouts
-from asyncio import timeouts
-import posixpath
+import time
 import logging
 import os
 import shutil
@@ -189,6 +186,8 @@ def get_cache_key(data: dict):
     import hashlib
     dump = json.dumps(data, sort_keys=True).encode('utf-8')
     return hashlib.md5(dump).hexdigest()
+
+
 # ── Analyze ────────────────────────────────────────────────────────────────────
 @app.post("/analyze")
 async def analyze(request_data: CaseAnalysisRequest, request: Request):
