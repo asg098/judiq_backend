@@ -179,7 +179,7 @@ class ResponseBuilder:
 
         audit = {
             "mode": "Cynical Advocate" if is_cynical else "Standard Analysis",
-            "risk_status": "HIGHLY VULNERABLE" if score < 50 else ("CAUTION" if score < 75 else "BATTLE READY"),
+            "risk_status": "HIGHLY VULNERABLE" if score < 50 else ("MODERATE RISK" if score < 75 else "FILING READY"),
             "critical_vulnerability": weaknesses[0] if weaknesses else "None Detected",
             "strategic_recommendation": suggestions[0]['title'] if suggestions else "Proceed with Caution",
             "improvement_metrics": improvement_metrics,
@@ -427,4 +427,8 @@ class ResponseBuilder:
             "contradictions": engine_result.get("contradictions", []),
             "timeline_anomalies": engine_result.get("timeline_anomalies", []),
             "remediation_roadmap": engine_result.get("remediation_roadmap", []),
+            "calibration_metadata": engine_result.get("calibration_metadata", {}),
+            "evidence_reliability": engine_result.get("evidence_reliability", {}),
+            "tldr": engine_result.get("tldr", {}),
+            "strategic_audit": engine_result.get("strategic_audit", []),
         }
