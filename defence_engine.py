@@ -7,7 +7,6 @@ def ensure_list(x):
 def ensure_number(x, default=0):
     try: return float(x)
     except: return default
-
 DEFENCE_ONLY_NEGATIVE_CONCEPTS = {
     "security_cheque", "signature_dispute", "signature_disputed", "no_debt_proof",
     "notice_not_sent", "notice_defect", "limitation_issue", "cheque_misuse",
