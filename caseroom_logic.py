@@ -3,7 +3,9 @@ import uuid
 import sqlite3
 from datetime import datetime
 from database_manager import DatabaseManager, DB_PATH
+
 logger = logging.getLogger(__name__)
+
 class CaseroomManager:
     @staticmethod
     def initialize_caseroom_for_case(case_id, owner_id):
@@ -26,11 +28,19 @@ class CaseroomManager:
     def get_full_caseroom_state(caseroom_id):
         """Fetches the entire state of the caseroom with Persistence Recovery."""
         state = DatabaseManager.get_caseroom_data(caseroom_id)
+        
         if not state:
-            logger.warning(f"Caseroom {caseroom_id} missing from DB. Attempting recovery...")
-            # Search for cases that might have this caseroom ID (heuristic recovery)
-            # This is limited in SQLite, but helps in some restart scenarios
-            pass
+            logger.warning(f"Caseroom {caseroom_id} missing from DB. Attempting ghost recovery...")
+            # If the ID looks valid (CR_ prefix), re-initialize a minimal ghost state 
+            # to prevent UI breakage on Render ephemeral restarts.
+            if str(caseroom_id).startswith("CR_"):
+                logger.info(f"👻 Re-hydrating ghost state for Caseroom {caseroom_id}")
+                # Use a dummy Case ID or try to find one? 
+                # For now, create a dummy so the UI loads.
+                DatabaseManager.create_caseroom(caseroom_id, "CASE_RECOVERED", "RECOVERED_USER")
+                DatabaseManager.send_message(caseroom_id, "SYSTEM", "Session recovered after server restart. Note: Previous chat history in this room was cleared due to ephemeral storage limits.")
+                return DatabaseManager.get_caseroom_data(caseroom_id)
+        
         return state
 
     @staticmethod
