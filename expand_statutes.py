@@ -1,6 +1,5 @@
 import json
 import os
-
 def expand_statutes():
     file_path = r'c:\Users\Atharva\OneDrive\Desktop\Level_0judiq\statutes.json'
     # Base structure
