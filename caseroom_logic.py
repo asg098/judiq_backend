@@ -3,6 +3,7 @@ import uuid
 import sqlite3
 from datetime import datetime
 from database_manager import DatabaseManager, DB_PATH
+
 logger = logging.getLogger(__name__)
 
 class CaseroomManager:
@@ -34,11 +35,21 @@ class CaseroomManager:
             # to prevent UI breakage on Render ephemeral restarts.
             if str(caseroom_id).startswith("CR_"):
                 logger.info(f"👻 Re-hydrating ghost state for Caseroom {caseroom_id}")
-                # Use a dummy Case ID or try to find one? 
-                # For now, create a dummy so the UI loads.
+                # Create a fresh room record
                 DatabaseManager.create_caseroom(caseroom_id, "CASE_RECOVERED", "RECOVERED_USER")
-                DatabaseManager.send_message(caseroom_id, "SYSTEM", "Session recovered after server restart. Note: Previous chat history in this room was cleared due to ephemeral storage limits.")
-                return DatabaseManager.get_caseroom_data(caseroom_id)
+                DatabaseManager.send_message(caseroom_id, "SYSTEM", "Session recovered after server restart. Previous history cleared.")
+                
+                # Fetch again after creation
+                state = DatabaseManager.get_caseroom_data(caseroom_id)
+                if not state:
+                    # Final fallback if DB is failing
+                    return {
+                        "room_info": (caseroom_id, "RECOVERY_PENDING", "SYSTEM", datetime.now().isoformat()),
+                        "participants": [{"user_id": "SYSTEM", "role": "ADMIN"}],
+                        "messages": [{"user_id": "SYSTEM", "content": "Critical persistence error. Database write failed.", "timestamp": datetime.now().isoformat()}],
+                        "documents": [],
+                        "tasks": []
+                    }
         
         return state
 
@@ -51,12 +62,13 @@ class CaseroomManager:
     def add_milestone(caseroom_id, title, due_date, description=""):
         """Adds a task or milestone to the caseroom timeline."""
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
+            p = DatabaseManager.get_dialect_placeholder()
             now = datetime.now().isoformat()
-            cursor.execute("""
+            cursor.execute(f"""
                 INSERT INTO caseroom_tasks (caseroom_id, title, description, due_date, created_at)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES ({p}, {p}, {p}, {p}, {p})
             """, (caseroom_id, title, description, due_date, now))
             conn.commit()
             conn.close()
@@ -66,25 +78,36 @@ class CaseroomManager:
             return False
 
     @staticmethod
-    def upload_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status="PENDING", extracted_data=None):
-        """Records a new document upload in the caseroom with Duplicate Detection."""
+    def upload_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status="PENDING", raw_text=None):
+        """Records a new document upload in the caseroom with Real Intelligence Extraction."""
+        from document_intelligence import doc_intel
+        
+        extracted_data = {}
+        intelligence_audit = {}
+        
+        if raw_text:
+            if doc_type == "BANK_MEMO":
+                extracted_data = doc_intel.extract_memo_data(raw_text)
+                intelligence_audit = doc_intel.perform_forensic_audit("BANK_MEMO", extracted_data)
+            elif doc_type == "BSA_CERTIFICATE" or "63(4)" in raw_text:
+                intelligence_audit = doc_intel.perform_forensic_audit("BSA_CERTIFICATE", {})
+
+        # Merge extracted data and audit for storage
+        metadata = {
+            "extracted": extracted_data,
+            "audit": intelligence_audit,
+            "processed_at": datetime.now().isoformat()
+        }
+
         # 1. Duplicate Document Detection
         caseroom_state = DatabaseManager.get_caseroom_data(caseroom_id)
         if caseroom_state and "documents" in caseroom_state:
             for doc in caseroom_state["documents"]:
                 if doc["file_name"] == file_name and doc["doc_type"] == doc_type:
                     logger.warning(f"Duplicate upload blocked: {file_name}")
-                    return None # Silently block or return a specific error flag
+                    return None 
 
-                # Check semantic duplicates (same cheque number uploaded under different name)
-                if doc_type == "CHEQUE" and extracted_data and doc.get("extracted_data"):
-                    existing_chq = doc["extracted_data"].get("extracted_cheque_numbers", [])
-                    new_chq = extracted_data.get("extracted_cheque_numbers", [])
-                    if existing_chq and new_chq and existing_chq[0] == new_chq[0]:
-                        logger.warning(f"Duplicate Cheque Number detected: {new_chq[0]}")
-                        return None
-
-        return DatabaseManager.save_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status, extracted_data)
+        return DatabaseManager.save_document(caseroom_id, user_id, file_name, file_path, doc_type, validation_status, metadata)
 
     @staticmethod
     def reanalyze_case_from_documents(caseroom_id, user_id="SYSTEM"):
@@ -165,12 +188,12 @@ class CaseroomManager:
                     case_data["concepts"].append({"concept": "unstamped_agreement"})
                     updates.append("WARNING: Formal agreement appears unstamped/unregistered. Inadmissible under Sec 35 Indian Stamp Act.")
         
-        # Section 65B Certificate Auto-Check
-        has_65b = any(str(d.get("doc_type")).upper() == "65B_CERTIFICATE" for d in documents)
-        if case_data.get("debt_proof_type") == "ELECTRONIC_COMMUNICATION" and not has_65b:
+        # Section 63(4) BSA Certificate Auto-Check
+        has_bsa_cert = any(str(d.get("doc_type")).upper() == "BSA_CERTIFICATE" for d in documents)
+        if case_data.get("debt_proof_type") == "ELECTRONIC_COMMUNICATION" and not has_bsa_cert:
             if "concepts" not in case_data: case_data["concepts"] = []
-            case_data["concepts"].append({"concept": "missing_65b_certificate"})
-            updates.append("FATAL DEFECT: Electronic evidence relied upon, but Section 65B Certificate is missing!")
+            case_data["concepts"].append({"concept": "missing_bsa_certificate"})
+            updates.append("FATAL DEFECT: Electronic evidence relied upon, but Section 63(4) BSA Certificate is missing!")
             
         if not updates:
             return True, "No new data extracted from documents to update."
