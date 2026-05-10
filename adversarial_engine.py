@@ -113,9 +113,9 @@ class AdversarialEngine:
         return roadmap
 
     @classmethod
-    def simulate_courtroom_battle(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
-        """Deep modeling of tactical exchanges and rebuttal trees."""
-        battle_nodes = []
+    def simulate_strategic_stress_test(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
+        """Deep modeling of potential defence theories and rebuttal chains."""
+        analysis_nodes = []
         concept_names = {c["concept"] for c in concepts}
         amount = float(case_data.get("amount") or 0)
         accused_name = str(case_data.get("accused_name", "")).lower()
@@ -123,34 +123,34 @@ class AdversarialEngine:
 
         # 1. Security Cheque Logic
         if not case_data.get("debt_proven") or "security_cheque" in concept_names:
-            battle_nodes.append(cls._build_node(cls.ATTACK_TREES["security_cheque"], "Security Cheque Defense"))
+            analysis_nodes.append(cls._build_node(cls.ATTACK_TREES["security_cheque"], "Security Cheque Defence Theory"))
 
         # 2. Financial Capacity Logic
         if amount > 150000 and not case_data.get("complainant_itr_available"):
-            battle_nodes.append(cls._build_node(cls.ATTACK_TREES["financial_capacity"], "Capacity Challenge"))
+            analysis_nodes.append(cls._build_node(cls.ATTACK_TREES["financial_capacity"], "Financial Capacity Challenge"))
 
         # 3. Material Alteration Logic
         if case_data.get("handwriting_different") or "material_alteration" in concept_names:
-            battle_nodes.append(cls._build_node(cls.ATTACK_TREES["material_alteration"], "S.87 Material Alteration"))
+            analysis_nodes.append(cls._build_node(cls.ATTACK_TREES["material_alteration"], "S.87 Material Alteration Risk"))
 
         # 4. Vicarious Liability Logic
         if is_company and not case_data.get("directors_named"):
-            battle_nodes.append(cls._build_node(cls.ATTACK_TREES["vicarious_liability"], "S.141 Company Defect"))
+            analysis_nodes.append(cls._build_node(cls.ATTACK_TREES["vicarious_liability"], "S.141 Procedural Defect"))
 
-        return battle_nodes
+        return analysis_nodes
 
     @classmethod
     def _build_node(cls, tree: Dict, vector_name: str) -> Dict:
         return {
-            "attack_vector": vector_name,
-            "tactical_chain": tree["chain"],
+            "adversarial_vector": vector_name,
+            "strategic_chain": tree["chain"],
             "rebuttal_tree": tree["rebuttal_tree"],
             "survival_probability": f"{int((1.0 - tree['probability_collapse']) * 100)}%",
-            "destruction_probability": f"{int(tree['probability_collapse'] * 100)}%",
-            "courtroom_dynamics": {
-                "hostile_question": f"Is it not true that the {vector_name.lower()} logic invalidates your claim?",
-                "witness_fatigue_risk": "HIGH" if tree["probability_collapse"] > 0.6 else "MEDIUM",
-                "contradiction_escalation": "Defence will contrast the notice demand with cross-exam admissions."
+            "collapse_risk": f"{int(tree['probability_collapse'] * 100)}%",
+            "courtroom_implications": {
+                "defence_position": f"The defence will likely argue that the {vector_name.lower()} invalidates the claim.",
+                "witness_scrutiny_level": "HIGH" if tree["probability_collapse"] > 0.6 else "MEDIUM",
+                "narrative_conflict": "Defence will highlight inconsistencies between the demand notice and oral testimony."
             }
         }
 
@@ -161,7 +161,7 @@ class AdversarialEngine:
         Severities: 
         - Minor inconsistency: Subtle variations in narrative.
         - Strategic contradiction: Tactical opening for the defence.
-        - Fatal credibility collapse: Destroys the entire cause of action.
+        - Material credibility risk: Significant threat to the cause of action.
         """
         contradictions = []
         concept_names = [c["concept"] for c in concepts]
@@ -169,10 +169,10 @@ class AdversarialEngine:
         # 1. Notice/Service Contradiction
         if "notice_not_served" in concept_names and case_data.get("reply_received"):
             contradictions.append({
-                "severity": "Fatal credibility collapse",
-                "issue": "Notice Service Paradox",
-                "detail": "Claiming 'Notice not served' while admitting 'Reply received' is an impossible legal state. Magistrate will likely dismiss at summoning stage.",
-                "remediation": "Immediately amend complaint to acknowledge service/reply.",
+                "severity": "Material credibility risk",
+                "issue": "Notice Service Inconsistency",
+                "detail": "Claiming non-service while admitting a reply notice creates a logical impossibility that may lead to summary dismissal.",
+                "remediation": "Amend pleadings to acknowledge the reply notice and its contents.",
                 "penalty": -45
             })
             
@@ -180,19 +180,19 @@ class AdversarialEngine:
         if "no_debt_proof" in concept_names and case_data.get("partial_payment_admitted"):
             contradictions.append({
                 "severity": "Strategic contradiction",
-                "issue": "Debt Existence Conflict",
-                "detail": "Denying debt proof while admitting partial payment creates a tactical opening for 'Basalingappa' attack.",
-                "remediation": "Procure ledger showing 'Part Payment' against 'Running Account'.",
+                "issue": "Liability/Payment Conflict",
+                "detail": "Admitting partial payment while denying debt proof provides a strategic opening for the defence to argue 'Settled Liability'.",
+                "remediation": "Produce ledger entries showing the balance as a 'Running Account' deficit.",
                 "penalty": -20
             })
 
         # 3. Director/Role Contradiction
         if "s141_defect" in concept_names and case_data.get("director_signed_cheque"):
             contradictions.append({
-                "severity": "Fatal credibility collapse",
+                "severity": "Material credibility risk",
                 "issue": "Vicarious Liability Conflict",
-                "detail": "Claiming no role for director who signed the cheque. Signature is conclusive proof of responsibility u/s 141.",
-                "remediation": "Re-draft S.141 averments to focus on the signing director.",
+                "detail": "Denying a director's role when they are the signatory is a fatal procedural error u/s 141.",
+                "remediation": "Re-align S.141 averments to focus on the signatory director's active management role.",
                 "penalty": -50
             })
 
@@ -201,8 +201,8 @@ class AdversarialEngine:
              contradictions.append({
                 "severity": "Minor inconsistency",
                 "issue": "Execution Context Variation",
-                "detail": "Different handwriting on a cheque allegedly issued at the office suggests it was a blank security cheque, not a completed instrument.",
-                "remediation": "Clarify if the cheque was filled by a clerk under instructions.",
+                "detail": "Varying handwriting on a cheque issued in a professional office setting suggests a security instrument rather than a completed debt payment.",
+                "remediation": "Clarify that the instrument was completed by an authorized representative under instructions.",
                 "penalty": -10
             })
 
@@ -216,72 +216,70 @@ class AdversarialEngine:
     def simulate_credibility_collapse(cls, contradiction: Dict) -> Dict:
         """
         Simulates how the defense exploits a specific contradiction in court.
-        Addresses USER REQUEST 1 (Contradiction Engine v3).
         """
         severity = contradiction["severity"]
         issue = contradiction["issue"]
         
         attack_patterns = {
-            "Fatal credibility collapse": {
-                "defense_exploit": "Argue 'Absolute Falsity' of the Complainant's case. Seek immediate acquittal.",
-                "cross_exam_impact": "Complainant unable to explain the paradox under pressure. High risk of witness breakdown.",
+            "Material credibility risk": {
+                "defense_exploit": "Argue fundamental falsity of the complainant's narrative. Seek immediate acquittal.",
+                "cross_exam_impact": "Complainant may be unable to reconcile contradictory statements under pressure.",
                 "survivability_impact": -0.45
             },
             "Strategic contradiction": {
-                "defense_exploit": "Create 'Reasonable Doubt' by showing narrative inconsistency. Target S.139 presumption.",
-                "cross_exam_impact": "Forcing admissions that contradict the statutory notice. Credibility erosion risk: HIGH.",
+                "defense_exploit": "Introduce reasonable doubt regarding the specific transaction. Target S.139 presumption.",
+                "cross_exam_impact": "Forcing admissions that erode the statutory presumption of liability.",
                 "survivability_impact": -0.18
             },
             "Minor inconsistency": {
-                "defense_exploit": "Show lack of 'Careful Record Keeping'. Marginalize Complainant's reliability.",
-                "cross_exam_impact": "Expose memory gaps or lack of professional process.",
+                "defense_exploit": "Suggest lack of professional record-keeping to marginalize the complainant's reliability.",
+                "cross_exam_impact": "Expose memory gaps or procedural lapses during cross-examination.",
                 "survivability_impact": -0.05
             }
         }
         
         pattern = attack_patterns.get(severity, attack_patterns["Minor inconsistency"])
         return {
-            "attack_vector": f"Exploiting {issue}",
-            "defense_strategy": pattern["defense_exploit"],
+            "adversarial_vector": f"Exploiting {issue}",
+            "defence_strategy": pattern["defense_exploit"],
             "cross_exam_prediction": pattern["cross_exam_impact"],
             "quantitative_impact": f"{int(pattern['survivability_impact'] * 100)}%"
         }
 
     @classmethod
-    def run_red_team_attack(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
+    def run_strategic_audit(cls, case_data: Dict, concepts: List[Dict]) -> List[Dict]:
         """
-        EXTREMELY HIGH VALUE: Aggressively attacks the Complainant's case.
-        Addresses USER REQUEST 6.
+        Aggressively audits the Complainant's case for vulnerabilities.
         """
-        attacks = []
+        vulnerabilities = []
         contradictions = cls.detect_contradictions(case_data, concepts)
         
         for c in contradictions:
-            attacks.append({
+            vulnerabilities.append({
                 "target": c["issue"],
-                "attack": f"Destructive exploit of {c['severity'].lower()}",
-                "hostile_argument": f"Your entire narrative is a fabrication, as evidenced by the {c['issue']}.",
-                "lethality": "FATAL" if "Fatal" in c["severity"] else "HIGH"
+                "risk": f"Adversarial exploit of {c['severity'].lower()}",
+                "opposing_argument": f"The complainant's narrative is inconsistent regarding {c['issue']}, suggesting a lack of bona fide debt.",
+                "risk_level": "CRITICAL" if "Material" in c["severity"] else "HIGH"
             })
             
-        # Attack assumptions
+        # Audit assumptions
         if not case_data.get("loan_via_bank") and float(case_data.get("amount") or 0) > 50000:
-            attacks.append({
-                "target": "Loan Transaction Assumption",
-                "attack": "Violation of S.269SS Income Tax Act",
-                "hostile_argument": "This cash transaction never occurred. No withdrawal record exists, and it violates anti-black money statutes.",
-                "lethality": "CRITICAL"
+            vulnerabilities.append({
+                "target": "Loan Transaction Verification",
+                "risk": "Violation of S.269SS Income Tax Act",
+                "opposing_argument": "This cash transaction violates anti-money laundering statutes and lacks banking verification.",
+                "risk_level": "CRITICAL"
             })
             
         if not case_data.get("itr_available"):
-            attacks.append({
-                "target": "Financial Capacity Assumption",
-                "attack": "Basalingappa Inference Attack",
-                "hostile_argument": "You are a 'person of small means' with no documented capacity to lend this amount.",
-                "lethality": "HIGH"
+            vulnerabilities.append({
+                "target": "Financial Capacity Verification",
+                "risk": "Basalingappa Inference Risk",
+                "opposing_argument": "The complainant has failed to document the financial capacity to advance the alleged amount.",
+                "risk_level": "HIGH"
             })
             
-        return attacks
+        return vulnerabilities
 
     @classmethod
     def simulate_witness_pressure(cls, case_data: Dict, adversarial_risk: float) -> Dict:
@@ -400,19 +398,19 @@ class AdversarialEngine:
     @classmethod
     def audit_case(cls, case_data: Dict, concepts: List[Dict]) -> Dict:
         """Central audit method for the orchestrator."""
-        battle_nodes = cls.simulate_courtroom_battle(case_data, concepts)
+        analysis_nodes = cls.simulate_strategic_stress_test(case_data, concepts)
         
         # Dynamic risk calculation based on active nodes
         base_risk = 0.15
-        for node in battle_nodes:
+        for node in analysis_nodes:
             # Extract probability from string "82%"
             try:
-                dest_prob = float(node["destruction_probability"].strip('%')) / 100.0
+                dest_prob = float(node["collapse_risk"].strip('%')) / 100.0
                 base_risk += (dest_prob * 0.3)
             except: base_risk += 0.1
             
         return {
-            "risks_and_rebuttals": battle_nodes,
+            "risks_and_rebuttals": analysis_nodes,
             "contradictions": [], 
             "adversarial_risk": min(0.95, base_risk)
         }
