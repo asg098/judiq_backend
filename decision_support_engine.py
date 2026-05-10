@@ -1,6 +1,8 @@
 import logging
 from typing import List, Dict, Any
+
 logger = logging.getLogger(__name__)
+
 # ── Risk catalogue ─────────────────────────────────────────────────────────────
 RISK_CATALOGUE = [
     {
@@ -177,39 +179,39 @@ class DecisionSupportEngine:
         order = {"FATAL": 0, "CRITICAL": 1, "HIGH": 2, "MEDIUM": 3, "LOW": 4}
         risks.sort(key=lambda r: order.get(r["severity"], 99))
 
-        # Hard-coded strategy triggers based on case data (Anti-AI-Marker Protections)
+        # Hard-coded strategy triggers based on case data (Institutional Hardening)
         risks.append({
-            "risk": "The 'Hallucination' Attack (Phantom Precedents)",
+            "risk": "Procedural Veracity Protocol",
             "severity": "FATAL",
-            "description": "Defense will verify citations. Submitting fake AI-generated case laws leads to Professional Misconduct and heavy fines.",
-            "rebuttal": "Fact-check EVERY citation on verified legal databases (e.g., SCC Online) before filing. Do not trust AI blindly.",
-            "case_law": "Supreme Court Guidelines (March 2026)"
+            "description": "Any mismatch between alleged precedents and official records can lead to professional misconduct proceedings.",
+            "rebuttal": "Verify every citation against official gazettes or reporters (SCC/AIR) before submission.",
+            "case_law": "Bar Council of India Standards"
         })
         
         risks.append({
-            "risk": "The 'Cookie-Cutter' Drafting Trap",
+            "risk": "Boilerplate Pleading Scrutiny",
             "severity": "HIGH",
-            "description": "Magistrates are actively scrutinizing e-filings for 'AI-Markers'. Defense will claim lack of 'application of mind'.",
-            "rebuttal": "Humanize the draft. Add specific personal details about the transaction. Never file raw AI boilerplate.",
-            "case_law": "Judicial Skepticism Protocols (April 2026)"
+            "description": "Courts are increasingly rejecting e-filed complaints that lack specific transactional details or appear mass-produced.",
+            "rebuttal": "Ensure the final draft contains unique transactional facts that demonstrate application of mind.",
+            "case_law": "Judicial Protocol 2026"
         })
 
         if case_data.get("communication_records"):
             risks.append({
-                "risk": "Digital Proof & BSA S.63 Compliance",
+                "risk": "BSA Section 63 Admissibility",
                 "severity": "HIGH",
-                "description": "Case relies on digital trails (WhatsApp/Email) which are subject to strict admissibility rules under the new criminal laws.",
-                "rebuttal": "File a mandatory Section 63(4) BSA Certificate alongside the complaint to ensure these records are read in evidence. Without it, you lose your best proof.",
-                "case_law": "BSA Section 63 (Replacing S.65B)"
+                "description": "Electronic records require a strict chain of custody certificate under the new Bharatiya Sakshya Adhiniyam.",
+                "rebuttal": "Prepare the mandatory S.63(4) certificate identifying the device and the person in control at the time of retrieval.",
+                "case_law": "BSA Section 63(4) Compliance"
             })
         
         if case_data.get("amount", 0) >= 50000:
             risks.append({
-                "risk": "The 143A 'Discretionary' Barrier",
+                "risk": "Section 143A Discretionary Bar",
                 "severity": "MEDIUM",
-                "description": "High-value cheque detected. Courts are treating Section 143A interim compensation as discretionary. Without arguing 'Financial Hardship', judges might deny it.",
-                "rebuttal": "Include a prayer for Interim Compensation under Section 143A explicitly arguing 'Financial Hardship' to secure partial recovery and pressure the accused.",
-                "case_law": "S.143A NI Act (Discretionary Rulings 2026)"
+                "description": "Interim compensation is not an automatic right; it requires a showing of financial necessity or prima facie strength.",
+                "rebuttal": "File a separate application u/s 143A detailing the financial impact on the complainant.",
+                "case_law": "S.143A Discretionary Guidelines"
             })
 
         return risks
