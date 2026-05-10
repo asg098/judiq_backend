@@ -649,7 +649,6 @@ class DraftEngine:
     def generate_draft(draft_type: str, score: int, concepts: List[Dict], case_data: Dict) -> str:
         # Get tone from case_data or default to standard
         tone = case_data.get("draft_tone", "standard")
-        
         if draft_type == "LEGAL_NOTICE":
             return generate_legal_notice(case_data)
         elif draft_type == "COMPLAINT":
