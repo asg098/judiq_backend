@@ -4,7 +4,6 @@ import os
 from datetime import datetime
 from typing import List, Dict, Any
 logger = logging.getLogger(__name__)
-
 class PrecedentManager:
     """
     Handles live ingestion and tagging of judicial precedents to keep the
