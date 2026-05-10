@@ -1,19 +1,54 @@
 import sqlite3
 import json
 import logging
+import os
 from datetime import datetime
+
 logger = logging.getLogger(__name__)
 DB_PATH = "analytics.db"
+DATABASE_URL = os.environ.get("DATABASE_URL") # Production Postgres Hook
 
 class DatabaseManager:
     @staticmethod
+    def get_connection():
+        """
+        Factory method to handle database connections.
+        Supports SQLite (local) and PostgreSQL (production).
+        """
+        if DATABASE_URL and DATABASE_URL.startswith("postgres"):
+            try:
+                import psycopg2
+                from psycopg2.extras import RealDictCursor
+                conn = psycopg2.connect(DATABASE_URL)
+                logger.info("📡 Production Database (Postgres) Connected.")
+                return conn
+            except ImportError:
+                logger.error("❌ psycopg2 not found. Falling back to SQLite.")
+            except Exception as e:
+                logger.error(f"❌ Postgres connection failed: {e}. Falling back to SQLite.")
+        
+        return sqlite3.connect(DB_PATH)
+
+    @staticmethod
+    def get_dialect_placeholder():
+        """Returns the correct parameter placeholder for the current DB."""
+        if DATABASE_URL and DATABASE_URL.startswith("postgres"):
+            return "%s"
+        return "?"
+
+    @staticmethod
     def init_db():
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
-            cursor.execute("""
+            
+            # --- Dialect-specific adaptations ---
+            serial_primary = "SERIAL PRIMARY KEY" if DATABASE_URL else "INTEGER PRIMARY KEY AUTOINCREMENT"
+            
+            # Saved Cases
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS saved_cases (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id {serial_primary},
                     case_id TEXT UNIQUE NOT NULL,
                     user_id TEXT NOT NULL,
                     case_data TEXT,
@@ -27,80 +62,69 @@ class DatabaseManager:
             """)
             
             # --- CASEROOM TABLES ---
-            cursor.execute("""
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS caserooms (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id {serial_primary},
                     caseroom_id TEXT UNIQUE NOT NULL,
                     case_id TEXT NOT NULL,
                     owner_id TEXT NOT NULL,
                     status TEXT DEFAULT 'ACTIVE',
-                    created_at TEXT,
-                    FOREIGN KEY (case_id) REFERENCES saved_cases(case_id)
+                    created_at TEXT
                 )
             """)
 
-            cursor.execute("""
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS caseroom_participants (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id {serial_primary},
                     caseroom_id TEXT NOT NULL,
                     user_id TEXT NOT NULL,
-                    role TEXT DEFAULT 'RESEARCHER', -- LEAD_COUNSEL, ASSOCIATE, RESEARCHER, CLIENT
+                    role TEXT DEFAULT 'RESEARCHER',
                     joined_at TEXT,
-                    UNIQUE(caseroom_id, user_id),
-                    FOREIGN KEY (caseroom_id) REFERENCES caserooms(caseroom_id)
+                    UNIQUE(caseroom_id, user_id)
                 )
             """)
 
-            cursor.execute("""
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS caseroom_messages (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id {serial_primary},
                     caseroom_id TEXT NOT NULL,
                     user_id TEXT NOT NULL,
                     content TEXT NOT NULL,
-                    created_at TEXT,
-                    FOREIGN KEY (caseroom_id) REFERENCES caserooms(caseroom_id)
+                    created_at TEXT
                 )
             """)
 
-            cursor.execute("""
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS caseroom_documents (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id {serial_primary},
                     caseroom_id TEXT NOT NULL,
                     uploader_id TEXT NOT NULL,
                     file_name TEXT NOT NULL,
                     file_path TEXT NOT NULL,
-                    doc_type TEXT, -- CHEQUE, MEMO, NOTICE, 65B, etc.
+                    doc_type TEXT, 
                     validation_status TEXT DEFAULT 'PENDING',
-                    extracted_data TEXT, -- JSON holding dates, amounts, etc.
+                    extracted_data TEXT, 
                     version INTEGER DEFAULT 1,
-                    created_at TEXT,
-                    FOREIGN KEY (caseroom_id) REFERENCES caserooms(caseroom_id)
+                    created_at TEXT
                 )
             """)
 
-            # Safe migration for existing DB
-            try:
-                cursor.execute("ALTER TABLE caseroom_documents ADD COLUMN extracted_data TEXT")
-            except sqlite3.OperationalError:
-                pass # Column already exists
-
-            cursor.execute("""
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS caseroom_tasks (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id {serial_primary},
                     caseroom_id TEXT NOT NULL,
                     title TEXT NOT NULL,
                     description TEXT,
                     due_date TEXT,
-                    status TEXT DEFAULT 'PENDING', -- PENDING, COMPLETED, OVERDUE
-                    created_at TEXT,
-                    FOREIGN KEY (caseroom_id) REFERENCES caserooms(caseroom_id)
+                    status TEXT DEFAULT 'PENDING',
+                    created_at TEXT
                 )
             """)
 
             # --- AUDIT LOGS ---
-            cursor.execute("""
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS audit_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id {serial_primary},
                     user_id TEXT NOT NULL,
                     case_id TEXT,
                     action TEXT NOT NULL,
@@ -119,9 +143,10 @@ class DatabaseManager:
     @staticmethod
     def save_case(case_id, user_id, case_data, analysis_result, score, verdict):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
             now = datetime.now().isoformat()
+            p = DatabaseManager.get_dialect_placeholder()
             
             # Generate Tags for Legacy Archive
             tags = [verdict]
@@ -129,11 +154,25 @@ class DatabaseManager:
             if score > 75: tags.append("HIGH_STRENGTH")
             elif score < 40: tags.append("WEAK_DEFENCE")
             
-            cursor.execute("""
-                INSERT OR REPLACE INTO saved_cases 
-                (case_id, user_id, case_data, analysis_result, score, verdict, created_at, updated_at, tags)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
+            # Handle UPSERT dialect differences
+            if p == "%s": # Postgres
+                query = f"""
+                    INSERT INTO saved_cases 
+                    (case_id, user_id, case_data, analysis_result, score, verdict, created_at, updated_at, tags)
+                    VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p})
+                    ON CONFLICT (case_id) DO UPDATE SET
+                    user_id = EXCLUDED.user_id, case_data = EXCLUDED.case_data, 
+                    analysis_result = EXCLUDED.analysis_result, score = EXCLUDED.score, 
+                    verdict = EXCLUDED.verdict, updated_at = EXCLUDED.updated_at, tags = EXCLUDED.tags
+                """
+            else: # SQLite
+                query = f"""
+                    INSERT OR REPLACE INTO saved_cases 
+                    (case_id, user_id, case_data, analysis_result, score, verdict, created_at, updated_at, tags)
+                    VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p})
+                """
+                
+            cursor.execute(query, (
                 case_id, 
                 user_id, 
                 json.dumps(case_data), 
@@ -155,9 +194,10 @@ class DatabaseManager:
     @staticmethod
     def get_case(case_id):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM saved_cases WHERE case_id = ?", (case_id,))
+            p = DatabaseManager.get_dialect_placeholder()
+            cursor.execute(f"SELECT * FROM saved_cases WHERE case_id = {p}", (case_id,))
             row = cursor.fetchone()
             conn.close()
             return row
@@ -168,9 +208,10 @@ class DatabaseManager:
     @staticmethod
     def get_caseroom_by_case_id(case_id):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT caseroom_id FROM caserooms WHERE case_id = ?", (case_id,))
+            p = DatabaseManager.get_dialect_placeholder()
+            cursor.execute(f"SELECT caseroom_id FROM caserooms WHERE case_id = {p}", (case_id,))
             row = cursor.fetchone()
             conn.close()
             return row[0] if row else None
@@ -181,18 +222,19 @@ class DatabaseManager:
     @staticmethod
     def create_caseroom(caseroom_id, case_id, owner_id):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
+            p = DatabaseManager.get_dialect_placeholder()
             now = datetime.now().isoformat()
-            cursor.execute("""
+            cursor.execute(f"""
                 INSERT INTO caserooms (caseroom_id, case_id, owner_id, created_at)
-                VALUES (?, ?, ?, ?)
+                VALUES ({p}, {p}, {p}, {p})
             """, (caseroom_id, case_id, owner_id, now))
             
             # Add owner as Lead Counsel
-            cursor.execute("""
+            cursor.execute(f"""
                 INSERT INTO caseroom_participants (caseroom_id, user_id, role, joined_at)
-                VALUES (?, ?, 'LEAD_COUNSEL', ?)
+                VALUES ({p}, {p}, 'LEAD_COUNSEL', {p})
             """, (caseroom_id, owner_id, now))
             
             conn.commit()
@@ -205,13 +247,18 @@ class DatabaseManager:
     @staticmethod
     def add_participant(caseroom_id, user_id, role="RESEARCHER"):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
+            p = DatabaseManager.get_dialect_placeholder()
             now = datetime.now().isoformat()
-            cursor.execute("""
-                INSERT OR IGNORE INTO caseroom_participants (caseroom_id, user_id, role, joined_at)
-                VALUES (?, ?, ?, ?)
-            """, (caseroom_id, user_id, role, now))
+            
+            # Handle dialect differences for IGNORE
+            if p == "%s": # Postgres
+                query = f"INSERT INTO caseroom_participants (caseroom_id, user_id, role, joined_at) VALUES ({p}, {p}, {p}, {p}) ON CONFLICT DO NOTHING"
+            else: # SQLite
+                query = f"INSERT OR IGNORE INTO caseroom_participants (caseroom_id, user_id, role, joined_at) VALUES ({p}, {p}, {p}, {p})"
+                
+            cursor.execute(query, (caseroom_id, user_id, role, now))
             conn.commit()
             conn.close()
             return True
@@ -222,28 +269,29 @@ class DatabaseManager:
     @staticmethod
     def get_caseroom_data(caseroom_id):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
+            p = DatabaseManager.get_dialect_placeholder()
             
             # Fetch basic info
-            cursor.execute("SELECT * FROM caserooms WHERE caseroom_id = ?", (caseroom_id,))
+            cursor.execute(f"SELECT * FROM caserooms WHERE caseroom_id = {p}", (caseroom_id,))
             room = cursor.fetchone()
             if not room: return None
             
             # Fetch participants
-            cursor.execute("SELECT user_id, role FROM caseroom_participants WHERE caseroom_id = ?", (caseroom_id,))
+            cursor.execute(f"SELECT user_id, role FROM caseroom_participants WHERE caseroom_id = {p}", (caseroom_id,))
             participants = [{"user_id": r[0], "role": r[1]} for r in cursor.fetchall()]
             
             # Fetch messages
-            cursor.execute("SELECT user_id, content, created_at FROM caseroom_messages WHERE caseroom_id = ? ORDER BY created_at ASC", (caseroom_id,))
+            cursor.execute(f"SELECT user_id, content, created_at FROM caseroom_messages WHERE caseroom_id = {p} ORDER BY created_at ASC", (caseroom_id,))
             messages = [{"user_id": r[0], "content": r[1], "timestamp": r[2]} for r in cursor.fetchall()]
             
             # Fetch tasks
-            cursor.execute("SELECT id, title, status, due_date FROM caseroom_tasks WHERE caseroom_id = ?", (caseroom_id,))
+            cursor.execute(f"SELECT id, title, status, due_date FROM caseroom_tasks WHERE caseroom_id = {p}", (caseroom_id,))
             tasks = [{"id": r[0], "title": r[1], "status": r[2], "due_date": r[3]} for r in cursor.fetchall()]
             
             # Fetch documents
-            cursor.execute("SELECT id, uploader_id, file_name, file_path, doc_type, validation_status, extracted_data, created_at FROM caseroom_documents WHERE caseroom_id = ?", (caseroom_id,))
+            cursor.execute(f"SELECT id, uploader_id, file_name, file_path, doc_type, validation_status, extracted_data, created_at FROM caseroom_documents WHERE caseroom_id = {p}", (caseroom_id,))
             documents = []
             for r in cursor.fetchall():
                 ext_data = {}
@@ -269,12 +317,13 @@ class DatabaseManager:
     @staticmethod
     def send_message(caseroom_id, user_id, content):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
+            p = DatabaseManager.get_dialect_placeholder()
             now = datetime.now().isoformat()
-            cursor.execute("""
+            cursor.execute(f"""
                 INSERT INTO caseroom_messages (caseroom_id, user_id, content, created_at)
-                VALUES (?, ?, ?, ?)
+                VALUES ({p}, {p}, {p}, {p})
             """, (caseroom_id, user_id, content, now))
             conn.commit()
             conn.close()
@@ -286,13 +335,14 @@ class DatabaseManager:
     @staticmethod
     def save_document(caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status="PENDING", extracted_data=None):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
+            p = DatabaseManager.get_dialect_placeholder()
             now = datetime.now().isoformat()
             ext_json = json.dumps(extracted_data) if extracted_data else None
-            cursor.execute("""
+            cursor.execute(f"""
                 INSERT INTO caseroom_documents (caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status, extracted_data, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p})
             """, (caseroom_id, uploader_id, file_name, file_path, doc_type, validation_status, ext_json, now))
             
             doc_id = cursor.lastrowid
@@ -307,9 +357,10 @@ class DatabaseManager:
     @staticmethod
     def get_caseroom_documents(caseroom_id):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT id, uploader_id, file_name, file_path, doc_type, validation_status, created_at FROM caseroom_documents WHERE caseroom_id = ?", (caseroom_id,))
+            p = DatabaseManager.get_dialect_placeholder()
+            cursor.execute(f"SELECT id, uploader_id, file_name, file_path, doc_type, validation_status, created_at FROM caseroom_documents WHERE caseroom_id = {p}", (caseroom_id,))
             docs = [{"id": r[0], "uploader_id": r[1], "file_name": r[2], "file_path": r[3], "doc_type": r[4], "validation_status": r[5], "created_at": r[6]} for r in cursor.fetchall()]
             conn.close()
             return docs
@@ -320,11 +371,12 @@ class DatabaseManager:
     @staticmethod
     def save_interaction(log_entry):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = DatabaseManager.get_connection()
             cursor = conn.cursor()
-            cursor.execute("""
+            p = DatabaseManager.get_dialect_placeholder()
+            cursor.execute(f"""
                 INSERT INTO audit_logs (user_id, case_id, action, metadata, timestamp)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES ({p}, {p}, {p}, {p}, {p})
             """, (
                 log_entry.get("user_id"),
                 log_entry.get("case_id"),
