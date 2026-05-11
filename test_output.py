@@ -37,6 +37,7 @@ def get_cases():
             "debt_proof_type": "invoice"
         }
     ]
+
 def generate_multi_json():
     cases = get_cases()
     results = []

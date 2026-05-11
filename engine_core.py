@@ -245,13 +245,17 @@ class JudiQEngine:
                 existing_risk_titles.add(dr_title)
                 adversarial_result["risks_and_rebuttals"].append({
                     "adversarial_vector": dr["risk"],
-                    "strategic_chain": [dr["description"]],
-                    "survival_probability": "65%",
-                    "collapse_risk": "35%",
+                    "risk": dr["risk"],
+                    "severity": dr.get("severity", "HIGH"),
+                    "description": dr.get("description", ""),
+                    "rebuttal": dr.get("rebuttal", ""),
+                    "strategic_chain": [dr.get("description", "")],
                     "rebuttal_tree": {
-                        "complainant_counter": dr["rebuttal"],
-                        "magistrate_view": f"High attention to {dr['case_law']}"
-                    }
+                        "complainant_counter": dr.get("rebuttal", ""),
+                        "magistrate_view": f"High attention to {dr.get('case_law', 'relevant statutes')}"
+                    },
+                    "survival_probability": "65%",
+                    "collapse_risk": "35%"
                 })
 
         # -- 9. Timeline & Simulation -----------------------------------------

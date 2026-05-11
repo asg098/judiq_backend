@@ -117,6 +117,8 @@ class SemanticEngineV12:
 
         detected.sort(key=lambda x: x.get('confidence', 0), reverse=True)
         return detected
+
+
 class EnhancedSemanticExtractor:
     @staticmethod
     def extract_concepts(text: str, threshold: float = 0.20) -> Dict[str, Any]:

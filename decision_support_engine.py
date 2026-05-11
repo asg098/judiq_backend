@@ -1,6 +1,9 @@
 import logging
 from typing import List, Dict, Any
+
 logger = logging.getLogger(__name__)
+
+# ── Risk catalogue ─────────────────────────────────────────────────────────────
 RISK_CATALOGUE = [
     {
         "concept_trigger": "security_cheque",

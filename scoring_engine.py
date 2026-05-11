@@ -106,7 +106,7 @@ class ScoringEngineV12:
         else:
             score -= 42
             trace.append("FATAL ERROR: Primary instrument missing (-42 impact).")
-            causality_map.append({"fact": "Missing Original Cheque", "impact": -42, "type": "negative", "rationale": "S.138 requires the instrument. Photocopies are rarely admissible without S.65B."})
+            causality_map.append({"fact": "Missing Original Cheque", "impact": -42, "type": "negative", "rationale": "S.138 requires the instrument. Photocopies are inadmissible without Section 63(4) BSA."})
 
         # PILLAR 2: DISHONOUR MEMO
         if memo:
@@ -306,7 +306,7 @@ class ScoringEngineV12:
             "causality_map": causality_map,
             "remediation_roadmap": [x for x in [
                 {"action": "Procure Complainant ITR (Source of Funds)", "delta": 18, "priority": "CRITICAL"} if not case_data.get("complainant_itr_available") else None,
-                {"action": "Execute S.63 BSA Certificate for Digital Trails", "delta": 11, "priority": "HIGH"} if case_data.get("communication_records") and not case_data.get("has_65b_certificate") else None,
+                {"action": "Execute S.63 BSA Certificate for Digital Trails", "delta": 11, "priority": "HIGH"} if case_data.get("communication_records") and not case_data.get("has_bsa_certificate") else None,
                 {"action": "Establish Ledger Authentication (S.139 Support)", "delta": 14, "priority": "HIGH"} if not case_data.get("debt_proven") else None,
                 {"action": "Register Loan Agreement (Sec 17 Registration Act)", "delta": 9, "priority": "MEDIUM"} if amount > 100000 and not case_data.get("agreement_registered") else None,
                 {"action": "Obtain Certified Copy of Return Memo", "delta": 22, "priority": "CRITICAL"} if not case_data.get("dishonour_memo") else None,
@@ -331,7 +331,7 @@ class ScoringEngineV12:
             },
             "checkpoints": [
                 {"task": "Verify Notice Receipt/AD Card", "status": "PENDING", "priority": "HIGH"},
-                {"task": "S.65B Certificate Readiness", "status": "REQUIRED" if case_data.get("communication_records") else "N/A", "priority": "CRITICAL"},
+                {"task": "S.63(4) BSA Certificate Readiness", "status": "REQUIRED" if case_data.get("communication_records") else "N/A", "priority": "CRITICAL"},
                 {"task": "S.141 MCA Master Data Audit", "status": "REQUIRED" if is_company else "N/A", "priority": "CRITICAL"},
                 {"task": "Ledger Statement Procurement", "status": "PENDING" if not debt else "DONE", "priority": "HIGH"}
             ],
@@ -370,7 +370,7 @@ class ScoringEngineV12:
             if has_65b:
                 reliability["WhatsApp/Email"] = {"score": 0.85, "status": "AUTHENTICATED", "attack_risk": "LOW"}
             else:
-                reliability["WhatsApp Screenshot"] = {"score": 0.30, "status": "VULNERABLE", "attack_risk": "HIGH", "reason": "Mandatory S.65B Certificate missing (Arjun Panditrao v. Kailash Gour)."}
+                reliability["WhatsApp Screenshot"] = {"score": 0.30, "status": "VULNERABLE", "attack_risk": "HIGH", "reason": "Mandatory S.63(4) BSA Certificate missing (Replacing old 65B)."}
 
         # Bank Memo
         reliability["Bank Return Memo"] = {"score": 0.95, "status": "VERIFIED", "attack_risk": "MINIMAL"}
@@ -481,7 +481,7 @@ class ScoringEngineV12:
             sims.append({"gap": "Unregistered Loan Agreement", "impact": "+12%", "type": "Legal"})
         if not case_data.get("dishonour_memo"):
             sims.append({"gap": "Original Return Memo missing", "impact": "+45%", "type": "Procedural"})
-        if not case_data.get("has_65b_certificate"):
-            sims.append({"gap": "Missing S.65B for WhatsApp", "impact": "+15%", "type": "Admissibility"})
+        if not case_data.get("has_bsa_certificate"):
+            sims.append({"gap": "Missing S.63 BSA for WhatsApp", "impact": "+15%", "type": "Admissibility"})
         
         return sims[:3]

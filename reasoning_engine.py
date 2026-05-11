@@ -157,10 +157,12 @@ class ReasoningEngine:
                 "citation":  "Basalingappa vs. Mudibasappa (2019) 5 SCC 418",
                 "court":     "Supreme Court of India",
                 "principle": "Rebuttal of S.139 presumption via financial capacity challenge.",
+                "why_relevant": "Your high-value loan (₹5L+) without ITR or banking trail triggers the Basalingappa rule, allowing the accused to rebut the statutory presumption by merely raising a 'probable defense' of your lack of financial capacity.",
+                "authority": "Supreme Court Binding Precedent (S.141 Constitution of India)",
                 "relevance": 0.98,
                 "is_live":   False,
                 "document_url": "/api/precedents/document/Basalingappa_vs_Mudibasappa",
-                "adversarial_note": "CRITICAL VULNERABILITY: Your lack of ITR for a ₹50L loan is a 'Basalingappa' trigger. Defence will destroy your case in cross-examination on this point alone."
+                "adversarial_note": "CRITICAL VULNERABILITY: Defence will destroy your case in cross-examination on this point alone."
             }
             # Verify authenticity
             v = precedent_manager.verify_citation_authenticity(prec["citation"])

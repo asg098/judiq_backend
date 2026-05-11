@@ -3,9 +3,11 @@ import json
 import logging
 import os
 from datetime import datetime
+
 logger = logging.getLogger(__name__)
 DB_PATH = "analytics.db"
 DATABASE_URL = os.environ.get("DATABASE_URL") # Production Postgres Hook
+
 class DatabaseManager:
     @staticmethod
     def get_connection():

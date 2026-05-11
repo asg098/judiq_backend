@@ -442,14 +442,3 @@ class AdversarialEngine:
         for node in battle_nodes:
             risk += 0.15
         return min(0.9, risk)
-
-
-
-
-
-
-
-
-
-
-

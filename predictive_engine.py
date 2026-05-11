@@ -1,6 +1,8 @@
 import logging
 from typing import Dict, Any
+
 logger = logging.getLogger(__name__)
+
 class PredictiveEngine:
     """Predicts settlement probability and penalty forecasts based on case parameters."""
     
