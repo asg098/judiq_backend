@@ -93,6 +93,9 @@ def generate_legal_notice(case_data: Dict) -> str:
         transaction_nature = "services rendered"
     elif purpose:
         transaction_nature = purpose[:100]
+    
+    # Strip trailing period to avoid double period in templates
+    transaction_nature = transaction_nature.rstrip('.')
 
     return f"""{_header("LEGAL NOTICE UNDER SECTION 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881")}
 
@@ -224,6 +227,10 @@ def generate_complaint(case_data: Dict, concepts: List[Dict], tone: str = "stand
         occupation = "service provider"
     elif purpose:
         transaction_nature = purpose[:100]
+        
+    # Strip trailing period to avoid double period in templates
+    transaction_nature = transaction_nature.rstrip('.')
+    occupation = occupation.rstrip('.')
 
     # Authorization Clause Logic - ADVOCATE HARDENED (A.C. Narayanan)
     auth_clause = ""
@@ -654,7 +661,7 @@ class DraftEngine:
             return generate_legal_notice(case_data)
         elif draft_type == "COMPLAINT":
             return generate_complaint(case_data, concepts, tone=tone)
-        elif draft_type == "CERTIFICATE_65B":
+        elif draft_type in ("CERTIFICATE_BSA", "CERTIFICATE_65B"):
             return generate_certificate_63_bsa(case_data)
         elif draft_type in ("DEFENCE_STRATEGY", "DEFENCE_REPLY"):
             return generate_defence_strategy(case_data, concepts, score)
