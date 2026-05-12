@@ -55,6 +55,9 @@ class ScoringEngineV12:
         Includes Procedural, Evidentiary, and Strategic breakdown with Explicit Causality.
         """
         concepts = cls.resolve_conflicts(ensure_list(concepts))
+        
+        # --- NEW: CONCEPT INJECTION (Ensures Critical Issues show up in ResponseBuilder) ---
+        concept_names = {c["concept"] for c in concepts}
         trace = []
         causality_map = [] 
         uncertainty_messages = []
@@ -179,10 +182,14 @@ class ScoringEngineV12:
             score -= 60
             trace.append("-60 FATAL EVIDENTIARY GAP: ₹20L+ cash loan without ITR.")
             causality_map.append({"fact": "Basalingappa Fatal", "impact": -60, "rationale": "High-value cash loans without source proof are fatal."})
+            if "unaccounted_cash_loans" not in concept_names:
+                concepts.append({"concept": "unaccounted_cash_loans", "confidence": 0.95, "legal_impact": "Fatal evidentiary gap for high-value cash loans per Basalingappa ruling."})
         elif amount > 500000 and not case_data.get("loan_via_bank") and not case_data.get("complainant_itr_available"):
             score -= 45
             trace.append("-45 REBUTTAL RISK: High-value cash loan without ITR.")
             causality_map.append({"fact": "Basalingappa High Risk", "impact": -45, "rationale": "Lending capacity is a standard defence attack."})
+            if "unaccounted_cash_loans" not in concept_names:
+                concepts.append({"concept": "unaccounted_cash_loans", "confidence": 0.85, "legal_impact": "High risk of acquittal on financial capacity grounds."})
 
         # Limitation & Notice Defects
         existing_concepts = [c["concept"] for c in concepts]
@@ -286,6 +293,7 @@ class ScoringEngineV12:
         return {
             "score": int(calibrated_score),
             "final_score": int(calibrated_score),
+            "concepts": concepts, # Pass back the enriched concepts
             "raw_heuristic_score": int(final_score),
             "calibration_metadata": {
                 "confidence_interval": [max(0, int(calibrated_score - confidence_variance)), min(100, int(calibrated_score + confidence_variance))],
