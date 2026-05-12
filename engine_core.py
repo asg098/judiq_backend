@@ -200,7 +200,10 @@ class JudiQEngine:
         # -- 7. Draft Generation ----------------------------------------------
         draft_engine = registry.get("draft")
         from draft_engine import decide_draft_type
-        draft_type = decide_draft_type(int(final_score), concepts, case_data)
+        
+        # Priority: Forced Draft Type > Decision Logic
+        draft_type = raw_data.get("force_draft_type") or decide_draft_type(int(final_score), concepts, case_data)
+        
         draft_content = _safe_call(
             draft_engine.generate_draft, draft_type, int(final_score), concepts, case_data,
             fallback="Legal draft generation failed. Please use manual templates.",
