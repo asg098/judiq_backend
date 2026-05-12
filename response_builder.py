@@ -369,4 +369,5 @@ class ResponseBuilder:
             "tldr": tldr,
             "strategic_audit": engine_result.get("strategic_audit", []),
             "senior_brief": senior_brief,
+            "question_bank": engine_result.get("question_bank", []),
         }

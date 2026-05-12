@@ -191,6 +191,20 @@ class JudiQEngine:
             context="Reasoning Trail"
         )
         
+        # NEW: Precedents & Citations
+        precedents = _safe_call(
+            reasoning_engine.match_precedents, case_data, concepts,
+            fallback=[],
+            context="Precedents"
+        )
+        
+        # NEW: Statutory Interpretation
+        statutory_interpretation = _safe_call(
+            reasoning_engine.interpret_statutes, case_data, concepts,
+            fallback=[],
+            context="Statutes"
+        )
+        
         case_summary = _safe_call(
             reasoning_engine.summarize_case, case_data,
             fallback="Case assessment based on statutory pillars.",
@@ -309,6 +323,8 @@ class JudiQEngine:
             "translated_verdict": translated_verdict,
             "evidence_suggestions": evidence_suggestions,
             "case_summary": case_summary,
+            "precedents": precedents,
+            "statutory_interpretation": statutory_interpretation,
             "draft": draft_content,
             "draft_type": draft_type,
             "timeline": timeline,

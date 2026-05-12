@@ -215,4 +215,4 @@ class CaseroomManager:
         msg = f"Re-analyzed case using physical documents. Verified Facts:\n" + "\n".join(updates)
         DatabaseManager.send_message(caseroom_id, user_id, msg)
         
-        return True, "Case re-analyzed successfully."
+        return True, new_result
