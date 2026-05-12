@@ -194,7 +194,7 @@ class ResponseBuilder:
 
         NEGATIVE_RISK_ORDER = [
             "limitation_issue", "notice_defect", "notice_not_sent",
-            "litigation_risk", "security_cheque", "signature_dispute", "no_debt_proof",
+            "unaccounted_cash_loans", "litigation_risk", "security_cheque", "signature_dispute", "no_debt_proof",
             "no_agreement", "cheque_misuse", "payment_already_made",
             "cheque_validity_issue", "dishonour_disputed"
         ]
