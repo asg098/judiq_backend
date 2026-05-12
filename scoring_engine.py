@@ -300,6 +300,7 @@ class ScoringEngineV12:
                 "judicial_sentiment": "POSITIVE" if final_score > 70 else ("NEGATIVE" if final_score < 40 else "NEUTRAL"),
                 "calibration_notes": calibration_notes
             },
+            "causality_map": causality_map,
             "potential_score": potential_score,
             "causality_delta": causality_delta,
             "evidence_reliability": cls.calculate_evidence_reliability(case_data),
@@ -464,20 +465,36 @@ class ScoringEngineV12:
 
     @classmethod
     def generate_hostile_questions(cls, case_data: Dict, concepts: List[Dict]) -> List[str]:
-        """USER REQUEST 7: REAL COURTROOM QUESTION BANK"""
-        questions = [
-            "Why was this high-value loan not reflected in your ITR?",
-            "Can you show the exact source of funds for this ₹X loan?",
-            "If this was a debt repayment, why is there no written agreement?",
-            "Was this cheque issued as security for a future transaction?",
-            "Why did you wait until the last day of limitation to send the notice?",
-            "Is it true that the handwriting on the cheque is different from yours?",
-            "Can you prove the date of service of the legal notice with a tracking report?",
-            "Where is the ledger entry corresponding to this specific transaction?",
-            "Why is the interest rate mentioned in the complaint different from the agreement?",
-            "Did you receive any part-payment after the notice was served?"
-        ]
-        return questions
+        """Dynamically generates hostile questions based on case vulnerabilities."""
+        concept_names = {c["concept"] for c in concepts}
+        questions = []
+        
+        # 1. Financial Capacity (Basalingappa)
+        if "unaccounted_cash_loans" in concept_names or not case_data.get("complainant_itr_available"):
+            questions.append("Can you demonstrate the specific source of funds used for this high-value cash loan?")
+            questions.append("Why is this alleged loan amount not reflected in your Income Tax Returns for the relevant year?")
+            
+        # 2. Security Cheque Defence
+        if "security_cheque" in concept_names:
+            questions.append("Isn't it true that this cheque was handed over as a blank security instrument at the start of the transaction?")
+            questions.append("Why did you fill in the date and amount on this cheque without the accused's specific consent?")
+            
+        # 3. Debt Proof
+        if "no_debt_proof" in concept_names:
+            questions.append("Where is the written agreement or ledger entry that proves this alleged debt actually existed?")
+            questions.append("If this was a business transaction, why was no invoice or receipt ever generated?")
+            
+        # 4. Signature/Handwriting
+        if "signature_dispute" in concept_names or case_data.get("handwriting_different"):
+            questions.append("How do you explain the visible variation in ink and handwriting between the signature and the rest of the cheque?")
+            
+        # 5. Generic but high-impact fallbacks if list is short
+        if len(questions) < 5:
+            questions.append("Why did you wait until the very end of the statutory notice period to initiate these proceedings?")
+            questions.append("Can you produce the original bank tracking report for the legal notice you claim was served?")
+            
+        # Deduplicate and limit
+        return list(dict.fromkeys(questions))[:10]
 
     @classmethod
     def calculate_remediation_sim(cls, case_data: Dict) -> List[Dict]:
