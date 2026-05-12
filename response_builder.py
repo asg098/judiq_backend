@@ -268,7 +268,8 @@ class ResponseBuilder:
         if not case_data.get("debt_proven"):
             alternative_evidence = ["WhatsApp correspondence", "Bank statements", "Ledger entries"]
 
-        final_weaknesses = [f"{r['risk']} [{r['severity']}]" for r in ranked_weaknesses]
+        final_weaknesses = [f"{r['risk']} [{r['severity']}]" for r in ranked_weaknesses if r['severity'] not in ['CRITICAL', 'HIGH']]
+        final_issues = [f"{r['risk']} ({r['severity']})" for r in ranked_weaknesses if r['severity'] in ['CRITICAL', 'HIGH']]
 
         # ── SENIOR ADVOCATE BRIEF (Standalone Object for Print/UI) ───────────
         senior_brief = {
@@ -288,7 +289,7 @@ class ResponseBuilder:
             "decision":           decision,
             "strengths":          strengths,
             "weaknesses":         final_weaknesses,
-            "issues":             [f"{r['risk']} ({r['severity']})" for r in ranked_weaknesses if r['severity'] in ['CRITICAL', 'HIGH', 'MEDIUM']],
+            "issues":             final_issues,
             "legal_strategy":     strategy,
             "alternative_evidence": alternative_evidence,
             "judicial_caveats":   engine_result.get("discretionary_caveats", []),
