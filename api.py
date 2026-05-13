@@ -318,7 +318,15 @@ async def analyze(request_data: CaseAnalysisRequest, request: Request):
     cid = case_data.get("case_id", "")
     from database_manager import DatabaseManager
     response_body["caseroom_id"] = DatabaseManager.get_caseroom_by_case_id(cid) if cid else None
-    
+
+    # ── JURISDICTION MAPPING (S.142 Post-2015) ─────────────────────────────
+    try:
+        from jurisdiction_engine import map_jurisdiction
+        response_body["jurisdiction"] = map_jurisdiction(raw_data)
+    except Exception as je:
+        logger.warning(f"Jurisdiction mapping failed (non-fatal): {je}")
+        response_body["jurisdiction"] = None
+
     response_body["data"] = result        # keep nested copy for any legacy consumers
     return response_body
 
@@ -485,6 +493,17 @@ async def reanalyze_caseroom(room_id: str):
     if not success:
         return JSONResponse(status_code=400, content={"error": result})
     return {"success": True, "message": "Case re-analyzed successfully.", "new_analysis_result": result}
+
+@app.post("/jurisdiction/map")
+async def jurisdiction_map(request: Request):
+    """
+    Real-time Jurisdiction Mapping — S.142(2) NI Act (2015 Amendment).
+    Returns the correct court based on payee bank location.
+    """
+    from jurisdiction_engine import map_jurisdiction
+    data = await request.json()
+    result = map_jurisdiction(data)
+    return {"success": True, "jurisdiction": result}
 
 
 # ── PDF generation ─────────────────────────────────────────────────────────────

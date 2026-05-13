@@ -222,6 +222,14 @@ def normalize_input(data: dict) -> dict:
         "cheque_number": _safe_str(data.get("cheque_number", cq_obj.get("cheque_number", "")), 30, "cheque_number"),
         "cheque_date":   _safe_str(data.get("cheque_date",   cq_obj.get("cheque_date",   "")), 30, "cheque_date"),
         "bank_name":     _safe_str(data.get("bank_name",     cq_obj.get("bank_name",     "")), 100, "bank_name"),
+        "branch_name":   _safe_str(data.get("branch_name",   cq_obj.get("branch_name",   "")), 100, "branch_name"),
+        # Jurisdiction fields (S.142 Post-2015 Amendment)
+        "payee_bank_name": _safe_str(data.get("payee_bank_name", cq_obj.get("payee_bank_name", data.get("bank_name", ""))), 100, "payee_bank_name"),
+        "payee_branch":    _safe_str(data.get("payee_branch",    cq_obj.get("payee_branch",    data.get("branch_name", ""))), 100, "payee_branch"),
+        "payee_bank_city": _safe_str(data.get("payee_bank_city", cq_obj.get("payee_bank_city", "")), 100, "payee_bank_city"),
+        "drawer_bank_name": _safe_str(data.get("drawer_bank_name", ""), 100, "drawer_bank_name"),
+        "drawer_bank_city": _safe_str(data.get("drawer_bank_city", ""), 100, "drawer_bank_city"),
+        "accused_city":     _safe_str(data.get("accused_city", ""), 100, "accused_city"),
 
         # Dishonour details
         "dishonour_date":    _safe_str(data.get("dishonour_date",    ds_obj.get("dishonour_date",    "")), 30, "dishonour_date"),

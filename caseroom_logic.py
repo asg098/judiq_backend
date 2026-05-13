@@ -26,30 +26,27 @@ class CaseroomManager:
 
     @staticmethod
     def get_full_caseroom_state(caseroom_id):
-        """Fetches the entire state of the caseroom with Persistence Recovery."""
+        """Fetches the entire state of the caseroom with Persistence Recovery & Intelligence Sync."""
         state = DatabaseManager.get_caseroom_data(caseroom_id)
         
         if not state:
             logger.warning(f"Caseroom {caseroom_id} missing from DB. Attempting ghost recovery...")
-            # If the ID looks valid (CR_ prefix), re-initialize a minimal ghost state 
-            # to prevent UI breakage on Render ephemeral restarts.
             if str(caseroom_id).startswith("CR_"):
                 logger.info(f"👻 Re-hydrating ghost state for Caseroom {caseroom_id}")
-                # Create a fresh room record
                 DatabaseManager.create_caseroom(caseroom_id, "CASE_RECOVERED", "RECOVERED_USER")
                 DatabaseManager.send_message(caseroom_id, "SYSTEM", "Session recovered after server restart. Previous history cleared.")
-                
-                # Fetch again after creation
                 state = DatabaseManager.get_caseroom_data(caseroom_id)
-                if not state:
-                    # Final fallback if DB is failing
-                    return {
-                        "room_info": (caseroom_id, "RECOVERY_PENDING", "SYSTEM", datetime.now().isoformat()),
-                        "participants": [{"user_id": "SYSTEM", "role": "ADMIN"}],
-                        "messages": [{"user_id": "SYSTEM", "content": "Critical persistence error. Database write failed.", "timestamp": datetime.now().isoformat()}],
-                        "documents": [],
-                        "tasks": []
-                    }
+        
+        # 🔥 INTELLIGENCE SYNC: Attach latest analysis to room state
+        if state and state.get("room_info"):
+            case_id = state["room_info"][1]
+            case_record = DatabaseManager.get_case(case_id)
+            if case_record:
+                import json
+                try:
+                    state["latest_analysis"] = json.loads(case_record[3]) # result_data is index 3
+                except:
+                    state["latest_analysis"] = None
         
         return state
 
