@@ -332,7 +332,6 @@ class JudiQEngine:
             "strategy_result": strategy_result,
             "adversarial_risk": adversarial_risk
         }
-
         # Merge results into the structure ResponseBuilder expects
         full_result = {**engine_output, **scoring_result, **adversarial_result}
         
