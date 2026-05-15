@@ -1,4 +1,4 @@
-# JUDIQ AI: The Litigation Operating System v12.0
+# JUDIQ AI: The Litigation Operating System v12.000
 
 ![JudiQ AI Banner](https://img.shields.io/badge/Status-Institutional_Beta-gold?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-Proprietary-navy?style=for-the-badge)
